@@ -9,4 +9,7 @@
 #load "tools/json.jai";
 #load "tools/aseprite.jai";
 #load "statemachine.jai";
+#load "serialization/serializer.jai";
+#load "serialization/json_serializer.jai";
+#load "serialization/reflection_serialization.jai";
 #load "raylib_imgui.jai";
