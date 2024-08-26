@@ -15,7 +15,7 @@ JsonSerializer :: struct
     begin = (serializer: *Serializer) { json_serializer_begin(cast(*JsonSerializer)serializer); };
     end =   (serializer: *Serializer) { json_serializer_end(cast(*JsonSerializer)serializer); };
 
-    begin_array = (serializer: *Serializer, size: *u32, key: string) -> bool { return json_serializer_begin_array(cast(*JsonSerializer)serializer, size, key); };
+    begin_array = (serializer: *Serializer, size: *s64, key: string) -> bool { return json_serializer_begin_array(cast(*JsonSerializer)serializer, size, key); };
     end_array =   (serializer: *Serializer) -> bool                          { return json_serializer_end_array(cast(*JsonSerializer)serializer); };
 
     begin_object = (serializer: *Serializer, keys: *[]string, key: string) -> bool { return json_serializer_begin_object(cast(*JsonSerializer)serializer, keys, key); };
@@ -36,16 +36,62 @@ JsonSerializer :: struct
     serialize_string =  (serializer: *Serializer, value: *string, key: string) -> bool  { return serialize(cast(*JsonSerializer)serializer, value, key); };
 }
 
-json_serializer_set_read_data :: (serializer: *JsonSerializer, json_string :string)
+json_serializer_open_json_file :: (serializer: *JsonSerializer, path :string) -> bool
 {
+    assert(serializer != null);
     assert(serializer.mode == .NONE);
-    assert(false); // @TODO
+
+    push_allocator(temporary_allocator);
+    content, success: = read_entire_file(path);
+    if !success { return false; }
+
+    return json_serializer_set_json_string(serializer, content);
 }
 
-json_serializer_set_read_data :: (serializer: *JsonSerializer, root :JSON_Value)
+json_serializer_set_json_string :: (serializer: *JsonSerializer, json_string :string) -> bool
 {
+    assert(serializer != null);
     assert(serializer.mode == .NONE);
-    root_value = root;
+
+    push_allocator(temporary_allocator);
+    success, value: = json_parse_string(json_string);
+    if !success { return false; }
+
+    json_serializer_set_json_data(serializer, value);
+    return true;
+}
+
+json_serializer_set_json_data :: (serializer: *JsonSerializer, root :JSON_Value)
+{
+    assert(serializer != null);
+    assert(serializer.mode == .NONE);
+    serializer.root_value = root;
+}
+
+json_serializer_write_json_file :: (serializer: *JsonSerializer, path :string) -> bool
+{
+    json_string: = json_serializer_get_json_string(serializer);
+    write_entire_file(path, json_string);
+    return true;
+}
+
+json_serializer_get_json_string :: (serializer: *JsonSerializer) -> string
+{
+    assert(serializer != null);
+    assert(serializer.mode == .NONE);
+
+    push_allocator(temporary_allocator);
+    builder: String_Builder;
+    json_write_json_value(*builder, serializer.root_value);
+    json_string: = builder_to_string(*builder);
+
+    return json_string;
+}
+
+json_serializer_get_json_data :: (serializer: *JsonSerializer) -> JSON_Value
+{
+    assert(serializer != null);
+    return serializer.root_value;
 }
 
 #scope_file
@@ -197,13 +243,49 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "") -> boo
     return true;
 }
 
-json_serializer_begin_array :: (serializer: *JsonSerializer, size: *u32, keys: string) -> bool
+json_serializer_begin_array :: (using s: *JsonSerializer, size: *s64, key: string) -> bool
 {
+    assert(s != null);
+    assert(mode != .NONE);
+
+    success, next_value: = select_next_value(s, key);
+    if !success { return false; }
+
+    if mode ==
+    {
+        case .READ;
+        {
+            if (next_value.type != .ARRAY)
+            {
+                last_error = "Read value is not of type array";
+                return false;
+            }
+            <<size = next_value.array.count;
+        }
+        case .WRITE;
+        {
+            next_value.type = .ARRAY;
+            next_value.array.data = talloc(<<size * size_of(JSON_Value));
+            next_value.array.count = <<size;
+        }
+    }
+    array_add(*context_stack, .{ value = next_value });
+
     return true;
 }
 
-json_serializer_end_array :: (serializer: *JsonSerializer) -> bool
+json_serializer_end_array :: (using s: *JsonSerializer) -> bool
 {
+    assert(s != null);
+    assert(mode != .NONE);
+
+    if context_stack.count == 0 || array_back(context_stack).value.type != .ARRAY
+    {
+        last_error = "Ending an array that was never began";
+        return false;
+    }
+    pop(*context_stack);
+
     return true;
 }
 
@@ -342,3 +424,4 @@ select_next_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Valu
 }
 
 #import "jaison";
+#import "File";
