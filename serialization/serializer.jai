@@ -13,7 +13,7 @@ Serializer :: struct
     begin: #type (serializer: *Serializer);
     end:   #type (serializer: *Serializer);
 
-    begin_array: #type (serializer: *Serializer, size: *u32, key: string) -> bool;
+    begin_array: #type (serializer: *Serializer, size: *s64, key: string) -> bool;
     end_array:   #type (serializer: *Serializer) -> bool;
 
     begin_object: #type (serializer: *Serializer, keys: *[]string, key: string) -> bool;
@@ -49,7 +49,7 @@ serializer_end :: (serializer: *Serializer)
     serializer.mode = .NONE;
 }
 
-serializer_begin_array :: (serializer: *Serializer, size: *u32, key: string = "") -> bool
+serializer_begin_array :: (serializer: *Serializer, size: *s64, key: string = "") -> bool
 {
     assert(serializer != null);
     return serializer.begin_array(serializer, size, key);

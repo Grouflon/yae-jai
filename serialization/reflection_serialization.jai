@@ -23,7 +23,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 table_add(*key_to_type_info, member_type_info.name, info_struct.members.data + i);
             }
 
-            verify(serializer_begin_object(serializer, *keys));
+            verify(serializer_begin_object(serializer, *keys, key));
             for key : keys
             {
                 member_type_info, success: = table_find(*key_to_type_info, key);
@@ -131,16 +131,59 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         case .ARRAY;
         {
             info_array: = cast(*Type_Info_Array) info;
-
+            size: s64;
             array_data: *void;
 
-            // TODO: Handle size for different array types
-            size: u32;
-            verify(serializer_begin_array(serializer, *size));
+            if info_array.array_type == {
+                case .FIXED;
+                {
+                    size = info_array.array_count;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    if size > info_array.array_count
+                    {
+                        serializer.last_error = tprint("%: Read array element count is bigger than the fixed array size (% > %)", key, size, info_array.array_count);
+                        return false;
+                    }
+                    array_data = data;
+                }
+
+                case .VIEW;
+                {
+                    array_view: *Array_View_64 = data;
+                    size = array_view.count;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    if serializer.mode == .READ
+                    {
+                        array_view.count = size;
+                        array_view.data = alloc(size * info_array.element_type.runtime_size);
+                    }
+                    array_data = array_view.data;
+                }
+
+                case .RESIZABLE;
+                {
+                    array_resizable: *Resizable_Array = data;
+                    size = array_resizable.count;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    if serializer.mode == .READ
+                    {
+                        if array_resizable.allocated < size
+                        {
+                            allocator: Allocator = ifx array_resizable.allocator.proc != null then array_resizable.allocator else context.allocator;
+                            push_allocator(allocator);
+                            array_resizable.data = realloc(array_resizable.data, size, array_resizable.allocated);
+                            array_resizable.allocated = size;
+                        }
+                    }
+                    array_resizable.count = size;
+                    array_data = array_resizable.data;
+                }
+            }
+
             for i : 0..(size-1)
             {
                 element_data: = array_data + i * info_array.element_type.runtime_size;
-                verify(serialize(serializer, element_data, info_array.element_type, key));
+                verify(serialize(serializer, element_data, info_array.element_type));
             }
             verify(serializer_end_array(serializer));
         }
