@@ -55,6 +55,7 @@ raylib_imgui_shutdown :: ()
 {
     ImGui.DestroyContext(global_state.imgui_context);
     global_state.imgui_context = null;
+    free(global_state.config.font_file);
 }
 
 raylib_imgui_new_frame :: (dt: float)
@@ -139,15 +140,17 @@ global_state: RaylibImgGuiState;
 
 load_fonts :: (fonts: *ImGui.ImFontAtlas)
 {
-    fonts.ClearFonts(fonts);
+    fonts.Clear(fonts);
 
     if global_state.config.font_file.count > 0
     {
-        fonts.AddFontFromFileTTF(fonts, temp_c_string(global_state.config.font_file), global_state.config.font_size);
+        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(global_state.config.font_file), global_state.config.font_size);
+        assert(font != null);
     }
     else
     {
-        fonts.AddFontDefault(fonts);
+        font: = fonts.AddFontDefault(fonts);
+        assert(font != null);
     }
 
     pixels: *u8;
