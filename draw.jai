@@ -47,7 +47,7 @@ draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _f
     x: = cast(float) _data.frames[_frame_index].frame.x;
     y: = cast(float) _data.frames[_frame_index].frame.y;
     w: = (ifx _flip_x then -1.0 else 1.0) * cast(float)_data.frames[_frame_index].frame.w;
-    h: = (ifx _flip_y then -1.0 else 1.0) * cast(float)_data.frames[_frame_index].frame.h;
+    h: = (ifx _flip_y then 1.0 else -1.0) * cast(float)_data.frames[_frame_index].frame.h;
 
     DrawTextureRec(
         _texture,
