@@ -27,7 +27,8 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
             for key : keys
             {
                 member_type_info, success: = table_find(*key_to_type_info, key);
-                assert(success);
+                if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
+                
                 member_data: = data + member_type_info.offset_in_bytes;
                 verify(serialize(serializer, member_data, member_type_info.type, key));
             }
