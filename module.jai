@@ -3,6 +3,9 @@
 #load "draw.jai";
 #load "tilemap.jai";
 #load "pixel_perfect_viewport.jai";
+#load "resource.jai";
+#load "resources/spritesheet.jai";
+#load "resources/texture.jai";
 #load "tools/math.jai";
 #load "tools/imgui.jai";
 #load "tools/filesystem.jai";

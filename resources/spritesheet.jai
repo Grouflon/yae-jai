@@ -1,0 +1,26 @@
+Spritesheet :: struct
+{
+    #as using base: Resource;
+    type = Spritesheet;
+
+    load_function = spritesheet_load;
+    unload_function = spritesheet_unload;
+
+    data: AsepriteData;
+}
+
+#scope_file
+
+spritesheet_load :: (resource: *Resource)
+{
+    using spritesheet: = cast(*Spritesheet) resource;
+
+    aseprite_load_data(*data, name);
+}
+
+spritesheet_unload :: (resource: *Resource)
+{
+    using spritesheet: = cast(*Spritesheet) resource;
+
+    aseprite_release_data(*data);
+}

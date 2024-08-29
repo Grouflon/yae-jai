@@ -1,0 +1,28 @@
+Texture :: struct
+{
+    #as using base: Resource;
+    type = Texture;
+
+    load_function = texture_load;
+    unload_function = texture_unload;
+
+    texture: Texture2D;
+}
+
+#scope_file
+
+texture_load :: (resource: *Resource)
+{
+    using t: = cast(*Texture) resource;
+
+    texture = rl.LoadTexture(temp_c_string(name));
+}
+
+texture_unload :: (resource: *Resource)
+{
+    using t: = cast(*Texture) resource;
+
+    rl.UnloadTexture(texture);
+}
+
+rl :: #import "raylib";

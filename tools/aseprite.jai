@@ -77,18 +77,18 @@ AsepriteDirection :: enum
     backward;
 }
 
-aseprite_load_data :: (_json_file_path: string) -> *AsepriteData
+aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 {
-    success, json_data: = json_parse_file(_json_file_path);
+    assert(aseprite != null);
+
+    success, json_data: = json_parse_file(json_file_path);
     defer json_free(json_data);
 
     if !success
     {
-        log_error("Failed to load aseprite data \"%\"", _json_file_path);
-        return null;
+        log_error("Failed to load aseprite data \"%\"", json_file_path);
+        return false;
     }
-
-    aseprite: = New(AsepriteData);
 
     // Frames
     {
@@ -121,7 +121,7 @@ aseprite_load_data :: (_json_file_path: string) -> *AsepriteData
         meta: = json_get(json_data, "meta", .OBJECT);
         aseprite.app = copy_string(json_get(meta, "app", .STRING).str);
         aseprite.version = copy_string(json_get(meta, "version", .STRING).str);
-        aseprite.image_path = sprint("%/%", path_strip_filename(_json_file_path), json_get(meta, "image", .STRING).str);
+        aseprite.image_path = sprint("%/%", path_strip_filename(json_file_path), json_get(meta, "image", .STRING).str);
         aseprite.format = enum_name_to_value(AsepriteImageFormat, json_get(meta, "format", .STRING).str);
         aseprite.size = parse_box(json_get(meta, "size"));
         aseprite.scale = cast(float)atof(temp_c_string(json_get(meta, "scale", .STRING).str));
@@ -176,7 +176,7 @@ aseprite_load_data :: (_json_file_path: string) -> *AsepriteData
         table_set(*aseprite.name_to_layer, layer.name, cast(s32)i);
     }
 
-    return aseprite;
+    return true;
 }
 
 aseprite_release_data :: (_data: *AsepriteData)
@@ -206,7 +206,6 @@ aseprite_release_data :: (_data: *AsepriteData)
     }
     array_free(_data.layers);
     deinit(*_data.name_to_layer);
-    free(_data);
 }
 
 #scope_file
