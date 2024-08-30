@@ -121,7 +121,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
         meta: = json_get(json_data, "meta", .OBJECT);
         aseprite.app = copy_string(json_get(meta, "app", .STRING).str);
         aseprite.version = copy_string(json_get(meta, "version", .STRING).str);
-        aseprite.image_path = sprint("%/%", path_strip_filename(json_file_path), json_get(meta, "image", .STRING).str);
+        aseprite.image_path = sprint("%1%2", path_strip_filename(json_file_path), json_get(meta, "image", .STRING).str);
         aseprite.format = enum_name_to_value(AsepriteImageFormat, json_get(meta, "format", .STRING).str);
         aseprite.size = parse_box(json_get(meta, "size"));
         aseprite.scale = cast(float)atof(temp_c_string(json_get(meta, "scale", .STRING).str));
@@ -206,6 +206,8 @@ aseprite_release_data :: (_data: *AsepriteData)
     }
     array_free(_data.layers);
     deinit(*_data.name_to_layer);
+
+    <<_data = .{};
 }
 
 #scope_file
