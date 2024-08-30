@@ -38,6 +38,11 @@ array_back :: (array: []$T) -> *T
     return array.data + (array.count-1);
 }
 
+array_clear :: (array: *[..]$T)
+{
+    array.count = 0;
+}
+
 verify :: (result: bool) #expand
 {
     if !result { assert(false); }

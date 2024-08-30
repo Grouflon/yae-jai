@@ -16,12 +16,14 @@ texture_load :: (resource: *Resource)
     using t: = cast(*Texture) resource;
 
     texture = rl.LoadTexture(temp_c_string(name));
+    resource_add_file_watch(resource, name);
 }
 
 texture_unload :: (resource: *Resource)
 {
     using t: = cast(*Texture) resource;
 
+    resource_remove_file_watch(resource, name);
     rl.UnloadTexture(texture);
 }
 
