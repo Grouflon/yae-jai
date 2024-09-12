@@ -208,15 +208,9 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     verify(serializer_begin_array(serializer, *size, key));
                     if serializer.mode == .READ
                     {
-                        if array_resizable.allocated < size
-                        {
-                            allocator: Allocator = ifx array_resizable.allocator.proc != null then array_resizable.allocator else context.allocator;
-                            push_allocator(allocator);
-                            array_resizable.data = realloc(array_resizable.data, size, array_resizable.allocated);
-                            array_resizable.allocated = size;
-                        }
+                        array_resizable.count = size;
+                        maybe_grow(array_resizable, info_array.element_type.runtime_size);
                     }
-                    array_resizable.count = size;
                     array_data = array_resizable.data;
                 }
             }
