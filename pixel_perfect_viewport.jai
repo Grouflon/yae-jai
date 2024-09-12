@@ -42,10 +42,7 @@ viewport_update :: (using viewport: *PixelPerfectViewport, window_width: s32 = -
 viewport_begin_render :: (using viewport: PixelPerfectViewport)
 {
     rl.BeginTextureMode(render_target);
-
-    render_camera: = viewport.camera;
-    render_camera.offset += 0.5 * Vector2.{ xx render_target.texture.width, xx render_target.texture.height };
-    rl.BeginMode2D(render_camera);
+    rl.BeginMode2D(center_camera(viewport, camera));
 }
 
 viewport_end_render :: (using viewport: PixelPerfectViewport)
@@ -65,6 +62,28 @@ viewport_draw :: (using viewport: PixelPerfectViewport)
     rl.DrawTexturePro(render_target.texture, source_rect, target_rect, .{0.0, 0.0}, 0.0, rl.WHITE);
 }
 
+screen_to_world_position :: (using viewport: *PixelPerfectViewport, screen_position: Vector2, window_width: s32 = -1, window_height: s32 = -1) -> Vector2
+{
+    if window_width < 0 { window_width = rl.GetRenderWidth(); }
+    if window_height < 0 { window_height = rl.GetRenderHeight(); }
+
+    normalized_position: = (screen_position) / Vector2.{ xx window_width, xx window_height };
+    viewport_size: = Vector2.{ xx render_target.texture.width, xx render_target.texture.height };
+    reverse_y: = Vector2.{1,-1};
+
+    centered_camera: = center_camera(viewport, camera);
+    world_position: = (((normalized_position * viewport_size) - centered_camera.offset) / centered_camera.zoom) + centered_camera.target * reverse_y; // Magic formula, figured it out just by trying out things until it displayed what I want
+    world_position *= reverse_y;
+    return world_position;
+}
+
 #scope_file
+
+center_camera :: (viewport: PixelPerfectViewport, camera: rl.Camera2D) -> rl.Camera2D
+{
+    centered_camera: = camera;
+    centered_camera.offset += 0.5 * Vector2.{ xx viewport.render_target.texture.width, xx viewport.render_target.texture.height };
+    return centered_camera;
+}
 
 rl :: #import "raylib";
