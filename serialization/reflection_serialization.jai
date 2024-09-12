@@ -8,31 +8,71 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
     if info.type == {
         case .STRUCT;
         {
-            info_struct: = cast(*Type_Info_Struct) info;
-
-            keys: []string;
-            keys.count = info_struct.members.count;
-            keys.data = talloc(keys.count * size_of(string));
-
-            key_to_type_info: Table(string, *Type_Info_Struct_Member);
-            key_to_type_info.allocator = temporary_allocator;
-
-            for member_type_info, i : info_struct.members
+            if info ==
             {
-                keys[i] = member_type_info.name;
-                table_add(*key_to_type_info, member_type_info.name, info_struct.members.data + i);
-            }
+                case type_info(Vector2);
+                {
+                    vector: *float = data;
+                    size: s64 = 2;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    assert(size == 2);
+                    verify(serialize(serializer, vector));
+                    verify(serialize(serializer, vector+1));
+                    verify(serializer_end_array(serializer));
+                }
+                case type_info(Vector3);
+                {
+                    vector: *float = data;
+                    size: s64 = 3;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    assert(size == 3);
+                    verify(serialize(serializer, vector));
+                    verify(serialize(serializer, vector+1));
+                    verify(serialize(serializer, vector+2));
+                    verify(serializer_end_array(serializer));
+                }
+                case type_info(Quaternion);
+                {
+                    vector: *float = data;
+                    size: s64 = 4;
+                    verify(serializer_begin_array(serializer, *size, key));
+                    assert(size == 4);
+                    verify(serialize(serializer, vector));
+                    verify(serialize(serializer, vector+1));
+                    verify(serialize(serializer, vector+2));
+                    verify(serialize(serializer, vector+3));
+                    verify(serializer_end_array(serializer));
+                }
 
-            verify(serializer_begin_object(serializer, *keys, key));
-            for key : keys
-            {
-                member_type_info, success: = table_find(*key_to_type_info, key);
-                if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
-                
-                member_data: = data + member_type_info.offset_in_bytes;
-                verify(serialize(serializer, member_data, member_type_info.type, key));
+                case;
+                {
+                    info_struct: = cast(*Type_Info_Struct) info;
+
+                    keys: []string;
+                    keys.count = info_struct.members.count;
+                    keys.data = talloc(keys.count * size_of(string));
+
+                    key_to_type_info: Table(string, *Type_Info_Struct_Member);
+                    key_to_type_info.allocator = temporary_allocator;
+
+                    for member_type_info, i : info_struct.members
+                    {
+                        keys[i] = member_type_info.name;
+                        table_add(*key_to_type_info, member_type_info.name, info_struct.members.data + i);
+                    }
+
+                    verify(serializer_begin_object(serializer, *keys, key));
+                    for key : keys
+                    {
+                        member_type_info, success: = table_find(*key_to_type_info, key);
+                        if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
+                        
+                        member_data: = data + member_type_info.offset_in_bytes;
+                        verify(serialize(serializer, member_data, member_type_info.type, key));
+                    }
+                    verify(serializer_end_object(serializer));
+                }
             }
-            verify(serializer_end_object(serializer));
         }
         case .INTEGER;
         {
