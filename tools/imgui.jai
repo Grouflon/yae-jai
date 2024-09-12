@@ -67,7 +67,8 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
         SLIDER;
     };
     widget_type: WidgetType = .NONE;
-    step: float = 0.0;
+    has_step_override: bool;
+    step_override: float = 0.0;
     has_min_override: bool;
     min_override: float = 0.0;
     has_max_override: bool;
@@ -79,7 +80,7 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
         if note.name == {
             case "drag"; { widget_type = .DRAG; }
             case "slider"; { widget_type = .SLIDER; }
-            case "step"; { step = note.value.decimal; }
+            case "step"; { has_step_override = true; step_override = note.value.decimal; }
             case "min"; { has_min_override = true; min_override = note.value.decimal; }
             case "max"; { has_max_override = true; max_override = note.value.decimal; }
         }
@@ -120,6 +121,8 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
                 }
             }
 
+            step: float = 0.1;
+            if has_step_override { step = xx step_override; }
             if has_min_override { min_s32 = max(min_s32, cast(s32)min_override); }
             if has_max_override { max_s32 = min(max_s32, cast(s32)max_override); }
 
@@ -165,6 +168,8 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
                 case 8; { value_float = cast(float)<<cast(*float32)value; min_float = FLOAT32_MIN; max_float = FLOAT32_MAX; }
             }
 
+            step: = 0.1;
+            if has_step_override { step = step_override; }
             if has_min_override { min_float = max(min_float, min_override); }
             if has_max_override { max_float = min(max_float, max_override); }
 
