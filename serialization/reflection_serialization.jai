@@ -122,13 +122,16 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     case .READ;
                     {
                         enum_name: string;
-                        verify(serialize(serializer, *enum_name, key));
+                        {
+                            push_allocator(temporary_allocator);
+                            verify(serialize(serializer, *enum_name, key));
+                        }
                         for name, i : type.names
                         {
                             if name == enum_name
                             {
                                 <<data = cast(T) type.values[i];
-                                break;
+                                return true;
                             }
                         }
                     }
@@ -140,6 +143,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                             if value == enum_value
                             {
                                 verify(serialize(serializer, *type.names[i], key));
+                                return true;
                             }
                         }
                     }
