@@ -32,6 +32,18 @@ fletcher32_checksum :: (data: *u8, len: s32) -> s32
 }
 
 // Array Helpers
+first :: inline (array: []$T) -> T
+{
+    assert(array.count > 0);
+    return array[0];
+}
+
+last :: inline (array: []$T) -> T
+{
+    assert(array.count > 0);
+    return array[array.count - 1];
+}
+
 array_back :: (array: []$T) -> *T
 {
     if array.count <= 0 { return null; }

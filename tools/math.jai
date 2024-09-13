@@ -76,14 +76,28 @@ bezier_cubic_interpolation :: (points: []$T, t: float) -> T
     //     t
     // );
     
-    t3: = t*t*t;
     t2: = t*t;
+    t3: = t2*t;
     p0: = points[0] * (-  t3 + 3*t2 - 3*t + 1);
     p1: = points[1] * ( 3*t3 - 6*t2 + 3*t);
     p2: = points[2] * (-3*t3 + 3*t2);
     p3: = points[3] * (   t3);
 
     return p0 + p1 + p2 + p3;
+}
+
+/*
+for t between [0,1] return a f(t) value such as:
+    f(0)=0
+    f(1)=1
+    f'(0)=tangent0 on the right side of 0
+    f'(1)=tangent1 on the left side of 1
+*/
+parametric_curve :: inline (tangent0: float, tangent1: float, t: float) -> float
+{
+    t2: = t*t;
+    t3: = t2*t;
+    return ((tangent0+tangent1-2) * t3) + ((-2*tangent0-tangent1+3) * t2) + (tangent0 * t);
 }
 
 approximate_closest_point_on_bezier_curve :: (point: $T, points: []T, iterations: int = 10) -> T, float

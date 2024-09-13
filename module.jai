@@ -5,6 +5,7 @@
 #load "pixel_perfect_viewport.jai";
 #load "resource.jai";
 #load "spline.jai";
+#load "curve.jai";
 #load "resources/spritesheet.jai";
 #load "resources/texture.jai";
 #load "tools/math.jai";

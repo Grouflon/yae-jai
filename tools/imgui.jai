@@ -91,6 +91,31 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
     modified: bool = false;
 
     if info.type == {
+        case .STRUCT;
+        {
+            if info ==
+            {
+                case type_info(Curve);
+                {
+                    modified = imgui_edit(label, cast(*Curve)value);
+                }
+
+                case; // Generic structs
+                {
+                    info_struct: = cast(*Type_Info_Struct) info;
+
+                    if ImGui.TreeNodeEx(c_label, .DefaultOpen)
+                    {
+                        defer ImGui.TreePop();
+
+                        for member_type_info: info_struct.members
+                        {
+                            modified = imgui_edit(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+                        }
+                    }
+                }
+            }
+        }
         case .BOOL;
         {
             modified = ImGui.Checkbox(c_label, value);
@@ -193,20 +218,6 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
         case .STRING;
         {
             modified = imgui_input_text(label, value);
-        }
-        case .STRUCT;
-        {
-            info_struct: = cast(*Type_Info_Struct) info;
-
-            if ImGui.TreeNodeEx(c_label, .DefaultOpen)
-            {
-                defer ImGui.TreePop();
-
-                for member_type_info: info_struct.members
-                {
-                    modified = imgui_edit(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
-                }
-            }
         }
     }
     return modified;
