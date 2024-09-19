@@ -270,5 +270,13 @@ parse_note :: (note_string: string) -> Note
     // find = sign, trim both sides, convert right side to all possible types
 }
 
+Value :: (prefix: *u8, v: Vector2)
+{
+    ImGui.Text("%: {%,%}", to_string(prefix), v.x, v.y);
+}
+
 ImGui:: #import "ImGui";
 #import "String";
+
+#poke_name ImGui Value;
+

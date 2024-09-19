@@ -64,8 +64,7 @@ curve_evaluate :: (using curve: Curve, x: float) -> float
 CurveEditor :: struct
 {
     edited_curve: *Curve;
-    scrolling: Vector2 = .{0,0};
-    zoom: Vector2 = .{1,1};
+    canvas: ImGuiCanvas;
 }
 curve_editor: CurveEditor;
 
@@ -91,39 +90,26 @@ imgui_edit :: (label: string, value: *Curve) -> bool
     };
     if edited_curve == value
     {
-        size: = ImGui.GetContentRegionAvail();
-        size.y = 200.0;
-        canvas_p0: = ImGui.GetCursorScreenPos(); 
-        canvas_p1: = canvas_p0 + size; 
-
-        draw_list: = ImGui.GetWindowDrawList();
-        ImGui.ImDrawList.AddRectFilled(draw_list, canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
-        ImGui.ImDrawList.AddRect(draw_list, canvas_p0, canvas_p1, IM_COL32(200, 200, 200, 255));
-
-        ImGui.InvisibleButton("canvas", size, .MouseButtonLeft | .MouseButtonRight);
-        is_hovered: = ImGui.IsItemHovered(); // Hovered
-        is_active: = ImGui.IsItemActive(); // Held
-        if ImGui.IsItemClicked(.Right)
+        if imgui_canvas_begin(*canvas, .{0, 300})
         {
-            
-        }
+            canvas_min, canvas_max: = imgui_canvas_bounds(*canvas);
 
-        ImGui.ImDrawList.PushClipRect(draw_list, canvas_p0, canvas_p1, true);
-        defer ImGui.ImDrawList.PopClipRect(draw_list);
+            SCREEN_STEP :: 2.0;
+            step: = (SCREEN_STEP / canvas.draw_size.x) * (canvas_max.x - canvas_min.x); 
+            x1: = canvas_min.x;
+            while x1 < canvas_max.x
+            {
+                x2: = x1 + step;
 
-        GRID_STEP :: 64.0;
-        x: = 0.0;
-        while x < size.x
-        {
-            ImGui.ImDrawList.AddLine(draw_list, .{canvas_p0.x + x, canvas_p0.y}, .{canvas_p0.x + x, canvas_p1.y}, IM_COL32(200, 200, 200, 40));
-            x += GRID_STEP;
+                y1: = curve_evaluate(edited_curve, x1);
+                y2: = curve_evaluate(edited_curve, x2);
+
+                imgui_canvas_draw_line(*canvas, .{x1, y1}, .{x2, y2});
+
+                x1 = x2;
+            }
         }
-        y: = 0.0;
-        while y < size.y
-        {
-            ImGui.ImDrawList.AddLine(draw_list, .{canvas_p0.x, canvas_p0.y + y}, .{canvas_p1.x, canvas_p0.y + y}, IM_COL32(200, 200, 200, 40));
-            y += GRID_STEP;
-        }
+        imgui_canvas_end(*canvas);
     }
     else
     {

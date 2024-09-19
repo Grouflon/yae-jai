@@ -6,10 +6,11 @@
 #load "resource.jai";
 #load "spline.jai";
 #load "curve.jai";
+#load "imgui/imgui.jai";
+#load "imgui/imgui_canvas.jai";
 #load "resources/spritesheet.jai";
 #load "resources/texture.jai";
 #load "tools/math.jai";
-#load "tools/imgui.jai";
 #load "tools/filesystem.jai";
 #load "tools/misc.jai";
 #load "tools/json.jai";
