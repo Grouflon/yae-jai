@@ -91,7 +91,7 @@ raylib_imgui_render :: ()
 
     for i: 0..draw_data.CmdListsCount-1
     {
-        command_list: = draw_data.CmdLists[i];
+        command_list: = << (draw_data.CmdLists.Data + i);
 
         for j: 0..command_list.CmdBuffer.Size-1
         {
