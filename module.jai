@@ -5,6 +5,7 @@
 #load "pixel_perfect_viewport.jai";
 #load "resource.jai";
 #load "spline.jai";
+#load "bounds.jai";
 #load "curve.jai";
 #load "imgui/imgui.jai";
 #load "imgui/imgui_canvas.jai";
