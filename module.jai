@@ -15,6 +15,7 @@
 #load "tools/misc.jai";
 #load "tools/json.jai";
 #load "tools/aseprite.jai";
+#load "tools/os.jai";
 #load "statemachine.jai";
 #load "serialization/serializer.jai";
 #load "serialization/json_serializer.jai";
