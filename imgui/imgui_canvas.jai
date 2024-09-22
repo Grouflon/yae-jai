@@ -40,7 +40,7 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
         {
             ZOOM_IN_FACTOR :: 1.1;
             ZOOM_OUT_FACTOR :: 0.9;
-            
+
             wanted_zoom: = zoom;
 
             if io.KeyCtrl
@@ -113,6 +113,14 @@ imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2,
     ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color.r, color.g, color.b, color.a), thickness);
 }
 
+imgui_canvas_curve_point :: (using canvas: *ImGuiCanvas, point: *CurvePoint) -> bool
+{
+    screen_position: = canvas_to_screen(canvas, point.position);
+    draw_list: = ImGui.GetWindowDrawList();
+    draw_handle(draw_list, screen_position, 11, rl.WHITE, 0.5);
+    return false;
+}
+
 imgui_canvas_bounds :: (using canvas: *ImGuiCanvas) -> (min: Vector2, max: Vector2)
 {
     canvas_min: = screen_to_canvas(canvas, draw_origin + .{0, draw_size.y});
@@ -146,6 +154,17 @@ canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
 }
 
 #scope_file
+
+draw_handle :: (draw_list: *ImGui.ImDrawList, center: Vector2, size: float, color: Color, alpha: float)
+{
+    stroke_color: = IM_COL32(color.r, color.g, color.b, 255);
+    bg_color: = IM_COL32(color.r, color.g, color.b, xx (255 * alpha));
+    size_v: = Vector2.{ size, size };
+    p_min: = center - (size_v * 0.5);
+    p_max: = center + (size_v * 0.5);
+    draw_list.AddRectFilled(draw_list, p_min, p_max, bg_color);
+    draw_list.AddRect(draw_list, p_min, p_max, stroke_color, thickness = 2.0);
+}
 
 canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: Vector2)
 {

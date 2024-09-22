@@ -108,6 +108,11 @@ imgui_edit :: (label: string, value: *Curve) -> bool
 
                 x1 = x2;
             }
+
+            for i: 0..edited_curve.points.count-1
+            {
+                imgui_canvas_curve_point(*canvas, edited_curve.points.data + i);
+            }
         }
         imgui_canvas_end(*canvas);
     }
