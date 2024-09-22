@@ -18,6 +18,38 @@ CurvePoint :: struct
     front_tangent: float;
 }
 
+curve_segment_bounds :: (p0: Vector2, d0: float, d1: float, p1: Vector2) -> Bounds
+{
+    bounds: = make_bounds(p0, p1);
+    normalized_bounds: = parametric_curve_bounds(d0, d1);
+    w: = width(bounds);
+    h: = height(bounds);
+
+    bounds.min.x = bounds.min.x + normalized_bounds.min.x * w;
+    bounds.min.y = bounds.min.y + normalized_bounds.min.y * h;
+    bounds.max.x = bounds.min.x + normalized_bounds.max.x * w;
+    bounds.max.y = bounds.min.y + normalized_bounds.max.y * h;
+
+    return bounds;
+}
+
+curve_bounds :: (using curve: Curve) -> Bounds
+{
+    if points.count == 0 { return .{}; }
+    bounds: = make_bounds(points[0].position);
+    for i: 0.. points.count - 2
+    {
+        segment_bounds: = curve_segment_bounds(
+            points[i].position,
+            points[i].front_tangent,
+            points[i+1].back_tangent,
+            points[i+1].position,
+        );
+        bounds = combine(bounds, segment_bounds);
+    }
+    return bounds;
+}
+
 curve_evaluate :: (using curve: Curve, x: float) -> float
 {
     if curve.points.count == 0 { return 0.0; }
@@ -92,12 +124,12 @@ imgui_edit :: (label: string, value: *Curve) -> bool
     {
         if imgui_canvas_begin(*canvas, .{0, 300})
         {
-            canvas_min, canvas_max: = imgui_canvas_bounds(*canvas);
+            canvas_bounds: = imgui_canvas_bounds(*canvas);
 
             SCREEN_STEP :: 2.0;
-            step: = (SCREEN_STEP / canvas.draw_size.x) * (canvas_max.x - canvas_min.x); 
-            x1: = canvas_min.x;
-            while x1 < canvas_max.x
+            step: = (SCREEN_STEP / canvas.draw_size.x) * (canvas_bounds.max.x - canvas_bounds.min.x); 
+            x1: = canvas_bounds.min.x;
+            while x1 < canvas_bounds.max.x
             {
                 x2: = x1 + step;
 
@@ -108,6 +140,8 @@ imgui_edit :: (label: string, value: *Curve) -> bool
 
                 x1 = x2;
             }
+
+            imgui_canvas_draw_bounds(*canvas, curve_bounds(<<value));
 
             for i: 0..edited_curve.points.count-1
             {
@@ -123,6 +157,8 @@ imgui_edit :: (label: string, value: *Curve) -> bool
         {
             curve_editor = .{};
             edited_curve = value;
+
+            bounds: = curve_bounds(<<value);
         }
     }
 

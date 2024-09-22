@@ -100,6 +100,26 @@ parametric_curve :: inline (tangent0: float, tangent1: float, t: float) -> float
     return ((tangent0+tangent1-2) * t3) + ((-2*tangent0-tangent1+3) * t2) + (tangent0 * t);
 }
 
+parametric_curve_bounds :: inline (tangent0: float, tangent1: float) -> Bounds
+{
+    bounds: Bounds;
+    bounds.min = .{0, 0};
+    bounds.max = .{1, 1};
+
+    a: = 3*tangent0 + 3*tangent1 - 6;
+    b: = -4*tangent0 - 2*tangent1 + 6;
+    c: = tangent0;
+
+    determinant: = sqrt(b*b - 4*a*c);
+    x0: = (-b + determinant) / (2*a);
+    x1: = (-b - determinant) / (2*a);
+
+    if x0 > 0 && x0 < 1 { bounds = expand(bounds, .{x0, parametric_curve(tangent0, tangent1, x0)}); }
+    if x1 > 0 && x1 < 1 { bounds = expand(bounds, .{x1, parametric_curve(tangent0, tangent1, x1)}); }
+
+    return bounds;
+}
+
 approximate_closest_point_on_bezier_curve :: (point: $T, points: []T, iterations: int = 10) -> T, float
 {
     assert(points.count == 4);

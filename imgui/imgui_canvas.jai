@@ -67,22 +67,22 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
 
         origin_col: = IM_COL32(200, 200, 200, 120);
         default_col: = IM_COL32(200, 200, 200, 40);
-        canvas_min, canvas_max: = imgui_canvas_bounds(canvas);
+        canvas_bounds: = imgui_canvas_bounds(canvas);
 
         {
-            x: = ceil(canvas_min.x);
-            while x < canvas_max.x
+            x: = ceil(canvas_bounds.min.x);
+            while x < canvas_bounds.max.x
             {
-                line_origin: = canvas_to_screen(canvas, .{x, canvas_min.y});
+                line_origin: = canvas_to_screen(canvas, .{x, canvas_bounds.min.y});
                 ImGui.ImDrawList.AddLine(draw_list, line_origin, .{line_origin.x, draw_origin.y}, ifx x == 0 then origin_col else default_col);
                 x += 1.0;
             }
         }
         {
-            y: = ceil(canvas_min.y);
-            while y < canvas_max.y
+            y: = ceil(canvas_bounds.min.y);
+            while y < canvas_bounds.max.y
             {
-                line_origin: = canvas_to_screen(canvas, .{canvas_min.x, y});
+                line_origin: = canvas_to_screen(canvas, .{canvas_bounds.min.x, y});
                 ImGui.ImDrawList.AddLine(draw_list, line_origin, .{draw_origin.x + draw_size.x, line_origin.y}, ifx y == 0 then origin_col else default_col);
                 y += 1.0;
             }
@@ -113,6 +113,18 @@ imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2,
     ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color.r, color.g, color.b, color.a), thickness);
 }
 
+imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: Color = rl.RED, thickness: float = 1.0)
+{
+    p_min: = canvas_to_screen(canvas, bounds.min);
+    p_max: = canvas_to_screen(canvas, bounds.max);
+    clean_min: = min(p_min, p_max);
+    clean_max: = max(p_min, p_max);
+
+    draw_list: = ImGui.GetWindowDrawList();
+
+    ImGui.ImDrawList.AddRect(draw_list, clean_min, clean_max, IM_COL32(color.r, color.g, color.b, color.a), thickness = thickness);
+}
+
 imgui_canvas_curve_point :: (using canvas: *ImGuiCanvas, point: *CurvePoint) -> bool
 {
     screen_position: = canvas_to_screen(canvas, point.position);
@@ -121,18 +133,18 @@ imgui_canvas_curve_point :: (using canvas: *ImGuiCanvas, point: *CurvePoint) -> 
     return false;
 }
 
-imgui_canvas_bounds :: (using canvas: *ImGuiCanvas) -> (min: Vector2, max: Vector2)
+imgui_canvas_bounds :: (using canvas: *ImGuiCanvas) -> Bounds
 {
     canvas_min: = screen_to_canvas(canvas, draw_origin + .{0, draw_size.y});
     canvas_max: = screen_to_canvas(canvas, draw_origin + .{draw_size.x, 0});
-    return canvas_min, canvas_max;
+    return make_bounds(canvas_min, canvas_max);
 }
 
-imgui_canvas_screen_bounds :: (using canvas: *ImGuiCanvas) -> (min: Vector2, max: Vector2)
+imgui_canvas_screen_bounds :: (using canvas: *ImGuiCanvas) -> Bounds
 {
     canvas_min: = draw_origin;
     canvas_max: = draw_origin + draw_size;
-    return canvas_min, canvas_max;
+    return make_bounds(canvas_min, canvas_max);
 }
 
 screen_to_canvas :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
