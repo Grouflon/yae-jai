@@ -36,6 +36,14 @@ depth :: inline (using bounds: Bounds3D) -> float
     return max.z - min.z;
 }
 
+dilate :: (bounds: $T/BoundsBase, size: T.vector_type) -> T
+{
+    return .{
+        bounds.min - size,
+        bounds.max + size,
+    };
+}
+
 expand :: (a: $T/BoundsBase, p: T.vector_type) -> T
 {
     return .{

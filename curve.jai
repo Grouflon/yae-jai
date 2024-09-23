@@ -141,14 +141,20 @@ imgui_edit :: (label: string, value: *Curve) -> bool
                 x1 = x2;
             }
 
-            imgui_canvas_draw_bounds(*canvas, curve_bounds(<<value));
-
             for i: 0..edited_curve.points.count-1
             {
                 imgui_canvas_curve_point(*canvas, edited_curve.points.data + i);
             }
         }
         imgui_canvas_end(*canvas);
+        if (ImGui.BeginPopupContextItem("curve_popup"))
+        {
+            if ImGui.Selectable("Fit canvas to curve")
+            {
+                imgui_canvas_request_fit_to_bounds(*canvas, curve_bounds(<<value), 20.0);
+            }
+            ImGui.EndPopup();
+        }
     }
     else
     {
@@ -158,7 +164,7 @@ imgui_edit :: (label: string, value: *Curve) -> bool
             curve_editor = .{};
             edited_curve = value;
 
-            bounds: = curve_bounds(<<value);
+            imgui_canvas_request_fit_to_bounds(*canvas, curve_bounds(<<value), 20.0);
         }
     }
 

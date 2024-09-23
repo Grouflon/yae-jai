@@ -5,6 +5,10 @@ ImGuiCanvas :: struct
     draw_origin: Vector2;
     draw_size: Vector2;
     grid_step: float = 64.0;
+
+    fit_to_bounds_requested: bool;
+    fit_bounds: Bounds;
+    fit_margin: float;
 }
 
 imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bool
@@ -17,6 +21,18 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
     draw_origin = ImGui.GetCursorScreenPos(); 
     draw_end: = draw_origin + draw_size;
 
+    if fit_to_bounds_requested
+    {
+        imgui_canvas_fit_to_points(
+            canvas,
+            draw_origin + .{0, draw_size.y} + .{fit_margin, -fit_margin},
+            fit_bounds.min,
+            draw_origin + .{draw_size.x, 0} + .{-fit_margin, fit_margin},
+            fit_bounds.max
+        );
+        fit_to_bounds_requested = false;
+    }
+
     opened: = ImGui.BeginChild(ImGui.GetID(canvas), draw_size);
 
     draw_list: = ImGui.GetWindowDrawList();
@@ -27,12 +43,12 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
         ImGui.ImDrawList.AddRectFilled(draw_list, draw_origin, draw_end, IM_COL32(50, 50, 50, 255));
         ImGui.ImDrawList.AddRect(draw_list, draw_origin, draw_end, IM_COL32(200, 200, 200, 255));
 
-        ImGui.InvisibleButton("canvas", draw_size, .MouseButtonLeft | .MouseButtonRight);
+        ImGui.InvisibleButton("canvas", draw_size, .MouseButtonLeft | .MouseButtonRight | .MouseButtonMiddle);
         ImGui.SetItemKeyOwner(.MouseWheelY);
         is_hovered: = ImGui.IsItemHovered(); // Hovered
         is_active: = ImGui.IsItemActive(); // Held
 
-        if (is_active && ImGui.IsMouseDragging(.Right))
+        if (is_active && ImGui.IsMouseDragging(.Middle))
         {
             scrolling += io.MouseDelta;
         }
@@ -147,6 +163,13 @@ imgui_canvas_screen_bounds :: (using canvas: *ImGuiCanvas) -> Bounds
     return make_bounds(canvas_min, canvas_max);
 }
 
+imgui_canvas_request_fit_to_bounds :: (using canvas: *ImGuiCanvas, canvas_bounds: Bounds, screen_margin: float = 0.0)
+{
+    fit_to_bounds_requested = true;
+    fit_bounds = canvas_bounds;
+    fit_margin = screen_margin;
+}
+
 screen_to_canvas :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
 {
     origin: = draw_origin + scrolling + .{0, draw_size.y};
@@ -166,6 +189,19 @@ canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
 }
 
 #scope_file
+
+imgui_canvas_fit_to_points :: (using canvas: *ImGuiCanvas, screen_p0: Vector2, canvas_p0: Vector2, screen_p1: Vector2, canvas_p1: Vector2)
+{
+    assert(length(draw_size) != 0); // Can't call this on a canvas that has never been displayed once
+    assert(screen_p0 != screen_p1);
+    assert(canvas_p0 != canvas_p1);
+
+    f: = Vector2.{grid_step, -grid_step};
+    zoom = ((screen_p1 - screen_p0) / (canvas_p1 - canvas_p0)) / f;
+
+    o: = draw_origin + .{0, draw_size.y};
+    scrolling = screen_p0 - o - (zoom * canvas_p0 * f);
+}
 
 draw_handle :: (draw_list: *ImGui.ImDrawList, center: Vector2, size: float, color: Color, alpha: float)
 {
