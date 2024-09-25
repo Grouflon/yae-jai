@@ -59,3 +59,8 @@ verify :: (result: bool) #expand
 {
     if !result { assert(false); }
 }
+
+rgba :: (color: Color, a: float) -> Color
+{
+    return Color.{color.r, color.g, color.b, xx (a * 255) };
+}

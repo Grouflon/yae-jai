@@ -141,12 +141,19 @@ imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: 
     ImGui.ImDrawList.AddRect(draw_list, clean_min, clean_max, IM_COL32(color.r, color.g, color.b, color.a), thickness = thickness);
 }
 
-imgui_canvas_curve_point :: (using canvas: *ImGuiCanvas, point: *CurvePoint) -> bool
+imgui_canvas_draw_handle :: (using canvas: *ImGuiCanvas, position: Vector2, size: float, color: Color)
 {
-    screen_position: = canvas_to_screen(canvas, point.position);
+    screen_position: = canvas_to_screen(canvas, position);
+    size_v: = Vector2.{ size, size };
+    p_min: = screen_position - (size_v * 0.5);
+    p_max: = screen_position + (size_v * 0.5);
+    THICKNESS :: 2.0;
+
     draw_list: = ImGui.GetWindowDrawList();
-    draw_handle(draw_list, screen_position, 11, rl.WHITE, 0.5);
-    return false;
+    stroke_color: = IM_COL32(color.r, color.g, color.b, 255);
+    bg_color: = IM_COL32(color.r, color.g, color.b, color.a);
+    draw_list.AddRectFilled(draw_list, p_min, p_max, bg_color);
+    draw_list.AddRect(draw_list, p_min, p_max, stroke_color, thickness = THICKNESS);
 }
 
 imgui_canvas_bounds :: (using canvas: *ImGuiCanvas) -> Bounds
@@ -201,17 +208,6 @@ imgui_canvas_fit_to_points :: (using canvas: *ImGuiCanvas, screen_p0: Vector2, c
 
     o: = draw_origin + .{0, draw_size.y};
     scrolling = screen_p0 - o - (zoom * canvas_p0 * f);
-}
-
-draw_handle :: (draw_list: *ImGui.ImDrawList, center: Vector2, size: float, color: Color, alpha: float)
-{
-    stroke_color: = IM_COL32(color.r, color.g, color.b, 255);
-    bg_color: = IM_COL32(color.r, color.g, color.b, xx (255 * alpha));
-    size_v: = Vector2.{ size, size };
-    p_min: = center - (size_v * 0.5);
-    p_max: = center + (size_v * 0.5);
-    draw_list.AddRectFilled(draw_list, p_min, p_max, bg_color);
-    draw_list.AddRect(draw_list, p_min, p_max, stroke_color, thickness = 2.0);
 }
 
 canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: Vector2)
