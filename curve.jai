@@ -95,25 +95,47 @@ curve_evaluate :: (using curve: Curve, x: float) -> float
     return 0.0;
 }
 
-set_curve_point_position :: (curve: *Curve, index: int, position: Vector2)
+curve_set_point_position :: (using curve: *Curve, index: int, position: Vector2)
 {
     assert(curve != null);
-    assert(index >= 0 && index < curve.points.count);
+    assert(index >= 0 && index < points.count);
 
     lower_limit: float = -FLOAT32_INFINITY;
     upper_limit: float = FLOAT32_INFINITY;
-    if index > 0 { lower_limit = curve.points[index-1].position.x; }
-    if index < curve.points.count-1 { upper_limit = curve.points[index+1].position.x; }
+    if index > 0 { lower_limit = points[index-1].position.x; }
+    if index < points.count-1 { upper_limit = points[index+1].position.x; }
 
-    curve.points[index].position = .{ clamp(position.x, lower_limit, upper_limit), position.y };
+    points[index].position = .{ clamp(position.x, lower_limit, upper_limit), position.y };
 }
 
-add_curve_point_position :: (curve: *Curve, index: int, delta: Vector2)
+curve_add_point_position :: (using curve: *Curve, index: int, delta: Vector2)
 {
     assert(curve != null);
-    assert(index >= 0 && index < curve.points.count);
+    assert(index >= 0 && index < points.count);
 
-    set_curve_point_position(curve, index, curve.points[index].position + delta);
+    curve_set_point_position(curve, index, points[index].position + delta);
+}
+
+curve_insert_point :: (using curve: *Curve, point: Vector2)
+{
+    assert(curve != null);
+
+    i: = 0;
+    while i < points.count
+    {
+        if point.x < points[i].position.x { break; }
+        i += 1;
+    }
+
+    array_insert_at(*curve.points, .{point, 0, 0 }, i);
+}
+
+curve_remove_point :: (using curve: *Curve, index: int)
+{
+    assert(curve != null);
+    assert(index >= 0 && index < points.count);
+
+    array_ordered_remove_by_index(*points, index);
 }
 
 CurveEditor :: struct
@@ -134,7 +156,9 @@ CurveEditor :: struct
     dragged_point: int = -1;
     dragged_part: PointPart;
 
+    context_menu_opened: bool = false;
     context_menu_point: int = -1;
+    context_menu_position: Vector2;
 }
 curve_editor: CurveEditor;
 
@@ -143,32 +167,25 @@ imgui_edit :: (label: string, value: *Curve) -> bool
     using curve_editor;
 
     STEPS :: 32;
-    FIT_MARGIN :: 70.0;
 
+    io: = ImGui.GetIO();
+    mouse_position: = ImGui.GetMousePos();
     edited: = false;
 
     if edited_curve == value
     {
+        mouse_distance_to_curve: = FLOAT32_INFINITY;
+        canvas_mouse_position: Vector2;
+
         if imgui_canvas_begin(*canvas, .{0, 300})
         {
-            tangent_screen_position :: (using canvas: *ImGuiCanvas, point: CurvePoint, sign: float) -> Vector2
-            {
-                assert(sign == 1.0 || sign == -1.0);
-
-                TANGENT_RADIUS :: 75.0;
-
-                point_screen: = canvas_to_screen(canvas, point.position);
-                tangent: = point.position + rotate(Vector2.{sign,0}, atan(ifx sign > 0 then point.front_tangent else point.back_tangent));
-                tangent_screen_direction: = normalize(canvas_to_screen(canvas, tangent) - point_screen);
-                return point_screen + tangent_screen_direction * TANGENT_RADIUS;
-            }
+            canvas_mouse_position = screen_to_canvas(*canvas, mouse_position);
 
             // Find point closest to mouse
             closest_point: = -1;
             closest_position: Vector2;
             closest_part: = PointPart.Point;
             closest_distance_squared: float = FLOAT32_INFINITY;
-            io: = ImGui.GetIO();
             for i: 0..edited_curve.points.count-1
             {
                 point: = edited_curve.points[i];
@@ -251,24 +268,22 @@ imgui_edit :: (label: string, value: *Curve) -> bool
                     {
                         case .Point;
                         {
-                            add_curve_point_position(edited_curve, dragged_point, d);
+                            curve_add_point_position(edited_curve, dragged_point, d);
                         }
 
                         case .FrontTangent;
                         {
-                            mouse_position: = ImGui.GetMousePos();
-                            canvas_mouse_position: = screen_to_canvas(*canvas, mouse_position);
-                            canvas_mouse_position.x = max(canvas_mouse_position.x, edited_curve.points[dragged_point].position.x);
-                            direction: = canvas_mouse_position - edited_curve.points[dragged_point].position;
+                            canvas_tangent_position: = canvas_mouse_position;
+                            canvas_tangent_position.x = max(canvas_mouse_position.x, edited_curve.points[dragged_point].position.x);
+                            direction: = canvas_tangent_position - edited_curve.points[dragged_point].position;
                             edited_curve.points[dragged_point].front_tangent = direction.y / direction.x;
                         }
 
                         case .BackTangent;
                         {
-                            mouse_position: = ImGui.GetMousePos();
-                            canvas_mouse_position: = screen_to_canvas(*canvas, mouse_position);
-                            canvas_mouse_position.x = min(canvas_mouse_position.x, edited_curve.points[dragged_point].position.x);
-                            direction: = canvas_mouse_position - edited_curve.points[dragged_point].position;
+                            canvas_tangent_position: = canvas_mouse_position;
+                            canvas_tangent_position.x = min(canvas_mouse_position.x, edited_curve.points[dragged_point].position.x);
+                            direction: = canvas_tangent_position - edited_curve.points[dragged_point].position;
                             edited_curve.points[dragged_point].back_tangent = direction.y / direction.x;
                         }
                     }
@@ -336,20 +351,52 @@ imgui_edit :: (label: string, value: *Curve) -> bool
         // Draw context menu
         if (ImGui.BeginPopupContextItem("curve_popup"))
         {
+            if !context_menu_opened
+            {
+                context_menu_opened = true;
+                context_menu_point = hovered_point;
+                context_menu_position = canvas_mouse_position;
+            }
+
+            // Distance to curve
+            closest_curve_point: = Vector2.{ context_menu_position.x, curve_evaluate(edited_curve, context_menu_position.x) };
+            mouse_distance_to_curve: = abs(canvas_to_screen(*canvas, closest_curve_point).y - canvas_to_screen(*canvas, context_menu_position).y);
+
             // Point hovered options
-            if context_menu_point < 0 { context_menu_point = hovered_point; }
             if context_menu_point >= 0
             {
                 x: = edited_curve.points[context_menu_point].position.x;
                 y: = edited_curve.points[context_menu_point].position.y;
-                if ImGui.InputFloat("x", *x, flags = .EnterReturnsTrue)
+                if ImGui.InputFloat("x", *x)
                 {
-                    set_curve_point_position(edited_curve, context_menu_point, .{x, y});
+                    curve_set_point_position(edited_curve, context_menu_point, .{x, y});
                     edited = true;
                 }
-                if ImGui.InputFloat("y", *y, flags = .EnterReturnsTrue)
+                if ImGui.InputFloat("y", *y)
                 {
-                    set_curve_point_position(edited_curve, context_menu_point, .{x, y});
+                    curve_set_point_position(edited_curve, context_menu_point, .{x, y});
+                    edited = true;
+                }
+
+                if ImGui.Selectable("Remove point")
+                {
+                    curve_remove_point(edited_curve, context_menu_point);
+                    edited = true;
+                }
+            }
+            else if edited_curve.points.count < 2
+            {
+                if ImGui.Selectable("Add point")
+                {
+                    curve_insert_point(edited_curve, context_menu_position);
+                    edited = true;
+                }
+            }
+            else if mouse_distance_to_curve < 10.0
+            {
+                if ImGui.Selectable("Add point")
+                {
+                    curve_insert_point(edited_curve, closest_curve_point);
                     edited = true;
                 }
             }
@@ -357,14 +404,18 @@ imgui_edit :: (label: string, value: *Curve) -> bool
             // Common options
             if ImGui.Selectable("Fit canvas to curve")
             {
-                imgui_canvas_request_fit_to_bounds(*canvas, curve_bounds(<<value), FIT_MARGIN);
+                fit_canvas_to_curve(*canvas, value);
+            }
+            if ImGui.Selectable("Close canvas")
+            {
+                edited_curve = null;
             }
 
             ImGui.EndPopup();
         }
         else
         {
-            context_menu_point = -1;
+            context_menu_opened = false;
         }
     }
     else
@@ -391,7 +442,8 @@ imgui_edit :: (label: string, value: *Curve) -> bool
             curve_editor = .{};
             edited_curve = value;
 
-            imgui_canvas_request_fit_to_bounds(*canvas, curve_bounds(<<value), FIT_MARGIN);
+            fit_canvas_to_curve(*canvas, value);
+
         }
     }
 
@@ -399,6 +451,38 @@ imgui_edit :: (label: string, value: *Curve) -> bool
 }
 
 #scope_file
+
+tangent_screen_position :: (using canvas: *ImGuiCanvas, point: CurvePoint, sign: float) -> Vector2
+{
+    assert(sign == 1.0 || sign == -1.0);
+
+    TANGENT_RADIUS :: 75.0;
+
+    point_screen: = canvas_to_screen(canvas, point.position);
+    tangent: = point.position + rotate(Vector2.{sign,0}, atan(ifx sign > 0 then point.front_tangent else point.back_tangent));
+    tangent_screen_direction: = normalize(canvas_to_screen(canvas, tangent) - point_screen);
+    return point_screen + tangent_screen_direction * TANGENT_RADIUS;
+}
+
+fit_canvas_to_curve :: (canvas: *ImGuiCanvas, curve: *Curve)
+{
+    FIT_MARGIN :: 70.0;
+    bounds: Bounds;
+    if curve.points.count == 0
+    {
+        bounds = .{ .{0,0}, .{1,1} };
+    }
+    else if curve.points.count == 1
+    {
+        bounds = .{ curve.points[0].position, curve.points[0].position + .{1,1} };
+    }
+    else
+    {
+        bounds = curve_bounds(curve);
+    }
+
+    imgui_canvas_request_fit_to_bounds(canvas, bounds, FIT_MARGIN);
+}
 
 ImGui:: #import "ImGui";
 rl:: #import "raylib";
