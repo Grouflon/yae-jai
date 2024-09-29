@@ -34,7 +34,3 @@ change_state :: (sm: *StateMachine, state: sm.State_Type)
 		next_state.enter(sm.userdata);
 	}
 }
-
-#scope_file
-
-#import "Basic";
