@@ -127,7 +127,7 @@ resource_get :: ($T: Type, name: string) -> *T
     resource, found: = table_find(*resource_by_name, name);
     if found && resource.type != T
     {
-        log_error("Can't get Resource \"%\": Does not match the requested type (is %, expects %).", );
+        log_error("Can't get Resource \"%\": Does not match the requested type (is %, expects %).", name, resource.type, T);
         return null;
     }
 

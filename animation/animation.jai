@@ -1,55 +1,29 @@
-Animation :: struct
-{
-    texture: Texture2D;
-    data: *AsepriteData;
-    index: s32 = -1;
-}
-
-operator == :: (a: Animation, b: Animation) -> bool
-{
-    if a.texture.id != b.texture.id { return false; }
-    if a.data != b.data { return false; }
-    if a.index != b.index { return false; }
-    return true;
-}
-
 AnimationPlayer :: struct
 {
     play_rate : float = 1.0;
 
-    current_animation: Animation;
+    current_spritesheet: *Spritesheet;
+    current_animation: string;
     current_frame: s32 = -1;
     current_time_ms: float;
     current_repeat_count: s32;
     is_playing: bool;
 }
 
-is_animation_valid :: (using animation: Animation) -> bool
-{
-    if texture.id == 0 { return false; }
-    if data == null { return false; }
-    if index < 0 { return false; }
-
-    return true;
-}
-
-animation_get_duration :: (using animation: Animation) -> s32
-{
-    if !is_animation_valid(animation) { return -1; }
-
-    return data.frame_tags[index].duration_in_ms;
-}
-
-animation_player_play :: (using player: *AnimationPlayer, animation: Animation)
+animation_player_play :: (using player: *AnimationPlayer, spritesheet: *Spritesheet, animation_name: string)
 {
     assert(player != null);
-    if !is_animation_valid(animation) { return; }
-    if current_animation == animation { return;}
+    assert(spritesheet != null);
+
+    tag: = get_aseprite_tag(spritesheet, animation_name);
+    if tag == null { return; }
+    if tag == get_aseprite_tag(current_spritesheet, current_animation) { return; }
 
     animation_player_stop(player);
 
     play_rate = 1.0;
-    current_animation = animation;
+    current_spritesheet = spritesheet;
+    current_animation = animation_name;
     current_time_ms = 0.0;
     current_frame = -1;
     current_repeat_count = 0;
@@ -67,14 +41,23 @@ animation_player_stop :: (using player: *AnimationPlayer)
     }
 }
 
+animation_player_advance_frame :: (using player: *AnimationPlayer)
+{
+    assert(player != null);
+    if current_spritesheet == null { return; }
+
+    animation_player_update(player, current_spritesheet.frame_duration);
+}
+
 animation_player_update :: (using player: *AnimationPlayer, dt: float)
 {
     assert(player != null);
 
     if !is_playing { return; }
-    if !is_animation_valid(current_animation) { return; }
 
-    animation_data: = current_animation.data.frame_tags[current_animation.index];
+    animation_data: = get_aseprite_tag(current_spritesheet, current_animation);
+    if animation_data == null { return; }
+
     animation_duration: = cast(float) animation_data.duration_in_ms;
 
     // Update loops
@@ -94,7 +77,7 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     time_in_ms: s32 = floor_to_s32(current_time_ms);
     for i: animation_data.start_frame..animation_data.end_frame
     {
-        frame: = current_animation.data.frames[i];
+        frame: = current_spritesheet.data.frames[i];
         if time_in_ms <= duration + frame.duration_in_ms
         {
             current_frame = i;
@@ -114,9 +97,13 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
 {
     assert(player != null);
 
-    if !is_animation_valid(current_animation) { return; }
-    if (current_frame < 0 || current_frame >= current_animation.data.frames.count) { return; }
+    if current_spritesheet == null { return; }
+    if current_spritesheet.texture == null { return; }
 
-    draw_sprite(position, current_animation.texture, current_animation.data, current_frame, flip_x, flip_y, tint);
+    tag: = get_aseprite_tag(current_spritesheet, current_animation);
+    if tag == null { return; }
+
+    if (current_frame < 0 || current_frame >= current_spritesheet.data.frames.count) { return; }
+
+    draw_sprite(position, current_spritesheet.texture.texture, *current_spritesheet.data, current_frame, flip_x, flip_y, tint);
 }
-
