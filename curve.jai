@@ -162,7 +162,7 @@ CurveEditor :: struct
 }
 curve_editor: CurveEditor;
 
-imgui_edit :: (label: string, value: *Curve) -> bool
+EditValue :: (label: string, value: *Curve) -> bool
 {
     using curve_editor;
 
@@ -485,4 +485,6 @@ fit_canvas_to_curve :: (canvas: *ImGuiCanvas, curve: *Curve)
 }
 
 ImGui:: #import "ImGui";
+#poke_name ImGui EditValue;
+
 rl:: #import "raylib";

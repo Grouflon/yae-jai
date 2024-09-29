@@ -1,14 +1,16 @@
-IM_COL32_R_SHIFT :: 0;
-IM_COL32_G_SHIFT :: 8;
-IM_COL32_B_SHIFT :: 16;
-IM_COL32_A_SHIFT :: 24;
-
 IM_COL32 :: (r: u8, g: u8, b: u8, a: u8) -> u32 #expand
 {
     return ((cast(u32)r) << IM_COL32_R_SHIFT) | ((cast(u32)g) << IM_COL32_G_SHIFT) | ((cast(u32)b) << IM_COL32_B_SHIFT) | ((cast(u32)a) << IM_COL32_A_SHIFT);
 }
 
-imgui_input_text :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
+#scope_file
+
+IM_COL32_R_SHIFT :: 0;
+IM_COL32_G_SHIFT :: 8;
+IM_COL32_B_SHIFT :: 16;
+IM_COL32_A_SHIFT :: 24;
+
+InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
 {
     InputTextCallback_UserData :: struct
     {
@@ -62,12 +64,12 @@ imgui_input_text :: (label: string, str: *string, flags: ImGui.InputTextFlags = 
     return ImGui.InputText(temp_c_string(label), buffer, xx (str.count+1), flags, InputText_Callback, *cb_user_data);
 }
 
-imgui_edit :: (label: string, value: *$T) -> bool
+EditValue :: (label: string, value: *$T) -> bool
 {
-    return imgui_edit(label, value, type_info(T));
+    return EditValue(label, value, type_info(T));
 }
 
-imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
+EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
 {
     // Parse metadata
     WidgetType :: enum
@@ -107,7 +109,7 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
             {
                 case type_info(Curve);
                 {
-                    modified = imgui_edit(label, cast(*Curve)value);
+                    modified = EditValue(label, cast(*Curve)value);
                 }
 
                 case; // Generic structs
@@ -120,7 +122,7 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
 
                         for member_type_info: info_struct.members
                         {
-                            modified = imgui_edit(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+                            modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
                         }
                     }
                 }
@@ -227,13 +229,11 @@ imgui_edit :: (label: string, value: *void, info: *Type_Info, notes: []string = 
         }
         case .STRING;
         {
-            modified = imgui_input_text(label, value);
+            modified = InputText(label, value);
         }
     }
     return modified;
 }
-
-#scope_file
 
 Note :: struct
 {
@@ -247,6 +247,11 @@ Note :: struct
 
     name: string;
     value: Value;
+}
+
+Value :: (prefix: *u8, v: Vector2)
+{
+    ImGui.Text("%: {%,%}", to_string(prefix), v.x, v.y);
 }
 
 parse_note :: (note_string: string) -> Note
@@ -270,13 +275,10 @@ parse_note :: (note_string: string) -> Note
     // find = sign, trim both sides, convert right side to all possible types
 }
 
-Value :: (prefix: *u8, v: Vector2)
-{
-    ImGui.Text("%: {%,%}", to_string(prefix), v.x, v.y);
-}
-
 ImGui:: #import "ImGui";
 #import "String";
 
 #poke_name ImGui Value;
+#poke_name ImGui InputText;
+#poke_name ImGui EditValue;
 
