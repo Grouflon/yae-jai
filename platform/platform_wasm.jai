@@ -1,6 +1,26 @@
 #scope_export
 
 create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void #foreign;
+create_opengl_context :: () #foreign;
+get_canvas_size :: () -> Vector2 #foreign;
+read_and_decode_texture :: (filename: string, allocator: *Allocator) -> TextureData #foreign;
+preload :: (filename: string, file_type: PreloadFileType) #foreign;
+
+get_console_window_handle :: () -> *void
+{
+    return null;
+}
+
+get_window_position :: (window_handle: *void) -> width: int, height: int
+{
+    return 0, 0;
+}
+
+get_window_size :: (window_handle: *void) -> width: int, height: int
+{
+    size: = get_canvas_size();
+    return xx size.x, xx size.y;
+}
 
 update_input_events :: ()
 {
@@ -48,8 +68,6 @@ on_key_event :: (key_code: u32, pressed: bool)
     });
 }
 
-create_opengl_context :: () #foreign;
-
 init_opengl_context :: (window: *void)
 {
     create_opengl_context();
@@ -61,9 +79,7 @@ swap_buffers :: (window: *void)
 
 }
 
-load_texture_data :: (filename: string, allocator: *Allocator) -> TextureData #foreign;
-preload :: (filename: string, file_type: PreloadFileType) #foreign;
-
+#scope_file
 // GL bindings
 gl_load_wasm :: (procs: *GL_Procedures)
 {
@@ -89,10 +105,12 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glCreateProgram = _glCreateProgram;
     procs.glAttachShader = _glAttachShader;
     procs.glLinkProgram = _glLinkProgram;
+    procs.glDeleteProgram = _glDeleteProgram;
     procs.glGetProgramiv = _glGetProgramiv;
     procs.glGetProgramInfoLog = _glGetProgramInfoLog;
     procs.glUseProgram = _glUseProgram;
     procs.glDrawArrays = _glDrawArrays;
+    procs.glDrawElements = _glDrawElements;
     procs.glActiveTexture = _glActiveTexture;
     procs.glGenTextures = _glGenTextures;
     procs.glBindTexture = _glBindTexture;
@@ -100,7 +118,6 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glTexImage2D = _glTexImage2D;
     procs.glGetUniformLocation = _glGetUniformLocation;
     procs.glUniform1i = _glUniform1i;
-
 }
 
 _glGetString :: (pname: GLenum) -> *GLubyte #foreign;
@@ -125,10 +142,12 @@ _glDeleteShader :: (shader: GLuint) #foreign;
 _glCreateProgram :: () -> GLuint #foreign;
 _glAttachShader :: (program: GLuint, shader: GLuint) #foreign;
 _glLinkProgram :: (program: GLuint) #foreign;
+_glDeleteProgram :: (shader: GLuint) #foreign;
 _glGetProgramiv :: (program: GLuint, pname: GLenum, params: *GLint) #foreign;
 _glGetProgramInfoLog :: (program: GLuint, bufSize: GLsizei, length: *GLsizei, infoLog: *GLchar) #foreign;
 _glUseProgram :: (program: GLuint) #foreign;
 _glDrawArrays :: (mode: GLenum, first: GLint, count: GLsizei) #foreign;
+_glDrawElements :: (mode: GLenum, count: GLsizei, type: GLenum, offset: *void) #foreign;
 _glActiveTexture :: (texture: GLenum) #foreign;
 _glGenTextures :: (n: GLsizei, textures: *GLuint) #foreign;
 _glBindTexture :: (target: GLenum, texture: GLuint) #foreign;
@@ -136,8 +155,6 @@ _glTexParameteri :: (target: GLenum, pname: GLenum, param: GLint) #foreign;
 _glTexImage2D :: (target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, type: GLenum, pixels: *void) #foreign;
 _glGetUniformLocation :: (program: GLuint, name: *GLchar) -> GLint #foreign;
 _glUniform1i :: (location: GLint, v0: GLint) #foreign;
-
-#scope_file
 
 wasm_to_jai_key_code :: (key_code: u32) -> Key_Code
 {
@@ -181,7 +198,7 @@ wasm_to_jai_key_code :: (key_code: u32) -> Key_Code
 
 pending_events : [..]Event;
 
-
+// Input shenanigans
 Window_Type :: *void;
 INVALID_WINDOW : Window_Type : null;
 #poke_name Input Window_Type;

@@ -48,7 +48,7 @@ function read_float32(ptr)
 {
     ptr = Number(ptr);
     const buffer = w.instance.exports.memory.buffer;
-    return new Float32Array(buffer)[ptr/4];
+    return new Float32Array(buffer, ptr, 4)[0];
 }
 
 function read_u8(ptr)
@@ -117,6 +117,16 @@ function write_cstring(ptr, str)
     var bytes = new Uint8Array(buffer);
     bytes.set(str_bytes, Number(ptr));
     bytes.set(0, Number(ptr) + str_bytes.byteLength);
+}
+
+function write_float32(ptr, n)
+{
+    console.assert(typeof n == "number", "n is not a number", n);
+    ptr = Number(ptr);
+
+    const buffer = w.instance.exports.memory.buffer;
+    const float_bytes = new Float32Array(buffer, ptr, 4);
+    float_bytes[0] = n;
 }
 
 function write_u32(ptr, n)
@@ -423,6 +433,7 @@ const gl_exports =
 
     _glDeleteShader: (shader_index) =>
     {
+        //TODO: also release index
         gl.deleteShader(gl.get_shader(shader_index));
     },
 
@@ -440,6 +451,12 @@ const gl_exports =
     _glLinkProgram: (program_index) =>
     {
         gl.linkProgram(gl.get_program(program_index));
+    },
+
+    _glDeleteProgram: (program_index) =>
+    {
+        //TODO: also release index
+        gl.deleteProgram(gl.get_program(program_index));
     },
 
     _glGetProgramiv: (program_index, pname, params) =>
@@ -470,6 +487,11 @@ const gl_exports =
     _glDrawArrays: (mode, first, count) =>
     {
         gl.drawArrays(mode, first, count);
+    },
+
+    _glDrawElements: (mode, count, type, offset) =>
+    {
+        gl.drawElements(mode, Number(count), type, Number(offset));
     },
 
     _glActiveTexture: (texture) =>
@@ -567,7 +589,13 @@ const backend_exports =
         return 1n;
     },
 
-    load_texture_data: (out, filename, allocator) =>
+    get_canvas_size: (out) =>
+    {
+        write_float32(out, canvas.width);
+        write_float32(out + 4n, canvas.height);
+    },
+
+    read_and_decode_texture: (out, filename, allocator) =>
     {
         filename = read_jstring(filename);
         const image_data = preload_data[filename];

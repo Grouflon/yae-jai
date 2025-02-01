@@ -8,10 +8,6 @@ Application :: struct
     window: *void;
     stop_requested: bool;
 
-    // TODO: should request from window instead of storing in the struct
-    width: int;
-    height: int;
-
     preload_function: PreloadFunction;
     init_function: InitFunction;
     update_function: UpdateFunction;
@@ -34,9 +30,6 @@ app: Application;
 
 application_run :: (parameters: ApplicationParameters)
 {
-    app.width = parameters.width;
-    app.height = parameters.height;
-
     app.preload_function = parameters.preload_function;
     app.init_function = parameters.init_function;
     app.update_function = parameters.update_function;
@@ -80,7 +73,7 @@ application_preload :: ()
 
 application_init :: ()
 {
-    init_opengl_context(app.window);
+    renderer_init(app.window);
 
     if app.init_function != null then app.init_function();
 }
@@ -114,6 +107,8 @@ application_update :: (dt: float32)
 application_shutdown :: ()
 {
     if app.shutdown_function != null then app.shutdown_function();
+
+    renderer_shutdown();
 }
 
 #scope_file

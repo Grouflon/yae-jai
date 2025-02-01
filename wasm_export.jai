@@ -1,4 +1,5 @@
 // WASM callbacks
+
 wasm_on_update :: (dt: float32) #c_call
 {
     push_context

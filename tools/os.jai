@@ -1,16 +1,4 @@
 
-get_console_window_handle :: () -> *void
-{
-#if OS == .WINDOWS
-{
-    return GetConsoleWindow();
-}
-else
-{
-    return null;
-}
-}
-
 find_window_by_title_containing :: (substring: string) -> *void
 {
     #if OS == .WINDOWS
@@ -46,20 +34,6 @@ find_window_by_title_containing :: (substring: string) -> *void
     else
     {
         return null;
-    }
-}
-
-get_window_position :: (handle: *void) -> (x: int, y: int, width: int, height: int)
-{
-    #if OS == .WINDOWS
-    {
-        rect: Windows.RECT;
-        Windows.GetWindowRect(handle, *rect);
-        return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top;
-    }
-    else
-    {
-        return 0,0,0,0;
     }
 }
 

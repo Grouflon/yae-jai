@@ -4,6 +4,25 @@ create_window :: (width: int, height: int, window_name: string, background_color
     return create_window(width, height, window_name, background_color_rgb = rgb);
 }
 
+get_console_window_handle :: () -> *void
+{
+    return GetConsoleWindow();
+}
+
+get_window_position :: (window_handle: *void) -> width: int, height: int
+{
+    rect: Windows.RECT;
+    Windows.GetWindowRect(window_handle, *rect);
+    return rect.left, rect.top;
+}
+
+get_window_size :: (window_handle: *void) -> width: int, height: int
+{
+    rect: Windows.RECT;
+    Windows.GetWindowRect(window_handle, *rect);
+    return rect.right - rect.left, rect.bottom - rect.top;
+}
+
 update_input_events :: ()
 {
     update_window_events();
@@ -22,11 +41,11 @@ init_opengl_context :: (window: *void)
 
 swap_buffers :: (window: *void)
 {
-    dc := GetDC(window);
-    SwapBuffers(dc);
+    dc := Windows.GetDC(window);
+    Windows.SwapBuffers(dc);
 }
 
-load_texture_data :: (filename: string, allocator: *Allocator) -> TextureData
+read_and_decode_texture :: (filename: string, allocator: *Allocator) -> TextureData
 {
     push_allocator(allocator);
 
@@ -46,9 +65,16 @@ preload :: (filename: string, file_type: PreloadFileType) {}
 
 #scope_file
 
+GetConsoleWindow :: () -> Windows.HWND #foreign kernel32;
+GetWindowTextA :: (window: Windows.HWND, out_str: *u8, max_string_length: s32) -> s32 #foreign user32;
+EnumWindows :: (f: #type (window: Windows.HWND, data: *void) -> bool #c_call, data: *void) -> bool #foreign user32;
+
+Windows :: #import "Windows";
+kernel32 :: #system_library "kernel32";
+user32 :: #system_library "user32";
+
 #import "Input";
 #import "Window_Creation";
 #import "GL"(DUMP_GL_ERRORS = true);
-#import "Windows";
 #import "File";
 #import "stb_image";

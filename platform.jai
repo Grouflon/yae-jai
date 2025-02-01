@@ -1,6 +1,6 @@
 // API
 
-DEFAULT_WINDOW_CREATION_COLOR :: Color.{38,38,51,255};
+DEFAULT_WINDOW_CREATION_COLOR :: Vector4.{38,38,51,255};
 
 TextureData :: struct
 {
@@ -17,6 +17,8 @@ PreloadFileType :: enum
 }
 
 // create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void;
+// get_window_size :: (window_handle: *void) -> int, int;
+// get_window_position :: (window_handle: *void) -> int, int;
 // update_input_events :: ();
 // init_opengl_context :: (window: *void);
 // swap_buffers :: (window: *void);
@@ -25,9 +27,9 @@ PreloadFileType :: enum
 
 #if OS == .WINDOWS
 {
-    #load "backend_windows.jai";
+    #load "platform/platform_windows.jai";
 }
 #if OS == .WASM
 {
-    #load "backend_wasm.jai";
+    #load "platform/platform_wasm.jai";
 }

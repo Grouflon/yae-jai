@@ -1,6 +1,8 @@
-#load "types.jai";
+Color :: Vector4;
+
 #load "application.jai";
-#load "backend/backend.jai";
+#load "platform.jai";
+#load "renderer.jai";
 
 #import "Basic";
 #import "Math";
