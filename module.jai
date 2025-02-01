@@ -3,6 +3,7 @@ Color :: Vector4;
 #load "application.jai";
 #load "platform.jai";
 #load "renderer.jai";
+#load "camera.jai";
 
 #import "Basic";
 #import "Math";
