@@ -30,37 +30,3 @@ fletcher32_checksum :: (data: *u8, len: s32) -> s32
     sum2 = (sum2 & 0xffff) + (sum2 >> 16);
     return sum2 << 16 | sum1;
 }
-
-// Array Helpers
-first :: inline (array: []$T) -> T
-{
-    assert(array.count > 0);
-    return array[0];
-}
-
-last :: inline (array: []$T) -> T
-{
-    assert(array.count > 0);
-    return array[array.count - 1];
-}
-
-array_back :: (array: []$T) -> *T
-{
-    if array.count <= 0 { return null; }
-    return array.data + (array.count-1);
-}
-
-array_clear :: (array: *[..]$T)
-{
-    array.count = 0;
-}
-
-verify :: (result: bool) #expand
-{
-    if !result { assert(false); }
-}
-
-rgba :: (color: Color, a: float) -> Color
-{
-    return Color.{color.r, color.g, color.b, xx (a * 255) };
-}
