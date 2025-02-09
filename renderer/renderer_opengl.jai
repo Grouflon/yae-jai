@@ -12,10 +12,11 @@ OpenGLRenderer :: struct
     vbo: GLuint;
     ibo: GLuint;
 
+    // Maybe all this could go to a renderer agnostic command buffer thingy
     is_drawing: bool;
     vertex_buffer: [..]Vertex;
     index_buffer: [..]u16;
-    clear_color: Color;
+    camera_stack: [..]Camera;
 }
 renderer: OpenGLRenderer;
 
@@ -30,10 +31,6 @@ renderer_init :: (window_handle: *void)
     }
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
-
-    width, height: = get_window_size(app.window);
-    GL_VERIFY(glViewport(0, 0, xx width, xx height));
-    GL_VERIFY(glScissor(0, 0, xx width, xx height));
 
     // Generic shader
     vertex_shader: = create_shader(GL_VERTEX_SHADER, .[GENERIC_VERTEX_SHADER_SRC]);
@@ -79,6 +76,10 @@ begin_draw :: ()
     using renderer;
     assert(!is_drawing);
 
+    width, height: = get_window_size(app.window);
+    GL_VERIFY(glViewport(0, 0, xx width, xx height));
+    GL_VERIFY(glScissor(0, 0, xx width, xx height));
+
     is_drawing = true;
 }
 
@@ -86,6 +87,11 @@ end_draw :: ()
 {
     using renderer;
     assert(is_drawing);
+
+    location: = glGetUniformLocation(generic_shader_program, "uMvp");
+    camera: = peek(camera_stack);
+    mvp: = camera_to_vp_matrix(camera);
+    GL_VERIFY(glUniformMatrix4fv(location, 1, GL_TRUE, cast(*GLfloat)*mvp));
 
     GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
     GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
@@ -166,6 +172,18 @@ shader_uniform_texture :: (shader_program: u32, uniform_name: string, texture: u
     GL_VERIFY(glUniform1i(texture_location, 0));
 }
 
+push_camera :: (camera: Camera)
+{
+    using renderer;
+    array_add(*camera_stack, camera);
+}
+
+pop_camera :: ()
+{
+    using renderer;
+    pop(*camera_stack);
+}
+
 #scope_file
 
 GENERIC_VERTEX_SHADER_SRC :: #string END
@@ -179,11 +197,11 @@ layout (location = 2) in vec4 inColor;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 
-uniform sampler2D uTexture;
+uniform mat4 uMvp;
 
 void main()
 {
-    gl_Position = vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
+    gl_Position = uMvp * vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
     fragTexCoord = inTexCoord;
     fragColor = inColor;
 }

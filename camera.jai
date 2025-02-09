@@ -53,9 +53,9 @@ camera_to_vp_matrix :: (camera: Camera) -> Matrix4
         );
     }
     view: = Matrix4_Identity;
-    translate(*view, camera.position);
-    rotate(*view, camera.rotation);
-    inverse(*view);
+    view = translate(view, camera.position);
+    view = rotate(view, camera.rotation);
+    view = inverse(view);
     return projection * view;
 }
 

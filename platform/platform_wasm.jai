@@ -22,6 +22,12 @@ get_window_size :: (window_handle: *void) -> width: int, height: int
     return xx size.x, xx size.y;
 }
 
+get_viewport_size :: (window_handle: *void) -> int, int
+{
+    size: = get_canvas_size();
+    return xx size.x, xx size.y;
+}
+
 update_input_events :: ()
 {
     input_per_frame_event_and_flag_update();
@@ -118,6 +124,7 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glTexImage2D = _glTexImage2D;
     procs.glGetUniformLocation = _glGetUniformLocation;
     procs.glUniform1i = _glUniform1i;
+    procs.glUniformMatrix4fv = _glUniformMatrix4fv;
 }
 
 _glGetString :: (pname: GLenum) -> *GLubyte #foreign;
@@ -155,6 +162,7 @@ _glTexParameteri :: (target: GLenum, pname: GLenum, param: GLint) #foreign;
 _glTexImage2D :: (target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, type: GLenum, pixels: *void) #foreign;
 _glGetUniformLocation :: (program: GLuint, name: *GLchar) -> GLint #foreign;
 _glUniform1i :: (location: GLint, v0: GLint) #foreign;
+_glUniformMatrix4fv :: (location: GLint, count: GLsizei, transpose: GLboolean, value: *GLfloat) #foreign;
 
 wasm_to_jai_key_code :: (key_code: u32) -> Key_Code
 {

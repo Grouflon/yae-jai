@@ -23,6 +23,13 @@ get_window_size :: (window_handle: *void) -> width: int, height: int
     return rect.right - rect.left, rect.bottom - rect.top;
 }
 
+get_viewport_size :: (window_handle: *void) -> width: int, height: int
+{
+    rect: Windows.RECT;
+    Windows.GetClientRect(window_handle, *rect);
+    return rect.right - rect.left, rect.bottom - rect.top;
+}
+
 update_input_events :: ()
 {
     update_window_events();

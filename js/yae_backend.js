@@ -552,6 +552,14 @@ const gl_exports =
     {
         gl.uniform1i(gl.get_location(location_index), v0);
     },
+
+    _glUniformMatrix4fv: (location_index, count, transpose, value) =>
+    {
+        // Not sure how to handle more than 1 matrix. Let's try to just give a bigger array
+        const buffer = w.instance.exports.memory.buffer;
+        matrix_data = new Float32Array(buffer, Number(value), count * 16);
+        gl.uniformMatrix4fv(gl.get_location(location_index), transpose, matrix_data);
+    },
 }
 
 let preload_count = 0;

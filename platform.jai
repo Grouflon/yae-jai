@@ -18,13 +18,18 @@ PreloadFileType :: enum
 
 // create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void;
 // get_window_size :: (window_handle: *void) -> int, int;
-get_window_size :: () -> int, int { w, h: = get_window_size(app.window); return w, h; }
+// get_viewport_size :: (window_handle: *void) -> int, int;
 // get_window_position :: (window_handle: *void) -> int, int;
 // update_input_events :: ();
 // init_opengl_context :: (window: *void);
 // swap_buffers :: (window: *void);
 // load_texture_data :: (filename: string, allocator: *Allocator) -> TextureData;
 // preload :: (filename: string, file_type: PreloadFileType);
+
+get_window_width :: () -> int { w, h: = get_window_size(app.window); return w; }
+get_window_height :: () -> int { w, h: = get_window_size(app.window); return h; }
+get_window_size :: () -> int, int { w, h: = get_window_size(app.window); return w, h; }
+get_viewport_size :: () -> int, int { w, h: = get_viewport_size(app.window); return w, h; }
 
 #if OS == .WINDOWS
 {
