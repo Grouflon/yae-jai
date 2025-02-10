@@ -1,8 +1,18 @@
+RENDERER_INVALID_HANDLE :: 0;
+TextureHandle :: GLuint;
+
 Vertex :: struct
 {
     position: Vector3;
     uv: Vector2;
     color: Vector4;
+}
+
+DrawCommand :: struct
+{
+    start_index: u32;
+    size: u32;
+    texture: TextureHandle;
 }
 
 OpenGLRenderer :: struct
@@ -16,7 +26,7 @@ OpenGLRenderer :: struct
     is_drawing: bool;
     vertex_buffer: [..]Vertex;
     index_buffer: [..]u16;
-    camera_stack: [..]Camera;
+    command_buffer: [..]DrawCommand;
 }
 renderer: OpenGLRenderer;
 
@@ -68,10 +78,14 @@ renderer_shutdown :: ()
     using renderer;
 
     GL_VERIFY(glDeleteProgram(generic_shader_program));
+    array_reset(*vertex_buffer);
+    array_reset(*index_buffer);
+    array_reset(*command_buffer);
+
     // no need to destroy context apparently
 }
 
-begin_draw :: ()
+begin_draw :: (camera: Camera)
 {
     using renderer;
     assert(!is_drawing);
@@ -79,6 +93,10 @@ begin_draw :: ()
     width, height: = get_window_size(app.window);
     GL_VERIFY(glViewport(0, 0, xx width, xx height));
     GL_VERIFY(glScissor(0, 0, xx width, xx height));
+
+    location: = glGetUniformLocation(generic_shader_program, "uMvp");
+    mvp: = camera_to_vp_matrix(camera);
+    GL_VERIFY(glUniformMatrix4fv(location, 1, GL_TRUE, cast(*GLfloat)*mvp));
 
     is_drawing = true;
 }
@@ -88,17 +106,23 @@ end_draw :: ()
     using renderer;
     assert(is_drawing);
 
-    location: = glGetUniformLocation(generic_shader_program, "uMvp");
-    camera: = peek(camera_stack);
-    mvp: = camera_to_vp_matrix(camera);
-    GL_VERIFY(glUniformMatrix4fv(location, 1, GL_TRUE, cast(*GLfloat)*mvp));
-
     GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
     GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
-    GL_VERIFY(glDrawElements(GL_TRIANGLES, xx index_buffer.count, GL_UNSIGNED_SHORT, null));
+
+    for command: command_buffer
+    {
+        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
+
+        texture_location: = glGetUniformLocation(generic_shader_program, "uTexture");
+        GL_VERIFY(glUniform1i(texture_location, 0));
+
+        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
+    }
+
+    command_buffer.count = 0;
     vertex_buffer.count = 0;
     index_buffer.count = 0;
-
     is_drawing = false;
 }
 
@@ -111,77 +135,53 @@ clear_color :: (color: Color)
     GL_VERIFY(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 }
 
-draw_triangle :: (vertices: []Vertex)
+renderer_draw_command :: (vertices: []Vertex, indices: []u32, texture: TextureHandle)
 {
     using renderer;
-    assert(is_drawing);
-    assert(vertices.count == 3);
 
-    base_index: u16 = xx vertex_buffer.count;
-    array_add(*vertex_buffer, vertices[0]);
-    array_add(*vertex_buffer, vertices[1]);
-    array_add(*vertex_buffer, vertices[2]);
-    array_add(*index_buffer, base_index);
-    array_add(*index_buffer, base_index+1);
-    array_add(*index_buffer, base_index+2);
-}
-
-create_texture :: (texture_path: string) -> u32, bool
-{
-    texture_data: = read_and_decode_texture(texture_path, *temporary_allocator);
-
-    if texture_data.data != null
+    index_base: = vertex_buffer.count;
+    array_add(*vertex_buffer, ..vertices);
+    for i: indices
     {
-        texture: GLuint;
-        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-        GL_VERIFY(glGenTextures(1, *texture));
-        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture));
-        GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-        GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-        GL_VERIFY(glTexImage2D(
-            GL_TEXTURE_2D,    // target
-            0,                // level
-            GL_RGBA8,         // internal format
-            texture_data.width,           // width
-            texture_data.height,          // height
-            0,                // border, must be 0
-            GL_RGBA,          // format
-            GL_UNSIGNED_BYTE, // type
-            texture_data.data
-        ));
-        return texture, true;
+        array_add(*index_buffer, xx (index_base + i));
     }
-    else
-    {
-        log("failed to load texture %", texture_path);
-        return 0, false;
-    }
+
+    array_add(*command_buffer, DrawCommand.{
+        start_index = xx index_base,
+        size = xx indices.count,
+        texture = texture
+    });
 }
 
-bind_texture :: (texture: u32, slot: u32)
+renderer_create_texture :: (width: u32, height: u32, data: *u8) -> TextureHandle
 {
-    GL_VERIFY(glActiveTexture(xx (GL_TEXTURE0 + xx slot)));
-    GL_VERIFY(glBindTexture(GL_TEXTURE_2D, xx texture));
+    assert(data != null);
+
+    texture: GLuint;
+    GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+    GL_VERIFY(glGenTextures(1, *texture));
+    GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GL_VERIFY(glTexImage2D(
+        GL_TEXTURE_2D,    // target
+        0,                // level
+        GL_RGBA8,         // internal format
+        width,           // width
+        height,          // height
+        0,                // border, must be 0
+        GL_RGBA,          // format
+        GL_UNSIGNED_BYTE, // type
+        data
+    ));
+    return texture;
 }
 
-shader_uniform_texture :: (shader_program: u32, uniform_name: string, texture: u32)
+renderer_destroy_texture :: (handle: TextureHandle)
 {
-    if shader_program == 0 { shader_program = renderer.generic_shader_program; }
+    assert(handle != 0);
 
-    texture_location: = glGetUniformLocation(shader_program, temp_c_string(uniform_name));
-    GL_VERIFY(glUniform1i(texture_location, 0));
-}
-
-push_camera :: (camera: Camera)
-{
-    using renderer;
-    array_add(*camera_stack, camera);
-}
-
-pop_camera :: ()
-{
-    using renderer;
-    pop(*camera_stack);
+    GL_VERIFY(glDeleteTextures(1, *handle));
 }
 
 #scope_file
@@ -202,7 +202,7 @@ uniform mat4 uMvp;
 void main()
 {
     gl_Position = uMvp * vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
-    fragTexCoord = inTexCoord;
+    fragTexCoord = vec2(inTexCoord.x, -inTexCoord.y); // Textures are stored upside-down in opengl
     fragColor = inColor;
 }
 END
