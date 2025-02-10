@@ -5,6 +5,7 @@ create_opengl_context :: () #foreign;
 get_canvas_size :: () -> Vector2 #foreign;
 read_and_decode_texture :: (filename: string, allocator: *Allocator) -> TextureData #foreign;
 preload :: (filename: string, file_type: PreloadFileType) #foreign;
+get_mouse_position :: (window_handle: *void) -> Vector2 #foreign;
 
 get_console_window_handle :: () -> *void
 {
@@ -72,6 +73,11 @@ on_key_event :: (key_code: u32, pressed: bool)
         key_code = jai_key_code,
         repeat = xx (input_button_states[jai_key_code] & .DOWN),
     });
+}
+
+on_mousebutton_event :: (button: u32, pressed: bool)
+{
+    on_key_event(xx wasm_to_jai_mousebutton(button), pressed);
 }
 
 init_opengl_context :: (window: *void)
@@ -203,6 +209,18 @@ wasm_to_jai_key_code :: (key_code: u32) -> Key_Code
         case; return xx key_code;
     }
 }
+
+wasm_to_jai_mousebutton :: (button: u32) -> Key_Code
+{
+    if button == 
+    {
+        case 1; return Key_Code.MOUSE_BUTTON_LEFT;
+        case 2; return Key_Code.MOUSE_BUTTON_RIGHT;
+        case 3; return Key_Code.MOUSE_BUTTON_MIDDLE;
+        case; return Key_Code.UNKNOWN; 
+    }
+}
+
 
 pending_events : [..]Event;
 

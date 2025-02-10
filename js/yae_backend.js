@@ -4,6 +4,9 @@ let w; // the WASM module
 let wrapper;
 let canvas;
 let gl;
+let mouse_x = 0;
+let mouse_y = 0;
+let mouse_button_mask = 0;
 
 const RETURN_BUFFER_SIZE = 1024n
 let return_buffer_ptr;
@@ -588,6 +591,12 @@ const backend_exports =
         background_color = read_color(background_color);
         canvas.style.cssText += "background-color: rgb("+background_color.r+","+background_color.g+","+background_color.b+");";
 
+        canvas.addEventListener("contextmenu", (e) =>
+        {
+            event.preventDefault();
+            return false;
+        });
+
         document.title = read_jstring(window_name);
 
         wrapper.append(canvas);
@@ -663,8 +672,13 @@ const backend_exports =
             }
             break;
         }
-
     },
+
+    get_mouse_position: (out, window_handle) =>
+    {
+        write_float32(out, mouse_x);
+        write_float32(out + 4n, mouse_y);
+    }
 }
 
 function instantiate_yae(wasm_path, wrapper_element, additional_exports)
@@ -677,7 +691,6 @@ function instantiate_yae(wasm_path, wrapper_element, additional_exports)
         (obj) => {
             w = obj;
             console.log(w);
-            // console.log(w.instance.exports);
             wrapper = wrapper_element;
 
             wasm_alloc = find_name_by_regexp(w.instance.exports, "wasm_alloc");
@@ -685,6 +698,8 @@ function instantiate_yae(wasm_path, wrapper_element, additional_exports)
             wasm_on_preload_end = find_name_by_regexp(w.instance.exports, "wasm_on_preload_end");
             wasm_on_keydown = find_name_by_regexp(w.instance.exports, "wasm_on_keydown");
             wasm_on_keyup = find_name_by_regexp(w.instance.exports, "wasm_on_keyup");
+            wasm_on_mousedown = find_name_by_regexp(w.instance.exports, "wasm_on_mousedown");
+            wasm_on_mouseup = find_name_by_regexp(w.instance.exports, "wasm_on_mouseup");
 
             return_buffer_ptr = wasm_alloc(RETURN_BUFFER_SIZE, 0n);
 
@@ -729,6 +744,53 @@ function instantiate_yae(wasm_path, wrapper_element, additional_exports)
             {
                 wasm_on_keyup(e.keyCode);
             });
+
+            canvas.addEventListener('mousedown', (e) =>
+            {
+                b = e.buttons;
+
+                if (b & 1 && (~mouse_button_mask & 1))
+                {
+                    wasm_on_mousedown(1);
+                }
+                if (b & 2 && (~mouse_button_mask & 2))
+                {
+                    wasm_on_mousedown(2);
+                }
+                if (b & 4 && (~mouse_button_mask & 4))
+                {
+                    wasm_on_mousedown(3);
+                }
+
+                mouse_button_mask = e.buttons;
+            });
+
+            canvas.addEventListener('mouseup', (e) =>
+            {
+                b = e.buttons;
+                
+                if (mouse_button_mask & 1 && (~b & 1))
+                {
+                    wasm_on_mouseup(1);
+                }
+                if (mouse_button_mask & 2 && (~b & 2))
+                {
+                    wasm_on_mouseup(2);
+                }
+                if (mouse_button_mask & 4 && (~b & 4))
+                {
+                    wasm_on_mouseup(3);
+                }
+
+                mouse_button_mask = e.buttons;
+            });
+
+            document.addEventListener('mousemove', (e) =>
+            {
+                rect = canvas.getBoundingClientRect();
+                mouse_x = e.clientX - rect.x;
+                mouse_y = e.clientY - rect.y;
+            })
 
             window.requestAnimationFrame(first_frame);
         }

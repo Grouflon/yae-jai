@@ -32,6 +32,22 @@ wasm_on_keyup :: (key_code: u32) #c_call
     }
 }
 
+wasm_on_mousedown :: (button: u32) #c_call
+{
+    push_context
+    {
+        on_mousebutton_event(button, true);
+    }
+}
+
+wasm_on_mouseup :: (button: u32) #c_call
+{
+    push_context
+    {
+        on_mousebutton_event(button, false);
+    }
+}
+
 wasm_alloc :: (size: s64, allocator: *Allocator) -> *void #c_call
 {
     push_context

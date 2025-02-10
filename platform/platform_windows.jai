@@ -30,6 +30,14 @@ get_viewport_size :: (window_handle: *void) -> width: int, height: int
     return rect.right - rect.left, rect.bottom - rect.top;
 }
 
+mouse_position: Vector2;
+get_mouse_position :: (window_handle: *void) -> Vector2
+{
+    x, y, success: = get_mouse_pointer_position(window_handle, false);
+    if success { mouse_position = .{ xx x, xx y}; };
+    return mouse_position;
+}
+
 update_input_events :: ()
 {
     update_window_events();
