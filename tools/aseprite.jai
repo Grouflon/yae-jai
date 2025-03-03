@@ -127,9 +127,12 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
             if found
             {
                 aseprite.image_path = sprint("%1%2", path_strip_filename(json_file_path), value.str);
+                if !file_exists(aseprite.image_path)
+                {
+                    log_warning("Failed to find referenced image file %", aseprite.image_path);
+                }
             }
         }
-        
 
         aseprite.format = enum_name_to_value(AsepriteImageFormat, json_get(meta, "format", .STRING).str);
         aseprite.size = parse_box(json_get(meta, "size"));
@@ -289,3 +292,4 @@ parse_layer :: (_value: JSON_Value) -> AsepriteLayer
 #import "Basic";
 #import "String";
 #import "Reflection";
+#import "File_Utilities";

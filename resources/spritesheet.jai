@@ -9,7 +9,7 @@ Spritesheet :: struct
     unload_function = spritesheet_unload;
 
     data: AsepriteData;
-    texture: *Texture;
+    texture: *TextureFile;
 }
 
 
@@ -23,7 +23,7 @@ get_aseprite_tag :: (spritesheet: *Spritesheet, animation_name: string) -> *Asep
 
 #scope_file
 
-spritesheet_load :: (resource: *Resource)
+spritesheet_load :: (resource: *Resource) -> bool
 {
     using spritesheet: = cast(*Spritesheet) resource;
 
@@ -32,8 +32,11 @@ spritesheet_load :: (resource: *Resource)
 
     if data.image_path.count > 0
     {
-        texture = resource_load(Texture, data.image_path);
+        t, success: = resource_load(TextureFile, data.image_path);
+        texture = t;
     }
+
+    return true;
 }
 
 spritesheet_unload :: (resource: *Resource)

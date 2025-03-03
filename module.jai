@@ -1,16 +1,14 @@
 
 #load "animation/animation.jai";
+#load "log.jai";
 #load "draw.jai";
 #load "tilemap.jai";
 #load "pixel_perfect_viewport.jai";
-#load "resource.jai";
 #load "spline.jai";
 #load "bounds.jai";
 #load "curve.jai";
 #load "imgui/imgui.jai";
 #load "imgui/imgui_canvas.jai";
-#load "resources/spritesheet.jai";
-#load "resources/texture.jai";
 #load "tools/math.jai";
 #load "tools/filesystem.jai";
 #load "tools/misc.jai";
@@ -22,6 +20,12 @@
 #load "serialization/json_serializer.jai";
 #load "serialization/reflection_serialization.jai";
 #load "raylib_imgui.jai";
+
+#load "resources/resource.jai";
+#load "resources/spritesheet.jai";
+#load "resources/texture_file.jai";
+#load "resources/aseprite_file.jai";
+#load "resources/sprite.jai";
 
 #scope_module
 

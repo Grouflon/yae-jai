@@ -1,7 +1,7 @@
-Texture :: struct
+TextureFile :: struct
 {
     #as using base: Resource;
-    type = Texture;
+    type = TextureFile;
 
     load_function = texture_load;
     unload_function = texture_unload;
@@ -11,20 +11,22 @@ Texture :: struct
 
 #scope_file
 
-texture_load :: (resource: *Resource)
+texture_load :: (resource: *Resource) -> bool
 {
-    using t: = cast(*Texture) resource;
+    using t: = cast(*TextureFile) resource;
+    resource_add_file_watch(resource, name);
 
     texture = rl.LoadTexture(temp_c_string(name));
-    resource_add_file_watch(resource, name);
+    return true;
 }
 
 texture_unload :: (resource: *Resource)
 {
-    using t: = cast(*Texture) resource;
+    using t: = cast(*TextureFile) resource;
+
+    rl.UnloadTexture(texture);
 
     resource_remove_file_watch(resource, name);
-    rl.UnloadTexture(texture);
 }
 
 rl :: #import "raylib";
