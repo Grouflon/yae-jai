@@ -288,5 +288,4 @@ parse_layer :: (_value: JSON_Value) -> AsepriteLayer
 
 #import "Basic";
 #import "String";
-#import "jaison";
 #import "Reflection";

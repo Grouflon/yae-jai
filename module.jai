@@ -22,3 +22,7 @@
 #load "serialization/json_serializer.jai";
 #load "serialization/reflection_serialization.jai";
 #load "raylib_imgui.jai";
+
+#scope_module
+
+#import,dir "./modules/jaison";
