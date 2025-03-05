@@ -37,6 +37,22 @@ copy_file_set_if_newer :: (source_directory: string, destination_directory: stri
     return result;
 }
 
+normalize_path :: (path: string) -> string
+{
+    normalized_path, success: = get_absolute_path(path);
+    if !success
+        return path;
+
+    working_directory: = get_working_directory();
+    if starts_with(normalized_path, working_directory)
+    {
+        normalized_path = tprint(".%", slice(normalized_path, working_directory.count, normalized_path.count));
+    }
+
+    replace_chars(normalized_path, "\\", #char "/");
+    return normalized_path;
+}
+
 #scope_file
 
 #import "File_Utilities";
