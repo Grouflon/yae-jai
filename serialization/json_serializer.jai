@@ -33,7 +33,7 @@ JsonSerializer :: struct
     serialize_s64 =     (serializer: *Serializer, value: *s64, key: string) -> bool     { return serialize(cast(*JsonSerializer)serializer, value, key); };
     serialize_float32 = (serializer: *Serializer, value: *float32, key: string) -> bool { return serialize(cast(*JsonSerializer)serializer, value, key); };
     serialize_float64 = (serializer: *Serializer, value: *float64, key: string) -> bool { return serialize(cast(*JsonSerializer)serializer, value, key); };
-    serialize_string =  (serializer: *Serializer, value: *string, key: string) -> bool  { return serialize(cast(*JsonSerializer)serializer, value, key); };
+    serialize_string =  (serializer: *Serializer, value: *string, key: string, allocator: *Allocator) -> bool  { return serialize(cast(*JsonSerializer)serializer, value, key, allocator); };
 }
 
 json_serializer_open_json_file :: (serializer: *JsonSerializer, path :string) -> bool
@@ -215,7 +215,7 @@ serialize :: (serializer: *JsonSerializer, value: *float64, key: string = "") ->
     return serialize_number(serializer, value, key);
 }
 
-serialize :: (using s: *JsonSerializer, value: *string, key: string = "") -> bool
+serialize :: (using s: *JsonSerializer, value: *string, key: string = "", allocator: *Allocator) -> bool
 {
     assert(s != null);
     assert(mode != .NONE);
@@ -232,6 +232,7 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "") -> boo
                 return false;
             }
 
+            push_allocator(ifx allocator != null then allocator else *context.default_allocator);
             <<value = copy_string(next_value.str);
         }
         case .WRITE;

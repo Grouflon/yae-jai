@@ -30,7 +30,7 @@ Serializer :: struct
     serialize_s64:      #type (serializer: *Serializer, value: *s64, key: string) -> bool;
     serialize_float32:  #type (serializer: *Serializer, value: *float32, key: string) -> bool;
     serialize_float64:  #type (serializer: *Serializer, value: *float64, key: string) -> bool;
-    serialize_string:   #type (serializer: *Serializer, value: *string, key: string) -> bool;
+    serialize_string:   #type (serializer: *Serializer, value: *string, key: string, allocator: *Allocator) -> bool;
 };
 
 serializer_begin :: (serializer: *Serializer, mode: SerializationMode)
@@ -139,8 +139,8 @@ serialize :: (serializer: *Serializer, value: *float64, key: string = "") -> boo
     return serializer.serialize_float64(serializer, value, key);
 }
 
-serialize :: (serializer: *Serializer, value: *string, key: string = "") -> bool
+serialize :: (serializer: *Serializer, value: *string, key: string = "", allocator: *Allocator = null) -> bool
 {
     assert(serializer != null);
-    return serializer.serialize_string(serializer, value, key);
+    return serializer.serialize_string(serializer, value, key, allocator);
 }
