@@ -308,13 +308,16 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
                 return false;
             }
 
-            keys.count = next_value.object.count;
-            keys.data = talloc(next_value.object.count * size_of(string));
-            i: int = 0;
-            for value, key: next_value.object
+            if keys != null
             {
-                (<<keys)[i] = key;
-                i += 1;
+                keys.count = next_value.object.count;
+                keys.data = talloc(next_value.object.count * size_of(string));
+                i: int = 0;
+                for value, key: next_value.object
+                {
+                    (<<keys)[i] = key;
+                    i += 1;
+                }
             }
         }
         case .WRITE;

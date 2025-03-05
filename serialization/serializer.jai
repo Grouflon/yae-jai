@@ -61,7 +61,7 @@ serializer_end_array :: (serializer: *Serializer) -> bool
     return serializer.end_array(serializer);
 }
 
-serializer_begin_object :: (serializer: *Serializer, keys: *[]string, key: string = "") -> bool
+serializer_begin_object :: (serializer: *Serializer, keys: *[]string = null, key: string = "") -> bool
 {
     assert(serializer != null);
     return serializer.begin_object(serializer, keys, key);
