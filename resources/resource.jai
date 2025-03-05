@@ -10,7 +10,7 @@ ResourceID :: struct($ResourceType: Type)
 
 Resource :: struct
 {
-    type: Type;
+    type: *Type_Info_Struct;
     id: ResourceIDBase;
     name: string;
 
@@ -24,8 +24,10 @@ Resource :: struct
 ResourceManager :: struct
 {
     resource_by_id: Table(ResourceIDBase, *Resource);
-    resource_by_name: Table(string, *Resource);
+    resource_name_to_id: Table(string, ResourceIDBase);
     resources: [..]*Resource;
+
+    resource_type_by_name: Table(string, *Type_Info_Struct);
 
     file_dependencies: Table(string, [..]*Resource);
     resources_to_reload: [..]*Resource;
@@ -75,9 +77,116 @@ resource_unload :: (resource: *Resource)
     }
 }
 
-resource_manager_init :: (resource_folders: ..string)
+resource_save_to_disk :: (resource: *Resource, file_path: string)
+{
+    if resource == null return;
+
+    serializer: JsonSerializer;
+    serializer_begin(*serializer, .WRITE);
+    serializer_begin_object(*serializer, null);
+
+    serialize(*serializer, *resource.id.id, "id");
+    serialize(*serializer, *resource.type.name, "type");
+
+    resource_serialize(*serializer, resource);
+
+    serializer_end_object(*serializer);
+    serializer_end(*serializer);
+
+    json_serializer_write_json_file(*serializer, file_path);
+}
+
+resource_load_from_disk :: (file_path: string) -> *Resource
 {
     using manager: = resource_manager();
+
+    serializer: JsonSerializer;
+    if !json_serializer_open_json_file(*serializer, file_path)
+    {
+        log_warning("could not parse resource %", file_path);
+        return null;
+    }
+
+    serializer_begin(*serializer, .READ);
+    serializer_begin_object(*serializer);
+
+    // Mandatory fields
+    id: ResourceIDBase;
+    type: string;
+    if !serialize(*serializer, *id.id, "id")
+    {
+        log_warning("resource % does not contain an id field", file_path);
+        return null;
+    }
+
+    if !serialize(*serializer, *type, "type", *temporary_allocator)
+    {
+        log_warning("resource % does not contain a type field", file_path);
+        return null;
+    }
+
+    ti, found: = table_find(*resource_type_by_name, type);
+    if !found
+    {
+        log_warning("resource % has unknown type %", file_path, type);
+        return null;
+    }
+
+    // Create resource
+    resource: = resource_get_or_create(ti, id);
+    if !resource
+    {
+        log_warning("Failed to create resource % from id % and type %", file_path, id.id, ti.name);
+        return null;
+    }
+
+    // Serialize resource
+    if !resource_serialize(*serializer, resource)
+    {
+    }
+
+    serializer_end_object(*serializer);
+    serializer_end(*serializer);
+    return resource;
+}
+
+resource_serialize :: (serializer: *Serializer, resource: *Resource) -> bool
+{
+    assert(serializer != null);
+    assert(resource != null);
+
+    name: = copy_temporary_string(resource.name);
+    serialize(serializer, *name, "name", *temporary_allocator);
+    if serializer.mode == .READ
+    {
+        resource_rename(resource, name);
+    }
+
+    return true;
+}
+
+resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders: ..string)
+{
+    using manager: = resource_manager();
+
+    // Init resource types
+    for ti: resource_types
+    {
+        table_add(*resource_type_by_name, ti.name, ti);
+        log("%", ti.name);
+    }
+
+    // Gather resources
+    for resource_folder: resource_folders
+    {
+        visit_files(resource_folder, true, manager, (info: *File_Visit_Info, user_data: *ResourceManager)
+        {
+            if ends_with(info.short_name, ".res")
+            {
+                resource_load_from_disk(info.full_name);
+            }
+        });
+    }
 
     on_file_modified :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void)
     {
@@ -118,7 +227,7 @@ resource_manager_shutdown :: ()
         free(resource);
     }
     deinit(*resource_by_id);
-    deinit(*resource_by_name);
+    deinit(*resource_name_to_id);
     array_reset(*resources);
 }
 
@@ -139,41 +248,101 @@ resource_manager_update :: ()
     array_clear(*resources_to_reload);
 }
 
-resource_get_or_create :: ($T: Type, name: string) -> *T
+resource_rename :: (resource: *Resource, name: string)
 {
-    if name.count == 0
-    {
-        log_error("Can't get Resource with empty name.");
-        return null;
-    }
+    assert(resource != null);
 
     using manager: = resource_manager();
-    resource, found: = table_find(*resource_by_name, name);
-    if found && resource.type != T
-    {
-        log_error("Can't get Resource \"%\": Does not match the requested type (is %, expects %).", name, resource.type, T);
-        return null;
-    }
 
-    if !found
+    if compare(name, resource.name) == 0 return;
+
+    if resource.name.count > 0
     {
-        id: = generate_resource_id();
+        table_remove(*resource_name_to_id, resource.name);
+        free(resource.name);
+        resource.name.count = 0;
+    }
+    
+    resource.name = copy_string(name);
+
+    if resource.name.count > 0
+    {
+        table_add(*resource_name_to_id, resource.name, resource.id);
+    }
+}
+
+resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = .{}) -> *Resource
+{
+    assert(ti != null);
+    assert(is_subclass_of(ti, "Resource"));
+
+    using manager: = resource_manager();
+
+    actual_id: = id;
+    // If it is undefined, generate one
+    if actual_id.id == 0
+    {
+        actual_id = generate_resource_id();
         while table_contains(*resource_by_id, id)
         {
             // If there is an id collision, just pick a new one
-            id = generate_resource_id();
+            actual_id = generate_resource_id();
         }
-
-        typed_resource: = New(T);
-        typed_resource.id = id;
-        typed_resource.name = copy_string(name);
-
-        resource = typed_resource;
-        table_add(*resource_by_id, id, resource);
-        table_add(*resource_by_name, typed_resource.name, resource);
-        array_add(*resources, typed_resource);
     }
 
+    if (table_contains(*resource_by_id, actual_id))
+    {
+        log_error("resource id collision (%)", actual_id.id);
+        return null;
+    }
+
+    resource: *Resource = alloc(ti.runtime_size);
+    ti.initializer(resource);
+
+    resource.id = actual_id;
+    resource.type = ti;
+
+    table_add(*resource_by_id, resource.id, resource);
+    array_add(*resources, resource);
+
+    return resource;
+}
+
+resource_get_or_create :: (ti: *Type_Info_Struct, id: ResourceIDBase) -> *Resource
+{
+    assert(ti != null);
+
+    using manager: = resource_manager();
+    resource, found: = table_find(*resource_by_id, id);
+    if !found
+    {
+        resource = resource_create(ti, id);
+        assert(resource != null);
+    }
+    return resource;
+}
+
+resource_get_or_create :: ($T: Type, name: string) -> *T
+{
+    using manager: = resource_manager();
+
+    if name.count == 0
+    {
+        log_warning("Can't get Resource with empty name.");
+        return null;
+    }
+
+    id, found: = table_find(*resource_name_to_id, name);
+    ti: = cast(*Type_Info_Struct) type_info(T);
+    resource: = resource_get_or_create(ti, id);
+    assert(resource != null);
+    if resource.type != type_info(T)
+    {
+        log_error("Can't get Resource \"%\": Does not match the requested type (is %, expects %).", name, resource.type.name, ti.name);
+        return null;
+    }
+
+    resource_rename(resource, name);
     return xx resource;
 }
 
@@ -276,3 +445,4 @@ Hash :: #import "Hash";
 #poke_name Hash get_hash;
 
 #import "File_Watcher";
+#import "Compiler";

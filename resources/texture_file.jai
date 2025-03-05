@@ -1,7 +1,6 @@
 TextureFile :: struct
 {
     #as using base: Resource;
-    type = TextureFile;
 
     load_function = texture_load;
     unload_function = texture_unload;

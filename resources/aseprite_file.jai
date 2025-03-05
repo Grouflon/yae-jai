@@ -1,7 +1,6 @@
 AsepriteFile :: struct
 {
     #as using base: Resource;
-    type = AsepriteFile;
 
     load_function = aseprite_data_load;
     unload_function = aseprite_data_unload;

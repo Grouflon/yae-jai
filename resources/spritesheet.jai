@@ -1,7 +1,6 @@
 Spritesheet :: struct
 {
     #as using base: Resource;
-    type = Spritesheet;
 
     frame_duration: float = 0.015;
 
