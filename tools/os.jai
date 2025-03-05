@@ -72,6 +72,7 @@ kill_process_by_path :: (path: string) -> bool
                     false,
                     process_id
                 );
+                defer CloseHandle(hProcess);
 
                 closure: *Closure = data;
                 filename: [512]u8;
@@ -147,6 +148,7 @@ EnumWindows :: (f: #type (window: Windows.HWND, data: *void) -> bool #c_call, da
 GetModuleFileNameExA :: (hProcess: Windows.HANDLE, hModule: *void, lpFileName: *u8, nSize: s32) -> s32 #foreign psapi;
 GetWindowThreadProcessId :: (hWnd: Windows.HWND, lpdwProcessId: *s32 ) -> s32 #foreign user32;
 OpenProcess :: (dwDesiredAccess: s32, bInheritHandle: bool, dwProcessId: s32) -> Windows.HANDLE #foreign kernel32;
+CloseHandle :: (hObject: Windows.HANDLE) -> bool #foreign kernel32;
 DestroyWindow :: (hWnd: Windows.HWND) -> bool #foreign user32;
 
 Windows :: #import "Windows";
