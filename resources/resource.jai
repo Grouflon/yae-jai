@@ -1,13 +1,10 @@
 RESOURCE_LOG_SECTION :: Log_Section.{ "Resource" };
 
-ResourceIDBase :: struct
-{
-    id: u32;
-}
+ResourceIDBase :: u32;
 
 ResourceID :: struct($ResourceType: Type)
 {
-    #as using base: ResourceIDBase;
+    #as base: ResourceIDBase;
 }
 
 Resource :: struct
@@ -173,7 +170,7 @@ resource_save_to_disk :: (resource: *Resource, file_path: string)
     serializer_begin(*serializer, .WRITE);
     serializer_begin_object(*serializer, null);
 
-    serialize(*serializer, *resource.id.id, "id");
+    serialize(*serializer, *resource.id, "id");
     serialize(*serializer, *resource.type.name, "type");
 
     resource_serialize(*serializer, resource);
@@ -200,13 +197,13 @@ resource_load_from_disk :: (file_path: string) -> *Resource
 
     // Mandatory fields
     id: ResourceIDBase;
-    type: string;
-    if !serialize(*serializer, *id.id, "id")
+    if !serialize(*serializer, *id, "id")
     {
         log_warning("resource % does not contain an id field", file_path, section= *RESOURCE_LOG_SECTION);
         return null;
     }
 
+    type: string;
     if !serialize(*serializer, *type, "type", *temporary_allocator)
     {
         log_warning("resource % does not contain a type field", file_path, section= *RESOURCE_LOG_SECTION);
@@ -224,7 +221,7 @@ resource_load_from_disk :: (file_path: string) -> *Resource
     resource: = resource_get_or_create(ti, id);
     if !resource
     {
-        log_warning("Failed to create resource % from id % and type %", file_path, id.id, ti.name, section= *RESOURCE_LOG_SECTION);
+        log_warning("Failed to create resource % from id % and type %", file_path, id, ti.name, section= *RESOURCE_LOG_SECTION);
         return null;
     }
 
@@ -262,7 +259,7 @@ resource_rename :: (resource: *Resource, name: string)
     }
 }
 
-resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = .{}) -> *Resource
+resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
 {
     assert(ti != null);
     assert(is_subclass_of(ti, "Resource"));
@@ -271,7 +268,7 @@ resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = .{}) -> *Resourc
 
     actual_id: = id;
     // If it is undefined, generate one
-    if actual_id.id == 0
+    if actual_id == 0
     {
         actual_id = generate_resource_id();
         while table_contains(*resource_by_id, id)
@@ -283,7 +280,7 @@ resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = .{}) -> *Resourc
 
     if (table_contains(*resource_by_id, actual_id))
     {
-        log_error("resource id collision (%)", actual_id.id, section= *RESOURCE_LOG_SECTION);
+        log_error("resource id collision (%)", actual_id, section= *RESOURCE_LOG_SECTION);
         return null;
     }
 
@@ -391,21 +388,6 @@ resource_remove_file_watch :: (resource: *Resource, file_path: string)
     assert(removed == 1, "Trying to remove an unknown file watch (%)", file_path);
 }
 
-operator == :: (a: ResourceIDBase, b: ResourceIDBase) -> bool
-{
-    return a.id == b.id;
-}
-
-operator == :: (a: ResourceIDBase, b: u32) -> bool
-{
-    return a.id == b;
-}
-
-get_hash :: (x: ResourceIDBase) -> u32
-{
-    return x.id;
-}
-
 #scope_file
 
 resource_serialize :: (serializer: *Serializer, resource: *Resource) -> bool
@@ -436,16 +418,11 @@ generate_resource_id :: () -> ResourceIDBase
 {
     // Until we need something more sophisticated, Resource id is just a hash of the current time
     current_time: = current_time_consensus();
-    date_hash: = Hash.sdbm_hash(*current_time, xx size_of(Apollo_Time));
-    id: ResourceIDBase = .{ id = date_hash };
+    date_hash: = sdbm_hash(*current_time, xx size_of(Apollo_Time));
+    id: ResourceIDBase = date_hash;
     return id;
 }
 
-Hash_Table :: #import "Hash_Table";
-#poke_name Hash_Table operator==;
-
-Hash :: #import "Hash";
-#poke_name Hash get_hash;
-
+#import "Hash";
 #import "File_Watcher";
 #import "Compiler";
