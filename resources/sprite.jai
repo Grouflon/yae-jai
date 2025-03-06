@@ -2,6 +2,6 @@ Sprite :: struct
 {
     #as using base: Resource;
 
-    texture: *TextureFile;
-    bounds: Bounds;
+    texture: ResourceID(TextureFile); @serialize
+    bounds: Bounds; @serialize
 }

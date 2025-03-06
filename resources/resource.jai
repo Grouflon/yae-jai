@@ -54,6 +54,8 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders:
             if ends_with(info.short_name, ".res")
             {
                 resource: = resource_load_from_disk(info.full_name);
+                if resource == null return;
+
                 resource_name: = slice(info.full_name, 0, info.full_name.count - 4);
                 resource_rename(resource, resource_name);
                 log_verbose("gathered resource %", info.full_name, section= *RESOURCE_LOG_SECTION);
@@ -168,14 +170,7 @@ resource_save_to_disk :: (resource: *Resource, file_path: string)
 
     serializer: JsonSerializer;
     serializer_begin(*serializer, .WRITE);
-    serializer_begin_object(*serializer, null);
-
-    serialize(*serializer, *resource.id, "id");
-    serialize(*serializer, *resource.type.name, "type");
-
-    resource_serialize(*serializer, resource);
-
-    serializer_end_object(*serializer);
+    resource_serialize(*serializer, *resource.id);
     serializer_end(*serializer);
 
     json_serializer_write_json_file(*serializer, file_path);
@@ -192,47 +187,16 @@ resource_load_from_disk :: (file_path: string) -> *Resource
         return null;
     }
 
-    serializer_begin(*serializer, .READ);
-    serializer_begin_object(*serializer);
-
-    // Mandatory fields
     id: ResourceIDBase;
-    if !serialize(*serializer, *id, "id")
+    serializer_begin(*serializer, .READ);
+    if !resource_serialize(*serializer, *id)
     {
-        log_warning("resource % does not contain an id field", file_path, section= *RESOURCE_LOG_SECTION);
+        log_warning("failed to serialize resource %", file_path);
         return null;
     }
-
-    type: string;
-    if !serialize(*serializer, *type, "type", *temporary_allocator)
-    {
-        log_warning("resource % does not contain a type field", file_path, section= *RESOURCE_LOG_SECTION);
-        return null;
-    }
-
-    ti, found: = table_find(*resource_type_by_name, type);
-    if !found
-    {
-        log_warning("resource % has unknown type %", file_path, type, section= *RESOURCE_LOG_SECTION);
-        return null;
-    }
-
-    // Create resource
-    resource: = resource_get_or_create(ti, id);
-    if !resource
-    {
-        log_warning("Failed to create resource % from id % and type %", file_path, id, ti.name, section= *RESOURCE_LOG_SECTION);
-        return null;
-    }
-
-    // Serialize resource
-    if !resource_serialize(*serializer, resource)
-    {
-    }
-
-    serializer_end_object(*serializer);
     serializer_end(*serializer);
-    return resource;
+
+    return get(id);
 }
 
 resource_rename :: (resource: *Resource, name: string)
@@ -262,7 +226,7 @@ resource_rename :: (resource: *Resource, name: string)
 resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
 {
     assert(ti != null);
-    assert(is_subclass_of(ti, "Resource"));
+    assert(is_subclass_of(ti, Resource));
 
     using manager: = resource_manager();
 
@@ -285,7 +249,7 @@ resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
     }
 
     resource: *Resource = alloc(ti.runtime_size);
-    ti.initializer(resource);
+    if ti.initializer != null ti.initializer(resource);
 
     resource.id = actual_id;
     resource.type = ti;
@@ -320,9 +284,10 @@ resource_get_or_create :: ($T: Type, name: string) -> *T
         return null;
     }
 
+    ti: = cast(*Type_Info_Struct) type_info(T);
     normalized_name: = normalize_resource_name(name);
     id, found: = table_find(*resource_name_to_id, normalized_name);
-    ti: = cast(*Type_Info_Struct) type_info(T);
+    if !found { id = 0; }
     resource: = resource_get_or_create(ti, id);
     assert(resource != null);
     if resource.type != type_info(T)
@@ -348,6 +313,12 @@ get :: (id: ResourceIDBase) -> *Resource
     resource, success: = table_find(*resource_by_id, id);
     if !success { return null; }
     return resource;
+}
+
+get_id :: (resource: *$T/Resource) -> ResourceID(T)
+{
+    if resource == null return .{};
+    return .{resource.id};
 }
 
 resource_add_file_watch :: (resource: *Resource, file_path: string)
@@ -390,10 +361,64 @@ resource_remove_file_watch :: (resource: *Resource, file_path: string)
 
 #scope_file
 
-resource_serialize :: (serializer: *Serializer, resource: *Resource) -> bool
+resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string = "") -> bool
 {
     assert(serializer != null);
-    assert(resource != null);
+    using manager: = resource_manager();
+
+    resource: *Resource;
+
+    // Resource header
+    serializer_begin_object(serializer, null, key);
+    defer serializer_end_object(serializer);
+
+    if serializer.mode == .READ
+    {
+        // Read instantiation data
+        temp_id: ResourceIDBase;
+        if !serialize(serializer, *temp_id, "id")
+        {
+            log_warning("Missing id field in resource", section= *RESOURCE_LOG_SECTION);
+            return false;
+        }
+
+        type: *Type_Info_Struct;
+        type_name: string;
+        if !serialize(serializer, *type_name, "type", *temporary_allocator)
+        {
+            log_warning("Missing type field in resource", section= *RESOURCE_LOG_SECTION);
+            return false;
+        }
+
+        ti, success: = table_find(*resource_type_by_name, type_name);
+        if !success
+        {
+            log_warning("Unknown resource type % in resource", type_name, section= *RESOURCE_LOG_SECTION);
+            return false;
+        }
+        type = ti;
+
+        // Get or create resource
+        resource = resource_get_or_create(type, temp_id);
+        if resource == null
+        {
+            log_warning("Failed to create resource % (%)", id, type.name);
+            return false;
+        }
+        << id = resource.id;
+    }
+    else
+    {
+        resource = get(<<id);
+        if resource == null
+        {
+            log_warning("Unable to find resource %", id);
+            return false;
+        }
+
+        serialize(serializer, *resource.id, "id");
+        serialize(serializer, *resource.type.name, "type");
+    }
 
     name: = copy_temporary_string(resource.name);
     serialize(serializer, *name, "name", *temporary_allocator);
@@ -401,6 +426,28 @@ resource_serialize :: (serializer: *Serializer, resource: *Resource) -> bool
     {
         resource_rename(resource, name);
     }
+
+    // Resource Body
+    assert(resource != null);
+    assert(resource.id != 0);
+    assert(resource.type != null);
+
+    serialization_customizer :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, notes: []string, parent: *Type_Info_Struct) -> bool
+    {
+        // Not serializable, skip
+        if parent != null && is_subclass_of(parent, Resource) && !array_find(notes, "serialize") return false;
+
+        // embed Resource ID, serialize data
+        if is_subclass_of(info, ResourceIDBase) && array_find(notes, "embed")
+        {
+            resource_serialize(serializer, cast(*ResourceIDBase) data, key);
+            return false;
+        }
+
+        // else normal serialization
+        return true;
+    };
+    serialize(serializer, resource, resource.type, "data", customizer = serialization_customizer);
 
     return true;
 }
@@ -425,4 +472,3 @@ generate_resource_id :: () -> ResourceIDBase
 
 #import "Hash";
 #import "File_Watcher";
-#import "Compiler";

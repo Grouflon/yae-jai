@@ -6,7 +6,6 @@ AsepriteFile :: struct
     unload_function = aseprite_data_unload;
 
     texture: *TextureFile;
-    sprites: [..]*Sprite;
 }
 
 #scope_file
@@ -34,6 +33,20 @@ aseprite_data_load :: (resource: *Resource) -> bool
         return false;
     }
     texture = image;
+
+    array_clear(*texture.sprites);
+    for frame: aseprite_data.frames
+    {
+        sprite: = resource_get_or_create(Sprite, frame.name);
+        if sprite == null continue;
+
+        sprite.texture = get_id(texture);
+        sprite.bounds = .{ 
+            Vector2.{xx frame.frame.x, xx frame.frame.y },
+            Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
+        };
+        array_add(*texture.sprites, get_id(sprite));
+    }
 
     return true;
 }

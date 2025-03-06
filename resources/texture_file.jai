@@ -5,6 +5,8 @@ TextureFile :: struct
     load_function = texture_load;
     unload_function = texture_unload;
 
+    sprites: [..]ResourceID(Sprite); @embed @serialize
+
     texture: Texture2D;
 }
 
@@ -26,6 +28,9 @@ texture_unload :: (resource: *Resource)
     rl.UnloadTexture(texture);
 
     resource_remove_file_watch(resource, name);
+
+    // Do not belong here. Move it when we have a proper deinit
+    array_free(sprites);
 }
 
 rl :: #import "raylib";

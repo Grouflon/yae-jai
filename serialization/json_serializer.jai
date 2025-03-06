@@ -322,10 +322,14 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
         }
         case .WRITE;
         {
-            next_value.type = .OBJECT;
-            next_value.object = talloc(size_of(JSON_Object));
-            Initialize(next_value.object);
-            next_value.object.allocator = temporary_allocator;
+            // We allow for reopening an already written array
+            if next_value.type != .OBJECT
+            {
+                next_value.type = .OBJECT;
+                next_value.object = talloc(size_of(JSON_Object));
+                Initialize(next_value.object);
+                next_value.object.allocator = temporary_allocator;
+            }
         }
     }
     array_add(*context_stack, .{ value = next_value });
@@ -364,14 +368,6 @@ select_next_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Valu
     // First value
     if top_context == null
     {
-        // @NOTE: we currently do not allow the serializer to write a .NULL type, so we can assume this means uninitialized.
-        // We will need to change that code if this becomes false, but maybe the safeguard isn't even needed.
-        if mode == .WRITE && root_value.type != .NULL
-        {
-            last_error = "Cant write the root value twice.";
-            return false, null;
-        }
-
         return true, *root_value;
     }
 
