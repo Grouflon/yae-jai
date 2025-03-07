@@ -432,15 +432,23 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
     assert(resource.id != 0);
     assert(resource.type != null);
 
-    serialization_customizer :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, notes: []string, parent: *Type_Info_Struct) -> bool
+    serialization_customizer :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, ctx: ReflectionContext) -> bool
     {
         // Not serializable, skip
-        if parent != null && is_subclass_of(parent, Resource) && !array_find(notes, "serialize") return false;
+        if ctx.parent != null && is_subclass_of(ctx.parent, Resource) && !has_note(ctx.member, "serialize") return false;
 
-        // embed Resource ID, serialize data
-        if is_subclass_of(info, ResourceIDBase) && array_find(notes, "embed")
+        // Resource ID, override
+        if is_subclass_of(info, ResourceIDBase)
         {
-            resource_serialize(serializer, cast(*ResourceIDBase) data, key);
+            // If embed, serialize data directyly
+            if has_note(ctx.member, "embed")
+            {
+                resource_serialize(serializer, cast(*ResourceIDBase) data, key);
+            }
+            else // else serialize id
+            {
+                serialize(serializer, data, type_info(ResourceIDBase), key, null, ctx);
+            }
             return false;
         }
 

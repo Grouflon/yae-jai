@@ -1,12 +1,23 @@
-CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, notes: []string, parent: *Type_Info_Struct) -> bool;
+ReflectionContext :: struct
+{
+    parent: *Type_Info_Struct;
+    member: *Type_Info_Struct_Member;
+}
+
+CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, ctx: ReflectionContext) -> bool;
 
 serialize :: (serializer: *Serializer, value: *$T, key: string = "", customizer: CustomSerializationFunction = null) -> bool
 {
     return serialize(serializer, value, type_info(T), key, notes);
 }
 
-serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", customizer: CustomSerializationFunction = null, notes: []string = .[], parent: *Type_Info_Struct = null) -> bool
+serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", customizer: CustomSerializationFunction = null, ctx: ReflectionContext = .{}) -> bool
 {
+    if customizer != null && !customizer(serializer, data, info, key, ctx)
+    {
+        return true;
+    }
+
     if info.type == {
         case .STRUCT;
         {
@@ -49,6 +60,8 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 case;
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
+                    next_context: ReflectionContext;
+                    next_context.parent = info_struct;
 
                     keys: [..]string;
                     keys.allocator = temporary_allocator;
@@ -82,13 +95,10 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     {
                         member_type_info, success: = table_find(*key_to_type_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
-                        
-                        member_data: = data + member_type_info.offset_in_bytes;
 
-                        if customizer == null || customizer(serializer, member_data, member_type_info.type, key, member_type_info.notes, info_struct)
-                        {
-                            verify(serialize(serializer, member_data, member_type_info.type, key, customizer, member_type_info.notes, info_struct));
-                        }
+                        next_context.member = member_type_info;
+                        member_data: = data + member_type_info.offset_in_bytes;
+                        verify(serialize(serializer, member_data, member_type_info.type, key, customizer, next_context));
                     }
                     verify(serializer_end_object(serializer));
                 }
@@ -243,11 +253,8 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
             {
                 element_data: = array_data + i * info_array.element_type.runtime_size;
 
-                if customizer == null || customizer(serializer, element_data, info_array.element_type, "", notes, parent)
-                {
-                    // What to do if only one element of the array fails?
-                    verify(serialize(serializer, element_data, info_array.element_type, parent = parent, notes = notes, customizer = customizer));
-                }
+                // What to do if only one element of the array fails?
+                verify(serialize(serializer, element_data, info_array.element_type, "", customizer, ctx));
             }
             verify(serializer_end_array(serializer));
         }
