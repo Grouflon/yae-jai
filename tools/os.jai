@@ -102,7 +102,7 @@ kill_process_by_path :: (path: string) -> bool
     }
 }
 
-get_window_position :: (handle: *void) -> (x: int, y: int, width: int, height: int)
+get_window_rect :: (handle: *void) -> (x: int, y: int, width: int, height: int)
 {
     #if OS == .WINDOWS
     {
@@ -116,7 +116,7 @@ get_window_position :: (handle: *void) -> (x: int, y: int, width: int, height: i
     }
 }
 
-set_window_position :: (handle: *void, x: int, y: int, width: int, height: int)
+set_window_rect :: (handle: *void, x: int, y: int, width: int, height: int)
 {
     #if OS == .WINDOWS
     {
