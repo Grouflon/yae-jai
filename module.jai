@@ -12,6 +12,7 @@
 #load "math/bounds.jai";
 #load "math/curve.jai";
 #load "math/math.jai";
+#load "math/rect.jai";
 #load "math/spline.jai";
 
 #load "resources/resource.jai";
