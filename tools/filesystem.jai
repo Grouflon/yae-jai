@@ -53,6 +53,13 @@ normalize_path :: (path: string) -> string
     return normalized_path;
 }
 
+get_directory :: (path: string) -> string
+{
+    index: = find_index_from_right(path, "/");
+    if index < 0 return path;
+    return slice(path, 0, index+1);
+}
+
 #scope_file
 
 #import "File_Utilities";
