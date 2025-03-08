@@ -4,6 +4,7 @@ AsepriteFile :: struct
 
     load_function = aseprite_data_load;
     unload_function = aseprite_data_unload;
+    release_function = aseprite_data_release;
 
     texture: *TextureFile;
     animations: Table(string, *Animation);
@@ -85,9 +86,17 @@ aseprite_data_unload :: (resource: *Resource)
     {
         resource_unload(animation);
     }
-    table_free(*animations);
-    table_reset(*animations);
+    table_clear(*animations);
 
     resource_unload(texture);
     texture = null;
+
+    resource_remove_file_watch(resource, name);
+}
+
+aseprite_data_release :: (resource: *Resource)
+{
+    using t: = cast(*AsepriteFile) resource;
+    
+    table_free(*animations);
 }

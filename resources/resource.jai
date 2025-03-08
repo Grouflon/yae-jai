@@ -16,6 +16,7 @@ Resource :: struct
     load_count: u32;
     load_function: #type (resource: *Resource) -> bool;
     unload_function: #type (resource: *Resource);
+    release_function: #type (resource: *Resource);
 
     is_loaded_without_errors: bool = false;
 }
@@ -95,10 +96,11 @@ resource_manager_shutdown :: ()
 
     deinit(*watcher);
 
-    for resource: resource_by_id
+    for resource: resources
     {
         assert(resource.load_count == 0);
-        free(resource.name);
+
+        resource_release(resource);
         free(resource);
     }
 
@@ -166,6 +168,12 @@ resource_unload :: (resource: *Resource)
         resource.unload_function(resource);
         log_verbose("unloaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
+}
+
+resource_release :: (resource: *Resource)
+{
+    if resource.release_function != null resource.release_function(resource);
+    free(resource.name);
 }
 
 resource_save_to_disk :: (resource: *Resource, file_path: string)

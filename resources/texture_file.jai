@@ -4,6 +4,7 @@ TextureFile :: struct
 
     load_function = texture_load;
     unload_function = texture_unload;
+    release_function = texture_release;
 
     sprites: [..]*Sprite; @embed @serialize
 
@@ -28,9 +29,13 @@ texture_unload :: (resource: *Resource)
     rl.UnloadTexture(texture);
 
     resource_remove_file_watch(resource, name);
+}
 
-    // Do not belong here. Move it when we have a proper deinit
-    array_reset(*sprites);
+texture_release :: (resource: *Resource)
+{
+    using t: = cast(*TextureFile) resource;
+
+    array_free(sprites);
 }
 
 rl :: #import "raylib";

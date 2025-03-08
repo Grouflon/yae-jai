@@ -4,6 +4,7 @@ Animation :: struct
 
     load_function = animation_load;
     unload_function = animation_unload;
+    release_function = animation_release;
 
     frames_per_second: float = 10.0;
 
@@ -26,6 +27,11 @@ animation_load :: (resource: *Resource) -> bool
 animation_unload :: (resource: *Resource)
 {
     using t: = cast(*Animation) resource;
+}
 
-    array_reset(*frames);
+animation_release :: (resource: *Resource)
+{
+    using t: = cast(*Animation) resource;
+
+    array_free(frames);
 }
