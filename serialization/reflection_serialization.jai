@@ -8,7 +8,7 @@ CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info
 
 serialize :: (serializer: *Serializer, value: *$T, key: string = "", customizer: CustomSerializationFunction = null) -> bool
 {
-    return serialize(serializer, value, type_info(T), key, notes);
+    return serialize(serializer, value, type_info(T), key, customizer);
 }
 
 serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", customizer: CustomSerializationFunction = null, ctx: ReflectionContext = .{}) -> bool
