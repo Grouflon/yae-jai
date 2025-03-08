@@ -113,6 +113,11 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
                 aseprite.frames[i].name = copy_string(name);
                 i += 1;
             }
+            // If it is object, frames will come out unordered. We sort them alphabetically to at least handle the most general case
+            bubble_sort(aseprite.frames, (a: AsepriteFrame, b: AsepriteFrame) -> s64
+            {
+                return compare(a.name, b.name);
+            });
         }
     }
     
@@ -293,3 +298,4 @@ parse_layer :: (_value: JSON_Value) -> AsepriteLayer
 #import "String";
 #import "Reflection";
 #import "File_Utilities";
+#import "Sort";

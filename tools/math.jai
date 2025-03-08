@@ -41,6 +41,14 @@ ceil_to_s32 :: inline (_value: Vector2) -> s32, s32
     return ceil_to_s32(_value.x), ceil_to_s32(_value.y);
 }
 
+round :: inline (value: float) -> float
+{
+    if (value < 0.0)
+        return floor(value - 0.5);
+    else
+        return floor(value + 0.5);
+}
+
 sign :: inline (value: float) -> float
 {
     if value >= 0

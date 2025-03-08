@@ -21,6 +21,26 @@ make_bounds :: (points: ..$T) -> Bounds
     return bounds;
 }
 
+left :: inline (using bounds: $T/BoundsBase) -> float
+{
+    return min.x;
+}
+
+right :: inline (using bounds: $T/BoundsBase) -> float
+{
+    return max.x;
+}
+
+top :: inline (using bounds: $T/BoundsBase) -> float
+{
+    return max.y;
+}
+
+bottom :: inline (using bounds: $T/BoundsBase) -> float
+{
+    return min.y;
+}
+
 width :: inline (using bounds: $T/BoundsBase) -> float
 {
     return max.x - min.x;

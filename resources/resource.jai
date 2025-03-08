@@ -321,6 +321,12 @@ get_id :: (resource: *$T/Resource) -> ResourceID(T)
     return .{resource.id};
 }
 
+is_loaded :: (resource: *Resource) -> bool
+{
+    if resource == null return false;
+    return resource.is_loaded_without_errors;
+}
+
 resource_add_file_watch :: (resource: *Resource, file_path: string)
 {
     using manager: = resource_manager();

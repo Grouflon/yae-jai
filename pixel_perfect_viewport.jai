@@ -6,8 +6,8 @@ Using this viewport implies additional behaviour compared to vanilla raylib beha
 
 PixelPerfectViewport :: struct
 {
-    min_render_width, min_render_height: s32;
-    min_pixel_ratio, max_pixel_ratio: u8;
+    min_render_width, min_render_height: s32 = 200, 200;
+    min_pixel_ratio, max_pixel_ratio: u8 = 2, 2;
     camera: rl.Camera2D = .{ zoom = 1.0 };
 
     render_target: rl.RenderTexture2D;

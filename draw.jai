@@ -64,6 +64,24 @@ draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _f
     draw_sprite(_position, _texture, _data, index, _flip_x, _flip_y, _tint);
 }
 
+draw_sprite :: (_position: Vector2, _sprite: *Sprite, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
+{
+    if _sprite.texture == null return;
+    if !is_loaded(_sprite.texture) return;
+
+    x: = left(_sprite.bounds);
+    y: = bottom(_sprite.bounds);
+    w: = (ifx _flip_x then -1.0 else 1.0) * width(_sprite.bounds);
+    h: = (ifx _flip_y then 1.0 else -1.0) * height(_sprite.bounds);
+
+    DrawTextureRec(
+        _sprite.texture.texture,
+        .{ x, y, w, h },
+        _position,
+        _tint,
+    );
+}
+
 draw_loading_bar :: (_rectangle: Rectangle, _percentage: float, _color: Color)
 {
     DrawRectangleLinesEx(_rectangle, 1, _color);

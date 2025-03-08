@@ -26,6 +26,7 @@
 #load "resources/texture_file.jai";
 #load "resources/aseprite_file.jai";
 #load "resources/sprite.jai";
+#load "resources/animation.jai";
 
 #scope_module
 

@@ -55,6 +55,16 @@ array_clear :: (array: *[..]$T)
     array.count = 0;
 }
 
+table_clear :: (table: *Table)
+{
+    table_reset(table);
+}
+
+table_free :: (table: *Table)
+{
+    deinit(table);
+}
+
 verify :: (result: bool)
 {
     if !result { assert(false); }
