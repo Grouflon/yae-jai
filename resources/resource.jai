@@ -139,7 +139,9 @@ resource_load :: (resource: *Resource) -> bool
 
     if resource.load_count == 0 && resource.load_function != null
     {
+        log_verbose("loading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
         resource.is_loaded_without_errors = resource.load_function(resource);
+        log_verbose("loaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
     resource.load_count += 1;
     return resource.is_loaded_without_errors;
@@ -159,8 +161,10 @@ resource_unload :: (resource: *Resource)
     resource.load_count -= 1;
     if resource.load_count == 0 && resource.unload_function != null
     {
+        log_verbose("unloading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
         resource.is_loaded_without_errors = false;
         resource.unload_function(resource);
+        log_verbose("unloaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
 }
 

@@ -27,5 +27,5 @@ animation_unload :: (resource: *Resource)
 {
     using t: = cast(*Animation) resource;
 
-    array_free(frames);
+    array_reset(*frames);
 }

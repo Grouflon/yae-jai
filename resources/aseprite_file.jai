@@ -86,6 +86,7 @@ aseprite_data_unload :: (resource: *Resource)
         resource_unload(animation);
     }
     table_free(*animations);
+    table_reset(*animations);
 
     resource_unload(texture);
     texture = null;

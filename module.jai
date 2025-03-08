@@ -22,7 +22,6 @@
 #load "raylib_imgui.jai";
 
 #load "resources/resource.jai";
-#load "resources/spritesheet.jai";
 #load "resources/texture_file.jai";
 #load "resources/aseprite_file.jai";
 #load "resources/sprite.jai";

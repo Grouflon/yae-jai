@@ -30,7 +30,7 @@ texture_unload :: (resource: *Resource)
     resource_remove_file_watch(resource, name);
 
     // Do not belong here. Move it when we have a proper deinit
-    array_free(sprites);
+    array_reset(*sprites);
 }
 
 rl :: #import "raylib";
