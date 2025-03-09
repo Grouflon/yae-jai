@@ -6,8 +6,10 @@ AsepriteFile :: struct
     unload_function = aseprite_data_unload;
     release_function = aseprite_data_release;
 
-    texture: *TextureFile;
-    animations: Table(string, *Animation);
+    //Note: we still have the problem that data is non-existent until we load the resource, therefore if we just create the resource and save it, it will be empty and clear all the ids
+    // That may be a shortcoming of embedding resources like this, but maybe that's okay
+    texture: *TextureFile; @embed @serialize
+    animations: Table(string, *Animation); // to embed at some point to be able to maintain id. Bur require table serialization
 }
 
 get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
@@ -36,16 +38,21 @@ aseprite_data_load :: (resource: *Resource) -> bool
     }
 
     // Texture
-    image, success: = resource_load(TextureFile, aseprite_data.image_path);
+    if texture == null
+    {
+        texture = resource_get_or_create(TextureFile, aseprite_data.image_path);
+    }
+    assert(texture != null);
+
+    success: = resource_load(texture);
     if !success
     {
-        log_error("failed to load aseprite texture \"%\"", aseprite_data.image_path);
+        log_error("failed to load aseprite texture \"%\"", texture.name);
         return false;
     }
-    texture = image;
 
     // Sprites
-    array_clear(*image.sprites);
+    array_clear(*texture.sprites);
     for frame: aseprite_data.frames
     {
         sprite: = resource_get_or_create(Sprite, frame.name);
@@ -56,7 +63,7 @@ aseprite_data_load :: (resource: *Resource) -> bool
             Vector2.{xx frame.frame.x, xx frame.frame.y },
             Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
         };
-        array_add(*image.sprites, sprite);
+        array_add(*texture.sprites, sprite);
     }
 
     // Animations
@@ -68,7 +75,7 @@ aseprite_data_load :: (resource: *Resource) -> bool
         array_clear(*animation.frames);
         for i: tag.start_frame..tag.end_frame
         {
-            array_add(*animation.frames, .{ sprite = image.sprites[i] });
+            array_add(*animation.frames, .{ sprite = texture.sprites[i] });
         }
         table_add(*animations, tag.name, animation);
 

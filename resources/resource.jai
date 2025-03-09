@@ -1,4 +1,5 @@
 RESOURCE_LOG_SECTION :: Log_Section.{ "Resource" };
+RESOURCE_EXTENSION :: ".res";
 
 ResourceIDBase :: u32;
 
@@ -11,6 +12,7 @@ Resource :: struct
 {
     type: *Type_Info_Struct;
     id: ResourceIDBase;
+    data_path: string;
     name: string;
 
     load_count: u32;
@@ -52,14 +54,22 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders:
     {
         visit_files(resource_folder, true, manager, (info: *File_Visit_Info, user_data: *ResourceManager)
         {
-            if ends_with(info.short_name, ".res")
+            if ends_with(info.short_name, RESOURCE_EXTENSION)
             {
-                resource: = resource_load_from_disk(info.full_name);
+                resource: = resource_read_from_disk(info.full_name);
                 if resource == null return;
 
-                resource_name: = slice(info.full_name, 0, info.full_name.count - 4);
-                resource_rename(resource, resource_name);
-                log_verbose("gathered resource %", info.full_name, section= *RESOURCE_LOG_SECTION);
+                if resource.data_path.count > 0
+                {
+                    resource_unregister_name(resource, resource.data_path);
+                    free(resource.data_path);
+                }
+
+                resource.data_path = copy_string(normalize_path(info.full_name));
+                assert(resource.data_path.count > 0);
+                resource_register_name(resource, resource.data_path);
+
+                log_verbose("gathered resource %", resource.data_path, section= *RESOURCE_LOG_SECTION);
             }
         });
     }
@@ -173,6 +183,7 @@ resource_unload :: (resource: *Resource)
 resource_release :: (resource: *Resource)
 {
     if resource.release_function != null resource.release_function(resource);
+    free(resource.data_path);
     free(resource.name);
 }
 
@@ -188,7 +199,7 @@ resource_save_to_disk :: (resource: *Resource, file_path: string)
     json_serializer_write_json_file(*serializer, file_path);
 }
 
-resource_load_from_disk :: (file_path: string) -> *Resource
+resource_read_from_disk :: (file_path: string) -> *Resource
 {
     using manager: = resource_manager();
 
@@ -221,7 +232,7 @@ resource_rename :: (resource: *Resource, name: string)
 
     if resource.name.count > 0
     {
-        table_remove(*resource_name_to_id, resource.name);
+        resource_unregister_name(resource, name);
         free(resource.name);
         resource.name.count = 0;
     }
@@ -231,8 +242,40 @@ resource_rename :: (resource: *Resource, name: string)
 
     if resource.name.count > 0
     {
-        table_add(*resource_name_to_id, resource.name, resource.id);
+        resource_register_name(resource, name);
     }
+}
+
+resource_register_name :: (resource: *Resource, name: string)
+{
+    assert(resource != null);
+
+    using manager: = resource_manager();
+
+    if table_contains(*resource_name_to_id, name)
+    {
+        log_warning("name \"%\" already registered for resource %", name, resource.name);
+        return;
+    }
+
+    // note: we don't allocate memory for the name, we ideally should be there's no simple way to retrieve a pointer to the key when we remove it
+    // I don't think that's a big issue cause once the key is generated, we theoretically only ever touch the hash, so even if the key is deallocated we should be good
+    table_add(*resource_name_to_id, name, resource.id);
+}
+
+resource_unregister_name :: (resource: *Resource, name: string)
+{
+    assert(resource != null);
+
+    using manager: = resource_manager();
+
+    success, id: = table_remove(*resource_name_to_id, name);
+    if !success
+    {
+        log_warning("name \"%\" not registered for resource %", name, resource.name);
+        return;
+    }
+    assert(id == resource.id);
 }
 
 resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
@@ -468,6 +511,34 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
                 serialize(serializer, data, type_info(ResourceIDBase), key, null, ctx);
             }
             return false;
+        }
+
+        // Resource ID, override
+        if info.type == .POINTER
+        {
+            ti: = (cast(*Type_Info_Pointer) info).pointer_to;
+            if is_subclass_of(ti, Resource)
+            {
+                resource_ptr: = cast(**Resource) data;
+                resource: = <<resource_ptr;
+                id: ResourceIDBase = ifx resource != null then resource.id else 0;
+
+                // If embed, serialize data directyly
+                if has_note(ctx.member, "embed")
+                {
+                    resource_serialize(serializer, *id, key);
+                }
+                else // else serialize id
+                {
+                    serialize(serializer, *id, type_info(ResourceIDBase), key, null, ctx);
+                }
+
+                if serializer.mode == .READ
+                {
+                    <<resource_ptr = get(id);
+                }
+                return false;
+            }
         }
 
         // else normal serialization
