@@ -45,6 +45,8 @@ raylib_imgui_init :: (config: RaylibImGuiConfig = .{})
     io.BackendFlags_ |= .ImGuiBackendFlags_HasMouseCursors;
     io.MousePos = .{};
 
+    io.ConfigFlags_ |= .ImGuiConfigFlags_DockingEnable;
+
     // Setup clipboard functions
     io.GetClipboardTextFn = (_user_data: *void) -> *u8 #c_call { return GetClipboardText(); };
     io.SetClipboardTextFn = (user_data: *void, text: *u8) #c_call { SetClipboardText(text); };
@@ -92,7 +94,7 @@ raylib_imgui_render :: ()
 
     for i: 0..draw_data.CmdListsCount-1
     {
-        command_list: = draw_data.CmdLists[i];
+        command_list: = << (draw_data.CmdLists.Data + i);
 
         for j: 0..command_list.CmdBuffer.Size-1
         {
@@ -617,7 +619,6 @@ setup_mouse_cursors :: ()
     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_NotAllowed, MouseCursor.MOUSE_CURSOR_NOT_ALLOWED);
 }
 
-ImGui :: #import "ImGui";
 #import "raylib";
 #import "Hash_Table";
 #import "Math";

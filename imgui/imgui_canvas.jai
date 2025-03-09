@@ -217,5 +217,4 @@ canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: 
     zoom = new_zoom;
 }
 
-ImGui:: #import "ImGui";
 rl:: #import "raylib";

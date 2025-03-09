@@ -484,7 +484,6 @@ fit_canvas_to_curve :: (canvas: *ImGuiCanvas, curve: *Curve)
     imgui_canvas_request_fit_to_bounds(canvas, bounds, FIT_MARGIN);
 }
 
-ImGui:: #import "ImGui";
 #poke_name ImGui EditValue;
 
 rl:: #import "raylib";

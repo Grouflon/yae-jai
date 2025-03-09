@@ -275,7 +275,6 @@ parse_note :: (note_string: string) -> Note
     // find = sign, trim both sides, convert right side to all possible types
 }
 
-ImGui:: #import "ImGui";
 #import "String";
 
 #poke_name ImGui Value;
