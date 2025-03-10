@@ -7,7 +7,7 @@ AnimationPlayer :: struct
     is_playing: bool;
 }
 
-animation_player_play :: (using player: *AnimationPlayer, animation: *Animation)
+animation_player_set_animation :: (using player: *AnimationPlayer, animation: *Animation)
 {
     assert(player != null);
     assert(animation != null);
@@ -18,10 +18,27 @@ animation_player_play :: (using player: *AnimationPlayer, animation: *Animation)
 
     current_animation = animation;
     current_time_s = 0.0;
-    current_frame = -1;
+    current_frame = 0;
     current_repeat_count = 0;
-    is_playing = true;
+}
 
+animation_player_play :: (using player: *AnimationPlayer, animation: *Animation)
+{
+    assert(player != null);
+    assert(animation != null);
+
+    if current_animation == animation return;
+    
+    animation_player_stop(player);
+    animation_player_set_animation(player, animation);
+    animation_player_play(player);
+}
+
+animation_player_play :: (using player: *AnimationPlayer)
+{
+    if is_playing return;
+
+    is_playing = true;
     animation_player_update(player, 0.0);
 }
 

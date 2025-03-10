@@ -1,4 +1,4 @@
-#load "animation.jai";
+#load "animation_player.jai";
 #load "draw.jai";
 #load "log.jai";
 #load "pixel_perfect_viewport.jai";
