@@ -15,6 +15,9 @@ DECLARATIONS_TO_OMIT :: string.[
     "ImGuiTextBuffer",
 
     "ImDrawCallback_ResetRenderState", // casting an integer to a function pointer is not supported in Jai.
+
+    "ImFileHandle",
+    "ImBitArrayForNamedKeys",
 ];
 
 #if AT_COMPILE_TIME {
@@ -114,6 +117,7 @@ generate_bindings :: (args: [] string) -> bool {
         array_add(*libnames,      "ImGui");
         array_add(*include_paths, IMGUI_PATH);
         array_add(*source_files,  tprint("%/imgui.h", IMGUI_PATH));
+        array_add(*source_files,  tprint("%/imgui_internal.h", IMGUI_PATH));
         array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
         array_add(*flatten_namespaces, "ImGui");
         array_add(*strip_prefixes, "ImGui");
@@ -152,6 +156,7 @@ imgui_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_
         }
         if decl.name == "ImGuiContext" {
             decl.output_name = decl.name; // Don’t shorten ImGuiContext to Context as this would conflict
+            decl.decl_flags |= .TYPE_INFO_NONE;
         }
 
         if decl.kind == .TYPEDEF {
