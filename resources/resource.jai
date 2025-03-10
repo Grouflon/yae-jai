@@ -493,58 +493,60 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
     assert(resource.id != 0);
     assert(resource.type != null);
 
-    serialization_customizer :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, ctx: ReflectionContext) -> bool
-    {
-        // Not serializable, skip
-        if ctx.parent != null && is_subclass_of(ctx.parent, Resource) && !has_note(ctx.member, "serialize") return false;
+    serialization_params: SerializationParams = .{
 
-        // Resource ID, override
-        if is_subclass_of(info, ResourceIDBase)
+        filters = .[.{ .IN, type_info(Resource), "serialize" }],
+        
+        custom_serialization_function = (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool
         {
-            // If embed, serialize data directyly
-            if has_note(ctx.member, "embed")
+            // Resource ID, override
+            if is_subclass_of(info, ResourceIDBase)
             {
-                resource_serialize(serializer, cast(*ResourceIDBase) data, key);
-            }
-            else // else serialize id
-            {
-                serialize(serializer, data, type_info(ResourceIDBase), key, null, ctx);
-            }
-            return false;
-        }
-
-        // Resource ID, override
-        if info.type == .POINTER
-        {
-            ti: = (cast(*Type_Info_Pointer) info).pointer_to;
-            if is_subclass_of(ti, Resource)
-            {
-                resource_ptr: = cast(**Resource) data;
-                resource: = <<resource_ptr;
-                id: ResourceIDBase = ifx resource != null then resource.id else 0;
-
                 // If embed, serialize data directyly
                 if has_note(ctx.member, "embed")
                 {
-                    resource_serialize(serializer, *id, key);
+                    resource_serialize(serializer, cast(*ResourceIDBase) data, key);
                 }
                 else // else serialize id
                 {
-                    serialize(serializer, *id, type_info(ResourceIDBase), key, null, ctx);
-                }
-
-                if serializer.mode == .READ
-                {
-                    <<resource_ptr = get(id);
+                    serialize(serializer, data, type_info(ResourceIDBase), key, .{}, ctx);
                 }
                 return false;
             }
-        }
 
-        // else normal serialization
-        return true;
+            // Resource ID, override
+            if info.type == .POINTER
+            {
+                ti: = (cast(*Type_Info_Pointer) info).pointer_to;
+                if is_subclass_of(ti, Resource)
+                {
+                    resource_ptr: = cast(**Resource) data;
+                    resource: = <<resource_ptr;
+                    id: ResourceIDBase = ifx resource != null then resource.id else 0;
+
+                    // If embed, serialize data directyly
+                    if has_note(ctx.member, "embed")
+                    {
+                        resource_serialize(serializer, *id, key);
+                    }
+                    else // else serialize id
+                    {
+                        serialize(serializer, *id, type_info(ResourceIDBase), key, .{}, ctx);
+                    }
+
+                    if serializer.mode == .READ
+                    {
+                        <<resource_ptr = get(id);
+                    }
+                    return false;
+                }
+            }
+
+            // else normal serialization
+            return true;
+        }
     };
-    serialize(serializer, resource, resource.type, "data", customizer = serialization_customizer);
+    serialize(serializer, resource, resource.type, "data", params = serialization_params);
 
     return true;
 }

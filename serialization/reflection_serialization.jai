@@ -1,19 +1,34 @@
+SerializationFilter :: struct
+{
+    type: enum
+    {
+        IN;  // Only serialize members that have the note
+        OUT; // Do not serialize members that have the note
+    }
+    subclass: *Type_Info; // Restrict the filter to subclasses of this
+    note: string;   
+}
+
+SerializationParams :: struct
+{
+    filters: []SerializationFilter;
+    custom_serialization_function: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool;
+}
+
 ReflectionContext :: struct
 {
     parent: *Type_Info_Struct;
     member: *Type_Info_Struct_Member;
 }
 
-CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, ctx: ReflectionContext) -> bool;
-
-serialize :: (serializer: *Serializer, value: *$T, key: string = "", customizer: CustomSerializationFunction = null) -> bool
+serialize :: (serializer: *Serializer, value: *$T, key: string = "", params: SerializationParams = .{}) -> bool
 {
-    return serialize(serializer, value, type_info(T), key, customizer);
+    return serialize(serializer, value, type_info(T), key, params);
 }
 
-serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", customizer: CustomSerializationFunction = null, ctx: ReflectionContext = .{}) -> bool
+serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool
 {
-    if customizer != null && !customizer(serializer, data, info, key, ctx)
+    if params.custom_serialization_function != null && !params.custom_serialization_function(serializer, data, info, key, params, ctx)
     {
         return true;
     }
@@ -96,9 +111,21 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         member_type_info, success: = table_find(*key_to_type_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
 
+                        // params filters
+                        skip: = false;
+                        for filter: params.filters
+                        {
+                            if filter.subclass != null && !is_subclass_of(info_struct, filter.subclass) { continue; }
+
+                            match: = has_note(member_type_info, filter.note);
+                            if filter.type == .IN && !match { skip = true; break; }
+                            else if filter.type == .OUT && match { skip = true; break; }
+                        }
+                        if skip { continue; }
+
                         next_context.member = member_type_info;
                         member_data: = data + member_type_info.offset_in_bytes;
-                        verify(serialize(serializer, member_data, member_type_info.type, key, customizer, next_context));
+                        verify(serialize(serializer, member_data, member_type_info.type, key, params, next_context));
                     }
                     verify(serializer_end_object(serializer));
                 }
@@ -254,7 +281,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 element_data: = array_data + i * info_array.element_type.runtime_size;
 
                 // What to do if only one element of the array fails?
-                verify(serialize(serializer, element_data, info_array.element_type, "", customizer, ctx));
+                verify(serialize(serializer, element_data, info_array.element_type, "", params, ctx));
             }
             verify(serializer_end_array(serializer));
         }
