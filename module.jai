@@ -2,6 +2,7 @@
 #load "draw.jai";
 #load "log.jai";
 #load "pixel_perfect_viewport.jai";
+#load "viewport.jai";
 #load "raylib_imgui.jai";
 #load "statemachine.jai";
 #load "tilemap.jai";

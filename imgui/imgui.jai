@@ -249,11 +249,6 @@ Note :: struct
     value: Value;
 }
 
-Value :: (prefix: *u8, v: Vector2)
-{
-    ImGui.Text("%: {%,%}", to_string(prefix), v.x, v.y);
-}
-
 parse_note :: (note_string: string) -> Note
 {
     note: Note;
@@ -277,7 +272,6 @@ parse_note :: (note_string: string) -> Note
 
 #import "String";
 
-#poke_name ImGui Value;
 #poke_name ImGui InputText;
 #poke_name ImGui EditValue;
 

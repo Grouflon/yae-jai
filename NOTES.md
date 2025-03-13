@@ -3,3 +3,4 @@
 
 # Todo
 - regenerate raylib bindings to allow log callback override. (check removing generator_options.strip_flags & .FUNCTIONS_WITH_VALIST)
+- Merge ViewportBase, PixelPerfectViewport and ImGuiViewport

@@ -10,6 +10,21 @@ ImVector :: struct (T: Type) {
     Data: *T;
 }
 
+Value :: (prefix: *u8, v: Vector2)
+{
+    Text("%: {%,%}", to_string(prefix), v.x, v.y);
+}
+
+Value :: (prefix: *u8, v: Vector3)
+{
+    Text("%: {%,%,%}", to_string(prefix), v.x, v.y, v.z);
+}
+
+Value :: (prefix: *u8, v: Vector4)
+{
+    Text("%: {%,%,%,%}", to_string(prefix), v.x, v.y, v.z, v.w);
+}
+
 ImDrawCallback :: #type (parent_list: *ImDrawList, cmd: *ImDrawCmd) #c_call;
 
 #scope_module

@@ -87,6 +87,16 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     current_frame = floor_to_s32(current_time_s / frame_time);
 }
 
+animation_player_current_frame :: (using player: *AnimationPlayer) -> index: s32, frame: AnimationFrame
+{
+    assert(player != null);
+
+    if current_animation == null { return -1, .{}; }
+    if current_frame < 0 || current_frame >= current_animation.frames.count { return -1, .{}; }
+
+    return current_frame, current_animation.frames[current_frame];
+}
+
 animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
     assert(player != null);

@@ -51,6 +51,11 @@ height :: inline (using bounds: $T/BoundsBase) -> float
     return max.y - min.y;
 }
 
+size :: inline  (using bounds: $T/BoundsBase) -> T.vector_type
+{
+    return max - min;
+}
+
 depth :: inline (using bounds: Bounds3D) -> float
 {
     return max.z - min.z;

@@ -61,6 +61,14 @@ sign :: inline (value: float) -> float
     }
 }
 
+clamp :: inline (_value: Vector2, min: float, max: float) -> Vector2
+{
+    return .{
+        clamp(_value.x, min, max),
+        clamp(_value.y, min, max)
+    };
+}
+
 signed_angle_between :: (a: Vector2, b: Vector2) -> float
 {
     angle_sign: = -sign(a.x * a.y - a.y * b.x);
