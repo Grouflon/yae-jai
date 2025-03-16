@@ -242,7 +242,7 @@ resource_rename :: (resource: *Resource, name: string)
 
     if resource.name.count > 0
     {
-        resource_register_name(resource, name);
+        resource_register_name(resource, resource.name);
     }
 }
 
