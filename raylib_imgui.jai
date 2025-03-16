@@ -1,8 +1,17 @@
+RaylibImGuiFont :: struct
+{
+    path: string;
+    size: float;
+    range: [2]ImGui.ImWchar;
+    config: ImGui.ImFontConfig;
+}
+
 RaylibImGuiConfig :: struct
 {
     theme: ImGuiTheme = .CLASSIC;
-    font_file: string = "";
-    font_size: float = 10.0;
+
+    load_default_font: bool = true;
+    fonts: []RaylibImGuiFont;
 
     user_data: *void;
     show_cursor_callback: #type (user_data: *void);
@@ -27,7 +36,6 @@ raylib_imgui_init :: (config: RaylibImGuiConfig = .{})
     global_state.last_frame_focused = IsWindowFocused();
 
     global_state.config = config;
-    global_state.config.font_file = copy_string(config.font_file);
 
     // Create context
     global_state.imgui_context = ImGui.CreateContext(null);
@@ -57,7 +65,6 @@ raylib_imgui_shutdown :: ()
 {
     ImGui.DestroyContext(global_state.imgui_context);
     global_state.imgui_context = null;
-    free(global_state.config.font_file);
 }
 
 raylib_imgui_new_frame :: (dt: float)
@@ -141,18 +148,19 @@ RaylibImgGuiState :: struct
 global_state: RaylibImgGuiState;
 
 
-load_fonts :: (fonts: *ImGui.ImFontAtlas)
+load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config: []RaylibImGuiFont)
 {
     fonts.Clear(fonts);
 
-    if global_state.config.font_file.count > 0
-    {
-        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(global_state.config.font_file), global_state.config.font_size);
-        assert(font != null);
-    }
-    else
+    if load_default_font
     {
         font: = fonts.AddFontDefault(fonts);
+        assert(font != null);
+    }
+
+    for font_config: fonts_config
+    {
+        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(font_config.path), font_config.size, *font_config.config, font_config.range.data);
         assert(font != null);
     }
 
@@ -203,7 +211,7 @@ update_scale :: (io: *ImGui.IO, scale: float)
 {
     // Setup Font
     io.FontGlobalScale = scale;
-    load_fonts(io.Fonts);
+    load_fonts(io.Fonts, global_state.config.load_default_font, global_state.config.fonts);
 
     // Setup Theme
     if global_state.config.theme ==
