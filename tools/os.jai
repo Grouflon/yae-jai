@@ -23,7 +23,7 @@ find_window_by_title_containing :: (substring: string) -> *void
         closure: = Closure.{substring, null};
         EnumWindows((window: Windows.HWND, data: *void) -> bool #c_call
         {
-            ctx: Context;
+            ctx: #Context;
             push_context ctx
             {
                 closure: *Closure = data;
