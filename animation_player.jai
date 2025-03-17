@@ -59,6 +59,17 @@ animation_player_advance_frame :: (using player: *AnimationPlayer)
     animation_player_update(player, 1.0 / current_animation.frames_per_second);
 }
 
+animation_player_set_frame :: (using player: *AnimationPlayer, frame: s32)
+{
+    assert(player != null);
+    if current_animation == null { return; }
+
+    current_frame = positive_mod(frame, xx current_animation.frames.count);
+    current_time_s = cast(float)(current_frame) / current_animation.frames_per_second;
+
+    animation_player_update(player, 0);
+}
+
 animation_player_update :: (using player: *AnimationPlayer, dt: float)
 {
     assert(player != null);
