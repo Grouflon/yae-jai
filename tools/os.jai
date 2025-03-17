@@ -102,13 +102,17 @@ kill_process_by_path :: (path: string) -> bool
     }
 }
 
-get_window_rect :: (handle: *void) -> IntRect
+get_window_rect :: (handle: *void) -> bool, IntRect
 {
+    if handle == null { return false, .{}; }
+
     #if OS == .WINDOWS
     {
         rect: Windows.RECT;
         Windows.GetWindowRect(handle, *rect);
-        return .{
+        if rect.left == 0 && rect.top == 0 && rect.right == 0 && rect.bottom == 0 { return false, .{}; };
+
+        return true, .{
             x = rect.left,
             y = rect.top,
             w = rect.right - rect.left,
@@ -117,12 +121,14 @@ get_window_rect :: (handle: *void) -> IntRect
     }
     else
     {
-        return .{};
+        return false, .{};
     }
 }
 
 set_window_rect :: (handle: *void, rect: IntRect)
 {
+    if handle == null { return; }
+
     #if OS == .WINDOWS
     {
         Windows.SetWindowPos(handle, null, rect.x, rect.y, rect.w, rect.h, 0);
