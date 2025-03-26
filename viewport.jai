@@ -26,38 +26,21 @@ ViewportBase :: struct
 
 viewport_align_points :: (viewport: *ViewportBase, viewport_p0: Vector2, world_p0: Vector2, viewport_p1: Vector2, world_p1: Vector2, uniform_zoom: bool = true)
 {
-    // if length(canvas.size) == 0
-    // {
-    //     canvas.target = .{};
-    //     canvas.zoom = .{};
-    //     return;
-    // }    
-    // assert(relative_p0 != relative_p1);
-    // assert(absolute_p0 != absolute_p1);
+    viewport.zoom = (viewport_p0 - viewport_p1) / (world_p0 - world_p1);
+    // zoom: float = max(viewport.zoom.x, viewport.zoom.y);
+    // viewport.zoom = .{zoom, zoom};
+    viewport.zoom.y *= -1;
 
-    // // f: = Vector2.{grid_step, -grid_step};
-    // zoom = ((relative_p1 - relative_p0) / (absolute_p1 - absolute_p0));
-
-    // o: = draw_origin + .{0, draw_size.y};
-    // scrolling = relative_p0 - o - (zoom * absolute_p0 * f);
+    viewport_align_point(viewport, viewport_p0, world_p0);
 }
 
-viewport_align_point :: (viewport: *ViewportBase, relative_position: Vector2, absolute_position: Vector2)
+viewport_align_point :: (viewport: *ViewportBase, viewport_position: Vector2, world_position: Vector2)
 {
-    // if length(canvas.size) == 0
-    // {
-    //     canvas.target = .{};
-    //     canvas.zoom = .{};
-    //     return;
-    // }    
-    // assert(relative_p0 != relative_p1);
-    // assert(absolute_p0 != absolute_p1);
+    assert(viewport.zoom.x != 0.0);
+    assert(viewport.zoom.y != 0.0);
 
-    // // f: = Vector2.{grid_step, -grid_step};
-    // zoom = ((relative_p1 - relative_p0) / (absolute_p1 - absolute_p0));
-
-    // o: = draw_origin + .{0, draw_size.y};
-    // scrolling = relative_p0 - o - (zoom * absolute_p0 * f);
+    zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
+    viewport.target = world_position - (viewport_position - viewport.size * 0.5) / zoom;
 }
 
 viewport_pan :: (viewport: *ViewportBase, viewport_translation: Vector2)
@@ -82,8 +65,8 @@ viewport_set_zoom_focused :: (viewport: *ViewportBase, focus_viewport_position: 
 
 viewport_to_world_position :: (viewport: *ViewportBase, viewport_position: Vector2) -> Vector2
 {
-    assert(viewport.zoom.x > 0.0);
-    assert(viewport.zoom.y > 0.0);
+    assert(viewport.zoom.x != 0.0);
+    assert(viewport.zoom.y != 0.0);
 
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
     return viewport.target + (viewport_position - viewport.size * 0.5) / zoom;
@@ -91,8 +74,8 @@ viewport_to_world_position :: (viewport: *ViewportBase, viewport_position: Vecto
 
 viewport_from_world_position :: (viewport: *ViewportBase, world_position: Vector2) -> Vector2
 {
-    assert(viewport.zoom.x > 0.0);
-    assert(viewport.zoom.y > 0.0);
+    assert(viewport.zoom.x != 0.0);
+    assert(viewport.zoom.y != 0.0);
 
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
     return (world_position - viewport.target) * zoom + viewport.size * 0.5;
@@ -115,6 +98,7 @@ viewport_update :: (using viewport: *ViewportBase, width: s32, height: s32) -> b
         rl.UnloadRenderTexture(render_target);
     }
     render_target = rl.LoadRenderTexture(width, height);
+    size = .{xx width, xx height};
     return true;
 }
 

@@ -6,7 +6,9 @@ Animation :: struct
     unload_function = animation_unload;
     release_function = animation_release;
 
-    frames_per_second: float = 10.0;
+    frames_per_second: float = 10.0; @serialize
+    layers: [..]AnimationLayer; @serialize
+    events: [..]AnimationEvent; @serialize
 
     frames: [..]AnimationFrame;
 }
@@ -14,6 +16,16 @@ Animation :: struct
 AnimationFrame :: struct
 {
     sprite: *Sprite;
+}
+
+AnimationLayer :: struct
+{
+    name: string;
+}
+
+AnimationEvent :: struct
+{
+    name: string;
 }
 
 #scope_file

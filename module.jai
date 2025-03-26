@@ -32,6 +32,8 @@
 #load "tools/misc.jai";
 #load "tools/os.jai";
 
+#load "editor/animation_editor.jai";
+
 #scope_module
 
 #import,dir "./modules/jaison";
