@@ -59,13 +59,6 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders:
                 resource: = resource_read_from_disk(info.full_name);
                 if resource == null return;
 
-                if resource.data_path.count > 0
-                {
-                    resource_unregister_name(resource, resource.data_path);
-                    free(resource.data_path);
-                }
-
-                resource.data_path = copy_string(normalize_path(info.full_name));
                 assert(resource.data_path.count > 0);
                 resource_register_name(resource, resource.data_path);
 
@@ -187,16 +180,26 @@ resource_release :: (resource: *Resource)
     free(resource.name);
 }
 
-resource_save_to_disk :: (resource: *Resource, file_path: string)
+resource_save_to_disk :: (resource: *Resource) -> bool
 {
-    if resource == null return;
+    if resource == null return false;
+    if resource.data_path.count == 0 return false;
+
+    return resource_save_to_disk(resource, resource.data_path);
+}
+
+resource_save_to_disk :: (resource: *Resource, file_path: string) -> bool
+{
+    if resource == null return false;
 
     serializer: JsonSerializer;
     serializer_begin(*serializer, .WRITE);
     resource_serialize(*serializer, *resource.id);
     serializer_end(*serializer);
 
+    make_directory_if_it_does_not_exist(get_directory(file_path), true);
     json_serializer_write_json_file(*serializer, file_path);
+    return true;
 }
 
 resource_read_from_disk :: (file_path: string) -> *Resource
@@ -219,7 +222,11 @@ resource_read_from_disk :: (file_path: string) -> *Resource
     }
     serializer_end(*serializer);
 
-    return get(id);
+    resource: = get(id);
+    assert(resource.data_path.count == 0);    
+    resource.data_path = copy_string(normalize_path(file_path));
+
+    return resource;
 }
 
 resource_rename :: (resource: *Resource, name: string)
