@@ -82,7 +82,7 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     // Update loops
     frame_time: = 1.0 / current_animation.frames_per_second;
     animation_duration: = cast(float) current_animation.frames.count * frame_time;
-    while current_time_s > animation_duration
+    while animation_duration > 0 && current_time_s > animation_duration
     {
         current_time_s -= animation_duration;
         current_repeat_count += 1;
