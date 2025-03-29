@@ -18,6 +18,8 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
     dockspace_id: = ImGui.GetID("animation_dockspace");
     animation_editor_window_class: = ImGui.WindowClass.{ ClassId = dockspace_id };
     dockspace_size: = ImGui.GetContentRegionAvail();
+    animation: = editor.player.current_animation;
+    animation_changed: = false;
 
     PROPERTIES_NAME :: "\uf03a Properties";
     TIMELINE_NAME :: "\uf008 Timeline";
@@ -58,10 +60,9 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
     if ImGui.Begin(TIMELINE_NAME, null)
     {
         line_height: = ImGui.GetTextLineHeightWithSpacing();
-        animation: = editor.player.current_animation;
 
         table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersH | .HighlightHoveredColumn | .Resizable | .RowBg;
-        if ImGui.BeginTable("timeline", xx (animation.frames.count + 1), table_flags, .{0, line_height * animation.layers.count})
+        if ImGui.BeginTable("timeline", xx (animation.frames.count + 1), table_flags, .{0, 0})
         {
             COLUMN_WIDTH :: 15;
             ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
@@ -87,9 +88,39 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
                 ImGui.TableHeader(name);
             }
 
+            layer_to_delete: s32 = -1;
             for layer, i: animation.layers
             {
+                ImGui.PushID(cast(s32) i);
+                defer ImGui.PopID();
 
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+                // ImGui.SetNextItemWidth(-FLOAT32_MAX);
+                ImGui.Selectable(temp_c_string(layer.name));
+                if ImGui.BeginPopupContextItem()
+                {
+                    if ImGui.MenuItem("Delete layer")
+                    {
+                        layer_to_delete = xx i;
+                    }
+
+                    ImGui.EndPopup();
+                }
+                
+            }
+            if layer_to_delete >= 0
+            {
+                animation_remove_layer(animation, layer_to_delete);
+                animation_changed = true;
+            }
+
+            ImGui.TableNextRow();
+            ImGui.TableSetColumnIndex(0);
+            if ImGui.Button("New Layer", .{ImGui.GetContentRegionAvail().x, 0})
+            {
+                animation_add_layer(animation, tprint("layer %", animation.layers.count));
+                animation_changed = true;
             }
             // for (int row = 0; row < rows_count; row++)
             // {
@@ -276,6 +307,11 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
     }
 
     animation_player_draw(*player, .{});
+
+    if animation_changed
+    {
+        resource_save_to_disk(animation);
+    }
 }
 
 #scope_file
