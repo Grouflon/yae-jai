@@ -60,6 +60,12 @@ animation_remove_layer :: (using animation: *Animation, index: s32)
     valid: = index >= 0 && index < animation.layers.count;
     if !valid { log_warning(tprint("animation \"%\": can't remove layer at index %", animation.name, index)); return; }
 
+    for *< event, i: events
+    {
+        if event.layer_index == index { animation_remove_event(animation, xx i); }
+        if event.layer_index > index { event.layer_index -= 1; }
+    }
+
     free(animation.layers[index].name);
     array_ordered_remove_by_index(*animation.layers, index);
 }
@@ -68,6 +74,15 @@ animation_add_event :: (using animation: *Animation, event: AnimationEvent)
 {
     assert(animation != null);
     array_add(*animation.events, event);
+}
+
+animation_remove_event :: (using animation: *Animation, index: s32)
+{
+    assert(animation != null);
+    valid: = index >= 0 && index < animation.events.count;
+    if !valid { log_warning(tprint("animation \"%\": can't remove event at index %", animation.name, index)); return; }
+
+    array_ordered_remove_by_index(*animation.events, index);
 }
 
 #scope_file

@@ -3,8 +3,11 @@ AnimationEditor :: struct
     player: AnimationPlayer;
     viewport: ViewportBase;
     is_dragging: = false;
-    edited_layer_name_index: int = -1;
+    edited_layer_name_index: s32 = -1;
+    selected_event_index: s32 = -1;
     focus_requested: bool = false;
+    event_popup_frame: s32 = -1;
+    event_popup_layer: s32 = -1;
 }
 
 animation_editor_init :: (using editor: *AnimationEditor, animation: *Animation)
@@ -100,8 +103,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 {
     animation_changed: = false;
     animation: = editor.player.current_animation;
-    line_height: = ImGui.GetTextLineHeightWithSpacing();
     frame_count: s32 = cast(s32) animation.frame_count;
+    CELL_WIDTH :: 24;
+    CELL_HEIGHT :: 17;
+    COLUMN_WIDTH :: CELL_WIDTH - 9;
 
     timeline_frame_origin: Vector2;
     timeline_frame_begin: Vector2;
@@ -111,7 +116,6 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     column_count: s32 = frame_count + 3;
     if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
     {
-        COLUMN_WIDTH :: 15;
         ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
 
         column_flags: ImGui.TableColumnFlags = .WidthFixed | .NoResize | .NoReorder | .NoHide;
@@ -132,7 +136,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
             if i == 0
             {
-                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, line_height-1};
+                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, CELL_HEIGHT-1};
             }
             else
             {
@@ -182,7 +186,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 // Edit enter
                 if ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(.Left)
                 {
-                    edited_layer_name_index = i;
+                    edited_layer_name_index = xx i;
                     focus_requested = true;
                 }
             }
@@ -206,44 +210,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 ImGui.EndPopup();
             }
 
-            // Frames
-            for frame_i: 0..frame_count-1
+            if i == 0
             {
-                ImGui.PushID(temp_c_string(tprint("% %", i, frame_i)));
-                defer ImGui.PopID();
-
-                ImGui.TableSetColumnIndex(cast(s32)frame_i + 1);
-
-                if frame_i == 0 && i == 0
-                {
-                    timeline_frame_origin = ImGui.GetCursorScreenPos() + .{-4, -1};
-                }
-
-                // This way of making the popup trigger zone is not ideal, but it will do for now
-                ImGui.SetCursorPos(ImGui.GetCursorPos() - .{4, 1});
-                ImGui.InvisibleButton("", .{COLUMN_WIDTH + 8, line_height-2});
-                if ImGui.BeginPopupContextItem()
-                {
-                    if ImGui.BeginMenu("Add Event")
-                    {
-                        enum_info: = cast(*Type_Info_Enum) type_info(AnimationEventType);
-
-                        for value: enum_info.values
-                        {
-                            if value == xx AnimationEventType.NONE continue;
-
-                            if ImGui.MenuItem(temp_c_string(enum_value_to_name(cast(AnimationEventType) value)))
-                            {
-                                animation_add_event(animation, .{ type = .SPRITE, layer_index = xx i, begin = xx frame_i });
-                                animation_changed = true;
-                            }
-                        }
-                        ImGui.EndMenu();
-                    }
-
-                    ImGui.EndPopup();
-                }
-
+                ImGui.TableSetColumnIndex(1);
+                timeline_frame_origin = ImGui.GetCursorScreenPos() + .{-4, -1};
             }
         }
         if layer_to_delete >= 0
@@ -265,55 +235,93 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         if ImGui.GetScrollMaxY() > 0 timeline_frame_end.x -= 12;
         draw_list: = ImGui.GetWindowDrawList();
         draw_list.PushClipRect(draw_list, timeline_frame_begin, timeline_frame_end);
-        // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF);
-        for event: animation.events
+        // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF); // debug: see clipping rect
+        clicked_on_something: = false;
+        for event, event_i: animation.events
         {
-            center: Vector2 = timeline_frame_origin + Vector2.{ cast(float)(event.begin+1) * (COLUMN_WIDTH+9), (line_height * 0.5) + cast(float)event.layer_index * (line_height+1) };
-            draw_list.AddNgonFilled(draw_list, center, 5, 0xFF0000FF, 4);
+            DIAMOND_RADIUS :: 5;
+            center: Vector2 = timeline_frame_origin + Vector2.{ cast(float)(event.begin+1) * CELL_WIDTH, (CELL_HEIGHT * 0.5) + cast(float)event.layer_index * CELL_HEIGHT };
+            color: u32 = 0xffe0873d;
+
+            if ImGui.IsWindowHovered() && length(ImGui.GetMousePos() - center) <= DIAMOND_RADIUS
+            {
+                color = 0xffffb679;
+
+                if ImGui.IsMouseClicked(.Left)
+                {
+                    selected_event_index = xx event_i;
+                    clicked_on_something = true;
+                }
+            }
+
+            draw_list.AddNgonFilled(draw_list, center, DIAMOND_RADIUS, color, 4);
+            if selected_event_index == event_i
+            {
+                draw_list.AddNgon(draw_list, center, DIAMOND_RADIUS+1, 0xffffb679, 4);
+            }
+        }
+
+        // Clicks on timeline
+        if ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false)
+        {
+            relative_mouse_pos: = ImGui.GetMousePos() - timeline_frame_origin;
+            hovered_frame: = cast(s32) round(relative_mouse_pos.x / CELL_WIDTH) - 1;
+            hovered_layer: = cast(s32) floor(relative_mouse_pos.y / CELL_HEIGHT);
+            is_valid_cell: = hovered_frame >= 0 && hovered_frame < xx animation.frame_count && hovered_layer >= 0 && hovered_layer < animation.layers.count;
+
+            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+
+            if ImGui.IsMouseClicked(.Left) && !clicked_on_something
+            {
+                selected_event_index = -1;
+            }
+
+            EVENT_POPUP_NAME :: "frame event";
+            if is_valid_cell && ImGui.IsMouseClicked(.Right)
+            {
+                event_popup_frame = hovered_frame;
+                event_popup_layer = hovered_layer;
+                ImGui.OpenPopup(EVENT_POPUP_NAME);
+            }
+        }
+        else
+        {
+            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = false;
+        }
+
+        // Event popup
+        if ImGui.BeginPopup("frame event")
+        {
+            if ImGui.BeginMenu("Add Event")
+            {
+                enum_info: = cast(*Type_Info_Enum) type_info(AnimationEventType);
+
+                for value: enum_info.values
+                {
+                    if value == xx AnimationEventType.NONE continue;
+
+                    if ImGui.MenuItem(temp_c_string(enum_value_to_name(cast(AnimationEventType) value)))
+                    {
+                        animation_add_event(animation, .{ type = .SPRITE, layer_index = xx event_popup_layer, begin = xx event_popup_frame });
+                        animation_changed = true;
+                    }
+                }
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndPopup();
+        }
+
+        // Keyboard shortcuts
+        if selected_event_index >= 0 && ImGui.IsWindowFocused() && ImGui.IsKeyPressed(.Delete)
+        {
+            animation_remove_event(animation, selected_event_index);
+            selected_event_index = -1;
+            animation_changed = true;
         }
 
         ImGui.EndTable();
     }
-
-    // timeline_id: = ImGui.GetID("timeline_dockspace");
-    // timeline_window_class: = ImGui.WindowClass.{ ClassId = dockspace_id };
-    // TIMELINE_LAYERS_NAME :: "Timeline_Layers";
-    // TIMELINE_FRAMES_NAME :: "Timeline_Frame";
-    // timeline_size: = ImGui.GetContentRegionAvail();
-
-    // // Build default dockspace
-    // flags: ImGui.DockNodeFlags = .NoDockingOverCentralNode | .NoDockingSplit | .AutoHideTabBar | .NoUndocking | .NoSplit | .NoDockingInCentralNode | cast(ImGui.DockNodeFlags) ImGui.DockNodeFlagsPrivate_.DockNodeFlags_NoTabBar;
-    // if ImGui.DockBuilderGetNode(timeline_id) == null
-    // {
-    //     ImGui.DockBuilderRemoveNode(timeline_id); // Clear out existing layout
-    //     ImGui.DockBuilderAddNode(timeline_id, flags | cast(ImGui.DockNodeFlags) ImGui.DockNodeFlagsPrivate_.DockNodeFlags_DockSpace); // Add empty node
-    //     ImGui.DockBuilderSetNodeSize(timeline_id, timeline_size);
-
-    //     dock_id_frames: = timeline_id; // This variable will track the document node, however we are not using it here as we aren't docking anything into it.
-    //     dock_id_layers: = ImGui.DockBuilderSplitNode(timeline_id, .ImGuiDir_Left, 0.20, null, *dock_id_frames);
-
-    //     ImGui.DockBuilderDockWindow(TIMELINE_LAYERS_NAME, dock_id_layers);
-    //     ImGui.DockBuilderDockWindow(TIMELINE_FRAMES_NAME, dock_id_frames);
-    //     ImGui.DockBuilderFinish(timeline_id);
-    // }
-    // else
-    // {
-    //     ImGui.DockSpace(timeline_id, *timeline_size, window_class = *timeline_window_class, flags = flags);
-    // }
-    
-    // ImGui.SetNextWindowClass(*timeline_window_class);
-    // if ImGui.Begin(TIMELINE_LAYERS_NAME, null)
-    // {
-    //     ImGui.Text("layers");
-    // }
-    // ImGui.End();
-
-    // ImGui.SetNextWindowClass(*timeline_window_class);
-    // if ImGui.Begin(TIMELINE_FRAMES_NAME, null)
-    // {
-    //     ImGui.Text("frames");
-    // }
-    // ImGui.End();
 
     return animation_changed;
 }
