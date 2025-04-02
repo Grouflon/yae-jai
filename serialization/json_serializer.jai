@@ -265,8 +265,10 @@ json_serializer_begin_array :: (using s: *JsonSerializer, size: *s64, key: strin
         }
         case .WRITE;
         {
+            byte_size: = <<size * size_of(JSON_Value);
             next_value.type = .ARRAY;
-            next_value.array.data = talloc(<<size * size_of(JSON_Value));
+            next_value.array.data = talloc(byte_size);
+            memset(next_value.array.data, 0, byte_size);
             next_value.array.count = <<size;
         }
     }
@@ -308,6 +310,7 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
                 return false;
             }
 
+            assert(next_value.object != null);
             if keys != null
             {
                 keys.count = next_value.object.count;
@@ -322,14 +325,12 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
         }
         case .WRITE;
         {
-            // We allow for reopening an already written array
-            if next_value.type != .OBJECT
-            {
-                next_value.type = .OBJECT;
-                next_value.object = talloc(size_of(JSON_Object));
-                Initialize(next_value.object);
-                next_value.object.allocator = temporary_allocator;
-            }
+            assert(next_value.type == .NULL); // Ensure we are not overwriting anything
+
+            next_value.type = .OBJECT;
+            next_value.object = talloc(size_of(JSON_Object));
+            Initialize(next_value.object);
+            next_value.object.allocator = temporary_allocator;
         }
     }
     array_add(*context_stack, .{ value = next_value });
@@ -387,6 +388,8 @@ select_next_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Valu
 
         case .OBJECT;
         {
+            assert(top_context.value.object != null);
+            
             if key.count == 0
             {
                 last_error = "Cannot serialize into an object without a key";
