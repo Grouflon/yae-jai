@@ -101,16 +101,21 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     animation_changed: = false;
     animation: = editor.player.current_animation;
     line_height: = ImGui.GetTextLineHeightWithSpacing();
+    frame_count: s32 = cast(s32) animation.frame_count;
+
+    timeline_frame_origin: Vector2;
+    timeline_frame_begin: Vector2;
+    timeline_frame_end: Vector2 = ImGui.GetCursorScreenPos() + ImGui.GetContentRegionAvail() + .{-1,-1};
 
     table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .HighlightHoveredColumn | .Resizable | .RowBg;
-    column_count: s32 = cast(s32) animation.frame_count + 3;
+    column_count: s32 = frame_count + 3;
     if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
     {
         COLUMN_WIDTH :: 15;
         ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
 
         column_flags: ImGui.TableColumnFlags = .WidthFixed | .NoResize | .NoReorder | .NoHide;
-        for i: 0..cast(s32)animation.frame_count-1
+        for i: 0..frame_count-1
         {
             ImGui.TableSetupColumn(temp_c_string(tprint("%", i)), column_flags, COLUMN_WIDTH);
         }
@@ -125,7 +130,11 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             name: = ImGui.TableGetColumnName(xx i);
             ImGui.TableSetColumnIndex(xx i);
 
-            if i != 0
+            if i == 0
+            {
+                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, line_height-1};
+            }
+            else
             {
                 size: = ImGui.CalcTextSize(name);
                 ImGui.SameLine(COLUMN_WIDTH - size.x);
@@ -143,6 +152,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             ImGui.TableNextRow();
             ImGui.TableSetColumnIndex(0);
 
+            // Layer Name
             if edited_layer_name_index == i
             {
                 if focus_requested
@@ -177,6 +187,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 }
             }
 
+            // Layer Context menu
             if ImGui.BeginPopupContextItem()
             {
                 if ImGui.MenuItem("Delete layer")
@@ -194,6 +205,46 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
                 ImGui.EndPopup();
             }
+
+            // Frames
+            for frame_i: 0..frame_count-1
+            {
+                ImGui.PushID(temp_c_string(tprint("% %", i, frame_i)));
+                defer ImGui.PopID();
+
+                ImGui.TableSetColumnIndex(cast(s32)frame_i + 1);
+
+                if frame_i == 0 && i == 0
+                {
+                    timeline_frame_origin = ImGui.GetCursorScreenPos() + .{-4, -1};
+                }
+
+                // This way of making the popup trigger zone is not ideal, but it will do for now
+                ImGui.SetCursorPos(ImGui.GetCursorPos() - .{4, 1});
+                ImGui.InvisibleButton("", .{COLUMN_WIDTH + 8, line_height-2});
+                if ImGui.BeginPopupContextItem()
+                {
+                    if ImGui.BeginMenu("Add Event")
+                    {
+                        enum_info: = cast(*Type_Info_Enum) type_info(AnimationEventType);
+
+                        for value: enum_info.values
+                        {
+                            if value == xx AnimationEventType.NONE continue;
+
+                            if ImGui.MenuItem(temp_c_string(enum_value_to_name(cast(AnimationEventType) value)))
+                            {
+                                animation_add_event(animation, .{ type = .SPRITE, layer_index = xx i, begin = xx frame_i });
+                                animation_changed = true;
+                            }
+                        }
+                        ImGui.EndMenu();
+                    }
+
+                    ImGui.EndPopup();
+                }
+
+            }
         }
         if layer_to_delete >= 0
         {
@@ -208,22 +259,19 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             animation_add_layer(animation, tprint("layer %", animation.layers.count));
             animation_changed = true;
         }
-        // for (int row = 0; row < rows_count; row++)
-        // {
-        //     ImGui.PushID(row);
-        //     ImGui.TableNextRow();
-        //     ImGui.TableSetColumnIndex(0);
-        //     ImGui.AlignTextToFramePadding();
-        //     ImGui.Text("Track %d", row);
-        //     for (int column = 1; column < columns_count; column++)
-        //         if (ImGui.TableSetColumnIndex(column))
-        //         {
-        //             ImGui.PushID(column);
-        //             ImGui.Checkbox("", &bools[row * columns_count + column]);
-        //             ImGui.PopID();
-        //         }
-        //     ImGui.PopID();
-        // }
+
+        // Draw events
+        if ImGui.GetScrollMaxX() > 0 timeline_frame_end.y -= 12;
+        if ImGui.GetScrollMaxY() > 0 timeline_frame_end.x -= 12;
+        draw_list: = ImGui.GetWindowDrawList();
+        draw_list.PushClipRect(draw_list, timeline_frame_begin, timeline_frame_end);
+        // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF);
+        for event: animation.events
+        {
+            center: Vector2 = timeline_frame_origin + Vector2.{ cast(float)(event.begin+1) * (COLUMN_WIDTH+9), (line_height * 0.5) + cast(float)event.layer_index * (line_height+1) };
+            draw_list.AddNgonFilled(draw_list, center, 5, 0xFF0000FF, 4);
+        }
+
         ImGui.EndTable();
     }
 
