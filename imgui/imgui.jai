@@ -21,7 +21,7 @@ InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, 
 
     InputText_Callback :: (data: *ImGui.InputTextCallbackData) -> s32 #c_call
     {
-        ctx: Context;
+        ctx: #Context;
         push_context ctx {
 
             user_data: = cast(*InputTextCallback_UserData) data.UserData;

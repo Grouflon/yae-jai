@@ -3,6 +3,8 @@ AnimationEditor :: struct
     player: AnimationPlayer;
     viewport: ViewportBase;
     is_dragging: = false;
+    edited_layer_name_index: int = -1;
+    focus_requested: bool = false;
 }
 
 animation_editor_init :: (using editor: *AnimationEditor, animation: *Animation)
@@ -96,18 +98,58 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
 
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                // ImGui.SetNextItemWidth(-FLOAT32_MAX);
-                ImGui.Selectable(temp_c_string(layer.name));
+
+                if edited_layer_name_index == i
+                {
+                    if focus_requested
+                    {
+                        focus_requested = false;
+                        ImGui.SetKeyboardFocusHere(0);
+                    }
+
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().x);
+                    if ImGui.InputText("", *layer.name, .AutoSelectAll)
+                    {
+                        animation_changed = true;
+                    }
+
+                    // Edit exit
+                    if (!ImGui.IsItemHovered() && ImGui.IsMouseClicked(.Left)) ||
+                        ImGui.IsKeyPressed(.Escape) ||
+                        ImGui.IsKeyPressed(.Enter)
+                    {
+                        edited_layer_name_index = -1;
+                    }
+                }
+                else
+                {
+                    ImGui.Selectable(temp_c_string(layer.name));
+
+                    // Edit enter
+                    if ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(.Left)
+                    {
+                        edited_layer_name_index = i;
+                        focus_requested = true;
+                    }
+                }
+
                 if ImGui.BeginPopupContextItem()
                 {
                     if ImGui.MenuItem("Delete layer")
                     {
                         layer_to_delete = xx i;
+                        if edited_layer_name_index == i
+                        {
+                            edited_layer_name_index = -1;
+                        }
+                        else if edited_layer_name_index > i
+                        {
+                            edited_layer_name_index -= 1;
+                        }
                     }
 
                     ImGui.EndPopup();
                 }
-                
             }
             if layer_to_delete >= 0
             {
