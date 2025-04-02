@@ -12,7 +12,7 @@ SerializationFilter :: struct
 SerializationParams :: struct
 {
     filters: []SerializationFilter;
-    custom_serialization_function: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool;
+    custom_serialization_function: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> default_serialize: bool, success: bool;
 }
 
 ReflectionContext :: struct
@@ -75,6 +75,10 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 case;
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
+
+                    // We do not serialize unions
+                    if info_struct.textual_flags & .UNION return true;
+
                     next_context: ReflectionContext;
                     next_context.parent = info_struct;
 

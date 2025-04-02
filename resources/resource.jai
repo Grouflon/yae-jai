@@ -504,7 +504,7 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
 
         filters = .[.{ .IN, type_info(Resource), "serialize" }],
         
-        custom_serialization_function = (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool
+        custom_serialization_function = (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> default_serialize: bool, success: bool
         {
             // Resource ID, override
             if is_subclass_of(info, ResourceIDBase)
@@ -512,13 +512,12 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
                 // If embed, serialize data directyly
                 if has_note(ctx.member, "embed")
                 {
-                    resource_serialize(serializer, cast(*ResourceIDBase) data, key);
+                    return false, resource_serialize(serializer, cast(*ResourceIDBase) data, key);
                 }
                 else // else serialize id
                 {
-                    serialize(serializer, data, type_info(ResourceIDBase), key, .{}, ctx);
+                    return false, serialize(serializer, data, type_info(ResourceIDBase), key, .{}, ctx);
                 }
-                return false;
             }
 
             // Resource ID, override
@@ -532,30 +531,31 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
                     id: ResourceIDBase = ifx resource != null then resource.id else 0;
 
                     // If embed, serialize data directyly
+                    success: = false;
                     if has_note(ctx.member, "embed")
                     {
-                        resource_serialize(serializer, *id, key);
+                        success = resource_serialize(serializer, *id, key);
                     }
                     else // else serialize id
                     {
-                        serialize(serializer, *id, type_info(ResourceIDBase), key, .{}, ctx);
+                        success = serialize(serializer, *id, type_info(ResourceIDBase), key, .{}, ctx);
                     }
 
                     if serializer.mode == .READ
                     {
                         <<resource_ptr = get(id);
                     }
-                    return false;
+
+                    return false, success;
                 }
             }
 
             // else normal serialization
-            return true;
+            return true, false;
         }
     };
-    serialize(serializer, resource, resource.type, "data", params = serialization_params);
 
-    return true;
+    return serialize(serializer, resource, resource.type, "data", params = serialization_params);
 }
 
 normalize_resource_name :: (name: string) -> string
