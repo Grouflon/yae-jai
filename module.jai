@@ -23,6 +23,7 @@
 #load "resources/sprite.jai";
 #load "resources/animation.jai";
 
+#load "serialization/serialization_manager.jai";
 #load "serialization/json_serializer.jai";
 #load "serialization/reflection_serialization.jai";
 #load "serialization/serializer.jai";
@@ -31,6 +32,7 @@
 #load "tools/filesystem.jai";
 #load "tools/json.jai";
 #load "tools/misc.jai";
+#load "tools/reflection.jai";
 #load "tools/os.jai";
 
 #load "editor/animation_editor.jai";

@@ -102,6 +102,27 @@ animation_get_events_for_frame :: (using animation: *Animation, frame: s32) -> [
     return result;
 }
 
+serialize_animation_event :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool, bool
+{
+    event: *AnimationEvent = xx data;
+
+    if !serializer_begin_object(serializer, null, key) return false, false;
+    defer serializer_end_object(serializer);
+
+    if !serialize(serializer, *event.type, "type", params) return false, false;
+
+    serialize(serializer, *event.layer_index, "layer_index", params);
+    serialize(serializer, *event.begin, "begin", params);
+    serialize(serializer, *event.end, "end", params);
+
+    if event.type ==
+    {
+        case .SPRITE; serialize(serializer, *event.sprite, "sprite", params);
+    }
+
+    return false, true;
+}
+
 #scope_file
 
 animation_load :: (resource: *Resource) -> bool
@@ -127,22 +148,4 @@ animation_release :: (resource: *Resource)
     array_free(layers);
     array_free(events);
     array_free(frames);
-}
-
-serialize_animation_event :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool, bool
-{
-    event: *AnimationEvent = xx data;
-
-    if !serialize(serializer, *event.type, "type", params) return false, false;
-
-    serialize(serializer, *event.layer_index, "layer_index", params);
-    serialize(serializer, *event.layer_index, "begin", params);
-    serialize(serializer, *event.layer_index, "end", params);
-
-    if event.type ==
-    {
-        case .SPRITE; if !serialize(serializer, *event.sprite, "sprite", params) return false, false;
-    }
-
-    return false, true;
 }

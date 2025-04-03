@@ -1,3 +1,5 @@
+CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> (default_serialize: bool, success: bool);
+
 SerializationFilter :: struct
 {
     type: enum
@@ -12,7 +14,7 @@ SerializationFilter :: struct
 SerializationParams :: struct
 {
     filters: []SerializationFilter;
-    custom_serialization_function: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> default_serialize: bool, success: bool;
+    custom_serialization_function: CustomSerializationFunction;
 }
 
 ReflectionContext :: struct
@@ -28,9 +30,13 @@ serialize :: (serializer: *Serializer, value: *$T, key: string = "", params: Ser
 
 serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool
 {
-    if params.custom_serialization_function != null && !params.custom_serialization_function(serializer, data, info, key, params, ctx)
+    if params.custom_serialization_function != null
     {
-        return true;
+        fallback_to_default, success := params.custom_serialization_function(serializer, data, info, key, params, ctx);
+        if !fallback_to_default
+        {
+            return success;
+        }
     }
 
     if info.type == {
@@ -76,40 +82,27 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
 
+                    // Custom serialize
+                    custom_serialize_function: = get_custom_serialize_function(info_struct);
+                    if custom_serialize_function != null
+                    {
+                        fallback_to_default, success: = custom_serialize_function(serializer, data, info_struct, key, params, ctx);
+                        if !fallback_to_default
+                        {
+                            return success;
+                        }
+                    }
+
                     // We do not serialize unions
                     if info_struct.textual_flags & .UNION return true;
 
                     next_context: ReflectionContext;
                     next_context.parent = info_struct;
 
-                    keys: [..]string;
-                    keys.allocator = temporary_allocator;
-
-                    key_to_type_info: Table(string, *Type_Info_Struct_Member);
-                    key_to_type_info.allocator = temporary_allocator;
-
-                    gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type: *Table(string, *Type_Info_Struct_Member))
-                    {
-                        for member_type_info, i : info.members
-                        {
-                            if member_type_info.flags & .AS
-                            {
-                                assert(i == 0, "#as members are only supported in first position for now");
-                                if member_type_info.type.type == .STRUCT
-                                {
-                                    gather_members_flat(xx member_type_info.type, keys, key_to_type);
-                                }
-                            }
-                            else
-                            {
-                                array_add(keys, member_type_info.name);
-                                table_add(key_to_type, member_type_info.name, info.members.data + i);
-                            }
-                        }
-                    }
-                    gather_members_flat(info_struct, *keys, *key_to_type_info);
+                    keys, key_to_type_info: = gather_members_flat(info_struct);
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
+
                     for key : keys
                     {
                         member_type_info, success: = table_find(*key_to_type_info, key);
@@ -290,4 +283,38 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
     return true;
+}
+
+#scope_file
+
+gather_members_flat :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, *Type_Info_Struct_Member)
+{
+    keys: [..]string;
+    keys.allocator = temporary_allocator;
+
+    key_to_type_info: Table(string, *Type_Info_Struct_Member);
+    key_to_type_info.allocator = temporary_allocator;
+
+    gather_members_flat(info, *keys, *key_to_type_info);
+    return keys, key_to_type_info;
+}
+
+gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type: *Table(string, *Type_Info_Struct_Member))
+{
+    for member_type_info, i : info.members
+    {
+        if member_type_info.flags & .AS
+        {
+            assert(i == 0, "#as members are only supported in first position for now");
+            if member_type_info.type.type == .STRUCT
+            {
+                gather_members_flat(xx member_type_info.type, keys, key_to_type);
+            }
+        }
+        else
+        {
+            array_add(keys, member_type_info.name);
+            table_add(key_to_type, member_type_info.name, info.members.data + i);
+        }
+    }
 }
