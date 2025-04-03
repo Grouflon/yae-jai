@@ -6,6 +6,8 @@
 #load "raylib_imgui.jai";
 #load "statemachine.jai";
 #load "tilemap.jai";
+#load "resource_manager.jai";
+#load "resource.jai";
 
 #load "imgui/imgui.jai";
 #load "imgui/imgui_canvas.jai";
@@ -16,7 +18,6 @@
 #load "math/rect.jai";
 #load "math/spline.jai";
 
-#load "resources/resource.jai";
 #load "resources/texture_file.jai";
 #load "resources/aseprite_file.jai";
 #load "resources/sprite.jai";
