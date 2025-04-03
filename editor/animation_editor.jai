@@ -283,6 +283,12 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 event_popup_layer = hovered_layer;
                 ImGui.OpenPopup(EVENT_POPUP_NAME);
             }
+
+            if is_valid_cell && selected_event_index >= 0 && ImGui.IsMouseDragging(.Left)
+            {
+                animation.events[selected_event_index].layer_index = hovered_layer;
+                animation.events[selected_event_index].begin = hovered_frame;
+            }
         }
         else
         {
