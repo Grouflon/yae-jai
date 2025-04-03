@@ -86,6 +86,12 @@ resource_manager_shutdown :: ()
         free(resource);
     }
 
+    for * type_array: resources_by_type
+    {
+        array_reset(type_array);
+    }
+
+    deinit(*resources_by_type);
     deinit(*resource_by_id);
     deinit(*resource_name_to_id);
     array_reset(*resources);
@@ -295,8 +301,7 @@ resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
     resource.id = actual_id;
     resource.type = ti;
 
-    table_add(*resource_by_id, resource.id, resource);
-    array_add(*resources, resource);
+    resource_register(resource);
 
     return resource;
 }
@@ -338,6 +343,48 @@ resource_get_or_create :: ($T: Type, name: string) -> *T
     }
     resource_rename(resource, normalized_name);
     return xx resource;
+}
+
+resource_register :: (resource: *Resource)
+{
+    assert(resource != null);
+    using manager: = resource_manager();
+
+    assert(array_find(resources, resource) == false);
+    assert(table_contains(*resource_by_id, resource.id) == false);
+
+    table_add(*resource_by_id, resource.id, resource);
+    array_add(*resources, resource);
+
+    type_array: = find_or_add(*resources_by_type, resource.type);
+    array_add(type_array, resource);
+}
+
+// Unregistering is unused and untested
+resource_unregister :: (resource: *Resource)
+{
+    assert(resource != null);
+    using manager: = resource_manager();
+
+    assert(array_find(*resources, resource) == true);
+    assert(table_contains(*resource_by_id, resource.id) == true);
+    
+    type_array: = table_find_pointer(*resources_by_type, resource.type);
+    assert(type_array != null);
+    array_unordered_remove_by_value(*type_array, resource);
+
+    table_remove(*resource_by_id, resource.id);
+    array_unordered_remove_by_value(*resources, resource);
+}
+
+get_resources_by_type :: ($T: Type) -> []*T
+{
+    using manager: = resource_manager();
+    if !is_subclass_of(T, Resource) return .[];
+
+    ti: = cast(*Type_Info_Struct) type_info(T);
+    type_array: = find_or_add(*resources_by_type, ti);
+    return cast,force([]*T)<<type_array;
 }
 
 get :: (id: ResourceID($T)) -> *T

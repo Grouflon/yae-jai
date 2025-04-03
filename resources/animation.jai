@@ -85,6 +85,23 @@ animation_remove_event :: (using animation: *Animation, index: s32)
     array_ordered_remove_by_index(*animation.events, index);
 }
 
+animation_get_events_for_frame :: (using animation: *Animation, frame: s32) -> [..]AnimationEvent
+{
+    result: [..]AnimationEvent;
+    result.allocator = temporary_allocator;
+
+    valid: = frame >= 0 && frame < frame_count;
+    if !valid { log_warning(tprint("animation \"%\": can't get event at frame %", animation.name, frame)); return result; }
+
+    for * event: events
+    {
+        if frame < event.begin { continue; }
+        if frame == event.begin || frame <= event.end { array_add(*result, event); }
+    }
+
+    return result;
+}
+
 #scope_file
 
 animation_load :: (resource: *Resource) -> bool

@@ -94,15 +94,32 @@ ZOOM_STEP :: 0.5;
 
 animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
 {
-    ImGui.Text("props");
-    ImGui.Value("zoom", editor.viewport.zoom);
-    return false;
+    if selected_event_index < 0 return false;
+
+    animation_changed: = false;
+    animation: = editor.player.current_animation;
+    assert(animation != null);
+    sprites: = get_resources_by_type(Sprite);
+    event_ptr: = animation.events.data + selected_event_index;
+
+    if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
+    {
+        if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
+        for sprite: sprites
+        {
+            if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
+        }
+        ImGui.EndCombo();
+    }
+
+    return animation_changed;
 }
 
 animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 {
     animation_changed: = false;
     animation: = editor.player.current_animation;
+    assert(animation != null);
     frame_count: s32 = cast(s32) animation.frame_count;
     CELL_WIDTH :: 24;
     CELL_HEIGHT :: 17;

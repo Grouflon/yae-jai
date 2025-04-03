@@ -95,6 +95,11 @@ has_note :: (ti: *Type_Info_Struct_Member, note: string) -> bool
     return false;
 }
 
+is_subclass_of :: ($T1: Type, $T2: Type, check_self: bool = true) -> bool
+{
+    return is_subclass_of(type_info(T1), type_info(T2), check_self);
+}
+
 is_subclass_of :: (info: *Type_Info, $T: Type, check_self: bool = true) -> bool
 {
     return is_subclass_of(info, type_info(T), check_self);
