@@ -184,8 +184,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     {
                         enum_name: string;
                         {
-                            push_allocator(temporary_allocator);
-                            if !serialize(serializer, *enum_name, key) return false;
+                            if !serialize(serializer, *enum_name, key, *temporary_allocator) return false;
                         }
                         for name, i : type.names
                         {
