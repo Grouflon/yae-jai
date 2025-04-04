@@ -21,6 +21,7 @@ JsonSerializer :: struct
     begin_object = (serializer: *Serializer, keys: *[]string, key: string) -> bool { return json_serializer_begin_object(cast(*JsonSerializer)serializer, keys, key); };
     end_object   = (serializer: *Serializer) -> bool                               { return json_serializer_end_object(cast(*JsonSerializer)serializer); };
 
+    _serialize_null =    (serializer: *Serializer, key: string) -> bool                  { return serialize_null(cast(*JsonSerializer)serializer, key); };
     serialize_bool =    (serializer: *Serializer, value: *bool, key: string) -> bool    { return serialize(cast(*JsonSerializer)serializer, value, key); };
     serialize_u8 =      (serializer: *Serializer, value: *u8, key: string) -> bool      { return serialize(cast(*JsonSerializer)serializer, value, key); };
     serialize_u16 =     (serializer: *Serializer, value: *u16, key: string) -> bool     { return serialize(cast(*JsonSerializer)serializer, value, key); };
@@ -160,6 +161,31 @@ serialize_number :: inline (using s: *JsonSerializer, value: *$T, key: string = 
         {
             next_value.type = .NUMBER;
             next_value.number = cast(float64) <<value;
+        }
+    }
+    return true;
+}
+
+serialize_null :: (using s: *JsonSerializer, key: string = "") -> bool
+{
+    assert(s != null);
+    assert(mode != .NONE);
+
+    success, next_value: = select_next_value(s, key);
+    if !success { return false; }
+
+    if mode == {
+        case .READ;
+        {
+            if next_value.type != .NULL
+            {
+                last_error = "Read value is not of type null";
+                return false;
+            }
+        }
+        case .WRITE;
+        {
+            next_value.type = .NULL;
         }
     }
     return true;

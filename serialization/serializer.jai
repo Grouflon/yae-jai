@@ -19,6 +19,7 @@ Serializer :: struct
     begin_object: #type (serializer: *Serializer, keys: *[]string, key: string) -> bool;
     end_object:   #type (serializer: *Serializer) -> bool;
 
+    _serialize_null:     #type (serializer: *Serializer, key: string) -> bool;
     serialize_bool:     #type (serializer: *Serializer, value: *bool, key: string) -> bool;
     serialize_u8:       #type (serializer: *Serializer, value: *u8, key: string) -> bool;
     serialize_u16:      #type (serializer: *Serializer, value: *u16, key: string) -> bool;
@@ -71,6 +72,12 @@ serializer_end_object :: (serializer: *Serializer) -> bool
 {
     assert(serializer != null);
     return serializer.end_object(serializer);
+}
+
+serialize_null :: (serializer: *Serializer, key: string = "") -> bool
+{
+    assert(serializer != null);
+    return serializer._serialize_null(serializer, key);
 }
 
 serialize :: (serializer: *Serializer, value: *bool, key: string = "") -> bool
