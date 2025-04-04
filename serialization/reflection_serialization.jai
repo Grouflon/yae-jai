@@ -39,6 +39,52 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
 
+    // Resource ID, override
+    if is_subclass_of(info, ResourceIDBase)
+    {
+        // If embed, serialize data directyly
+        if has_note(ctx.member, "embed")
+        {
+            id_ptr: = cast(*ResourceIDBase) data;
+            resource: = get(<<id_ptr);
+            if !resource_serialize(serializer, *resource, key) return false;
+            <<id_ptr = ifx resource != null then resource.id else 0;
+
+            return true;
+        }
+        else // else serialize id
+        {
+            return serialize(serializer, cast(*ResourceIDBase) data, key);
+        }
+    }
+
+    // Resource pointer, override
+    if info.type == .POINTER
+    {
+        ti: = (cast(*Type_Info_Pointer) info).pointer_to;
+        if is_subclass_of(ti, Resource)
+        {
+            resource_ptr: = cast(**Resource) data;
+            resource: = <<resource_ptr;
+
+            // If embed, serialize data directyly
+            success: = false;
+            if has_note(ctx.member, "embed")
+            {
+                success = resource_serialize(serializer, *resource, key);
+            }
+            else // else serialize id
+            {
+                id: ResourceIDBase = ifx resource != null then resource.id else 0;
+                success = serialize(serializer, *id, key);
+                <<resource_ptr = get(id);
+            }
+
+            return success;
+        }
+    }
+
+    // Basic types
     if info.type == {
         case .STRUCT;
         {

@@ -35,7 +35,7 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders:
         {
             if ends_with(info.short_name, RESOURCE_EXTENSION)
             {
-                resource: = resource_read_from_disk(info.full_name);
+                resource: = resource_read_header_from_disk(info.full_name);
                 if resource == null return;
 
                 assert(resource.data_path.count > 0);
@@ -130,6 +130,19 @@ resource_load :: (resource: *Resource) -> bool
     if resource.load_count == 0 && resource.load_function != null
     {
         log_verbose("loading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
+
+        if resource.data_path.count > 0
+        {
+            serializer: JsonSerializer;
+            if json_serializer_open_json_file(*serializer, resource.data_path)
+            {
+                serializer_begin(*serializer, .READ);
+                defer serializer_end(*serializer);
+
+                resource_serialize(*serializer, *resource);
+            }
+        }
+
         resource.is_loaded_without_errors = resource.load_function(resource);
         log_verbose("loaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
@@ -179,7 +192,7 @@ resource_save_to_disk :: (resource: *Resource, file_path: string) -> bool
 
     serializer: JsonSerializer;
     serializer_begin(*serializer, .WRITE);
-    resource_serialize(*serializer, *resource.id);
+    resource_serialize(*serializer, *resource);
     serializer_end(*serializer);
 
     make_directory_if_it_does_not_exist(get_directory(file_path), true);
@@ -187,7 +200,7 @@ resource_save_to_disk :: (resource: *Resource, file_path: string) -> bool
     return true;
 }
 
-resource_read_from_disk :: (file_path: string) -> *Resource
+resource_read_header_from_disk :: (file_path: string) -> *Resource
 {
     using manager: = resource_manager();
 
@@ -198,17 +211,27 @@ resource_read_from_disk :: (file_path: string) -> *Resource
         return null;
     }
 
-    id: ResourceIDBase;
-    serializer_begin(*serializer, .READ);
-    if !resource_serialize(*serializer, *id)
+    resource: *Resource;
     {
-        log_warning("failed to serialize resource %", file_path);
-        return null;
-    }
-    serializer_end(*serializer);
+        serializer_begin(*serializer, .READ);
+        defer serializer_end(*serializer);
 
-    resource: = get(id);
-    assert(resource.data_path.count == 0);    
+        if !serializer_begin_object(*serializer)
+        {
+            log_warning("resource file % does not contain a root object", file_path, section= *RESOURCE_LOG_SECTION);
+            return null;
+        }
+        defer serializer_end_object(*serializer);
+
+        if !resource_serialize_header(*serializer, *resource)
+        {
+            log_warning("failed to serialize resource %", file_path);
+            return null;
+        }
+    }
+
+    assert(resource != null);
+      
     resource.data_path = copy_string(normalize_path(file_path));
 
     return resource;
@@ -453,18 +476,35 @@ resource_remove_file_watch :: (resource: *Resource, file_path: string)
     assert(removed == 1, "Trying to remove an unknown file watch (%)", file_path);
 }
 
-#scope_file
-
-resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string = "") -> bool
+resource_serialize :: (serializer: *Serializer, resource_ptr: **Resource, key: string = "") -> bool
 {
     assert(serializer != null);
-    using manager: = resource_manager();
 
-    resource: *Resource;
+    if serializer.mode == .WRITE && <<resource_ptr == null
+    {
+        serialize_null(serializer, key);
+        return true;
+    }
 
-    // Resource header
-    serializer_begin_object(serializer, null, key);
+    if !serializer_begin_object(serializer, null, key) { <<resource_ptr = null; return true; }
     defer serializer_end_object(serializer);
+
+    if !resource_serialize_header(serializer, resource_ptr) return false;
+
+    resource: = <<resource_ptr;
+    assert(resource != null);
+
+    return resource_serialize_body(serializer, resource);
+}
+
+#scope_file
+
+// This is supposed to be called with the object already opened
+resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource) -> bool
+{
+    assert(serializer != null);
+    assert(resource_ptr != null);
+    using manager: = resource_manager();
 
     if serializer.mode == .READ
     {
@@ -493,20 +533,20 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
         type = ti;
 
         // Get or create resource
-        resource = resource_get_or_create(type, temp_id);
+        resource: = resource_get_or_create(type, temp_id);
         if resource == null
         {
-            log_warning("Failed to create resource % (%)", id, type.name);
+            log_warning("Failed to create resource % (%)", temp_id, type.name);
             return false;
         }
-        << id = resource.id;
+        << resource_ptr = resource;
     }
     else
     {
-        resource = get(<<id);
+        resource: = <<resource_ptr;
         if resource == null
         {
-            log_warning("Unable to find resource %", id);
+            log_warning("Unable to write null resource");
             return false;
         }
 
@@ -514,71 +554,26 @@ resource_serialize :: (serializer: *Serializer, id: *ResourceIDBase, key: string
         serialize(serializer, *resource.type.name, "type");
     }
 
+    resource: = <<resource_ptr;
+    assert(resource != null);
+
     name: = copy_temporary_string(resource.name);
     serialize(serializer, *name, "name", *temporary_allocator);
     if serializer.mode == .READ
     {
         resource_rename(resource, name);
     }
+    return true;
+}
 
-    // Resource Body
+resource_serialize_body :: (serializer: *Serializer, resource: *Resource) -> bool
+{
     assert(resource != null);
     assert(resource.id != 0);
     assert(resource.type != null);
 
     serialization_params: SerializationParams = .{
-
         filters = .[.{ .IN, type_info(Resource), "serialize" }],
-        
-        custom_serialization_function = (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> default_serialize: bool, success: bool
-        {
-            // Resource ID, override
-            if is_subclass_of(info, ResourceIDBase)
-            {
-                // If embed, serialize data directyly
-                if has_note(ctx.member, "embed")
-                {
-                    return false, resource_serialize(serializer, cast(*ResourceIDBase) data, key);
-                }
-                else // else serialize id
-                {
-                    return false, serialize(serializer, data, type_info(ResourceIDBase), key, .{}, ctx);
-                }
-            }
-
-            // Resource ID, override
-            if info.type == .POINTER
-            {
-                ti: = (cast(*Type_Info_Pointer) info).pointer_to;
-                if is_subclass_of(ti, Resource)
-                {
-                    resource_ptr: = cast(**Resource) data;
-                    resource: = <<resource_ptr;
-                    id: ResourceIDBase = ifx resource != null then resource.id else 0;
-
-                    // If embed, serialize data directyly
-                    success: = false;
-                    if has_note(ctx.member, "embed")
-                    {
-                        success = resource_serialize(serializer, *id, key);
-                    }
-                    else // else serialize id
-                    {
-                        success = serialize(serializer, *id, type_info(ResourceIDBase), key, .{}, ctx);
-                    }
-
-                    if serializer.mode == .READ
-                    {
-                        <<resource_ptr = get(id);
-                    }
-
-                    return false, success;
-                }
-            }
-
-            // else normal serialization
-            return true, false;
-        }
     };
 
     return serialize(serializer, resource, resource.type, "data", params = serialization_params);
