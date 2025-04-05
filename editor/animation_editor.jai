@@ -133,6 +133,8 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     column_count: s32 = frame_count + 3;
     if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
     {
+        defer ImGui.EndTable();
+
         ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
 
         column_flags: ImGui.TableColumnFlags = .WidthFixed | .NoResize | .NoReorder | .NoHide;
@@ -342,8 +344,6 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             selected_event_index = -1;
             animation_changed = true;
         }
-
-        ImGui.EndTable();
     }
 
     return animation_changed;

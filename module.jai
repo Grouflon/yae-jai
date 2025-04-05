@@ -36,6 +36,7 @@
 #load "tools/os.jai";
 
 #load "editor/animation_editor.jai";
+#load "editor/resource_browser.jai";
 
 #scope_module
 
