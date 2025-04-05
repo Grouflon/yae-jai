@@ -1,4 +1,6 @@
+#load "yae.jai";
 #load "animation_player.jai";
+#load "compile_time.jai";
 #load "draw.jai";
 #load "log.jai";
 #load "pixel_perfect_viewport.jai";
@@ -37,8 +39,6 @@
 
 #load "editor/animation_editor.jai";
 #load "editor/resource_browser.jai";
-
-#load "compile_time.jai";
 
 #scope_module
 

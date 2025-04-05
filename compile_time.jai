@@ -30,40 +30,40 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
             {
                 case .TYPECHECKED_ALL_WE_CAN;
                 {
-                    // Generate Resource Types array
-                    if !generated_resource_types
+                    if !generated_compile_time_info
                     {
                         sb: String_Builder;
                         init_string_builder(*sb);
-                        append(*sb, "resource_types: []*Type_Info_Struct = .[");
-                        for struct_type_info, i: resource_types
+                        append(*sb, "YAE_COMPILE_TIME_INFO : YaeCompileTimeInfo : .{\n");
+
+                        // Resource Types
                         {
-                            if i > 0 append(*sb, ",");
-                            append(*sb, tprint("type_info(%)", struct_type_info.name));
+                            append(*sb, "resource_types= .[\n");
+                            for struct_type_info, i: resource_types
+                            {
+                                if i > 0 append(*sb, ",\n");
+                                append(*sb, tprint("type_info(%)", struct_type_info.name));
+                            }
+                            append(*sb, "],\n");
                         }
-                        append(*sb, "];");
+
+                        // Custom serialization procedures
+                        {
+                            append(*sb, "custom_serialize_types= .[\n");
+                            i: = 0;
+                            for function_name, ti: custom_serialize_table
+                            {
+                                if i > 0 append(*sb, ",\n");
+                                append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
+                                i+=1;
+                            }
+                            append(*sb, "],\n");
+                        }
+
+                        append(*sb, "};\n");
 
                         add_build_string(builder_to_string(*sb), w);
-                        generated_resource_types = true;
-                    }
-
-                    // Generate custom serialization routines array
-                    if !generated_custom_serialize
-                    {
-                        sb: String_Builder;
-                        init_string_builder(*sb);
-                        append(*sb, "custom_serialize_types: []CustomSerializeType = .[");
-                        i: = 0;
-                        for function_name, ti: custom_serialize_table
-                        {
-                            if i > 0 append(*sb, ",");
-                            append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
-                            i+=1;
-                        }
-                        append(*sb, "];");
-
-                        add_build_string(builder_to_string(*sb), w);
-                        generated_custom_serialize = true;
+                        generated_compile_time_info = true;
                     }
                 }
             }
@@ -74,9 +74,9 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
 #scope_file
 
 resource_types: [..]*Type_Info_Struct;
-generated_resource_types: = false;
-generated_custom_serialize: = false;
 custom_serialize_table: Table(*Type_Info_Struct, string);
+
+generated_compile_time_info: = false;
 
 #import "Compiler";
 #import "Hash_Table";
