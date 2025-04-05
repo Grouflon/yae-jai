@@ -95,7 +95,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     vector: *float = data;
                     size: s64 = 2;
                     if !serializer_begin_array(serializer, *size, key) return false;
-                    assert(size == 2);
+                    if size != 2 return false;
                     verify(serialize(serializer, vector));
                     verify(serialize(serializer, vector+1));
                     verify(serializer_end_array(serializer));
@@ -105,7 +105,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     vector: *float = data;
                     size: s64 = 3;
                     if !serializer_begin_array(serializer, *size, key) return false;
-                    assert(size == 3);
+                    if size != 3 return false;
                     verify(serialize(serializer, vector));
                     verify(serialize(serializer, vector+1));
                     verify(serialize(serializer, vector+2));
@@ -116,7 +116,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     vector: *float = data;
                     size: s64 = 4;
                     if !serializer_begin_array(serializer, *size, key) return false;
-                    assert(size == 4);
+                    if size != 4 return false;
                     verify(serialize(serializer, vector));
                     verify(serialize(serializer, vector+1));
                     verify(serialize(serializer, vector+2));
@@ -145,7 +145,9 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     next_context: ReflectionContext;
                     next_context.parent = info_struct;
 
-                    keys, key_to_type_info: = gather_members_flat(info_struct);
+                    // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
+                    keys, key_to_type_info, notes: = gather_members_flat(info_struct);
+                    serialize_optin: = has_note(notes, "serialize_optin");
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
 
@@ -153,6 +155,9 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     {
                         member_type_info, success: = table_find(*key_to_type_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
+
+                        // @serialize filter
+                        if serialize_optin && !has_note(member_type_info, "serialize") { continue; }
 
                         // params filters
                         skip: = false;
@@ -333,7 +338,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
 #scope_file
 
-gather_members_flat :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, *Type_Info_Struct_Member)
+gather_members_flat :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, *Type_Info_Struct_Member), notes: []string
 {
     keys: [..]string;
     keys.allocator = temporary_allocator;
@@ -341,12 +346,22 @@ gather_members_flat :: (info: *Type_Info_Struct) -> keys: []string, key_to_type:
     key_to_type_info: Table(string, *Type_Info_Struct_Member);
     key_to_type_info.allocator = temporary_allocator;
 
-    gather_members_flat(info, *keys, *key_to_type_info);
-    return keys, key_to_type_info;
+    notes: [..]string;
+    notes.allocator = temporary_allocator;
+
+    gather_members_flat(info, *keys, *key_to_type_info, *notes);
+    return keys, key_to_type_info, notes;
 }
 
-gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type: *Table(string, *Type_Info_Struct_Member))
+gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type: *Table(string, *Type_Info_Struct_Member), notes: *[..]string)
 {
+    assert(info != null);
+    assert(keys != null);
+    assert(key_to_type != null);
+    assert(notes != null);
+
+    array_add(notes, ..info.notes);
+
     for member_type_info, i : info.members
     {
         if member_type_info.flags & .AS
@@ -354,7 +369,7 @@ gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type:
             assert(i == 0, "#as members are only supported in first position for now");
             if member_type_info.type.type == .STRUCT
             {
-                gather_members_flat(xx member_type_info.type, keys, key_to_type);
+                gather_members_flat(xx member_type_info.type, keys, key_to_type, notes);
             }
         }
         else

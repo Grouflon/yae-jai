@@ -582,11 +582,7 @@ resource_serialize_body :: (serializer: *Serializer, resource: *Resource) -> boo
     assert(resource.id != 0);
     assert(resource.type != null);
 
-    serialization_params: SerializationParams = .{
-        filters = .[.{ .IN, type_info(Resource), "serialize" }],
-    };
-
-    return serialize(serializer, resource, resource.type, "data", params = serialization_params);
+    return serialize(serializer, resource, resource.type, "data");
 }
 
 normalize_resource_name :: (name: string) -> string

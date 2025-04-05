@@ -5,7 +5,7 @@ ResourceID :: struct($ResourceType: Type)
     #as base: ResourceIDBase;
 }
 
-Resource :: struct
+Resource :: struct @serialize_optin
 {
     type: *Type_Info_Struct;
     id: ResourceIDBase;
