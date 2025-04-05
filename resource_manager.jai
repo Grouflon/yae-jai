@@ -86,7 +86,8 @@ resource_manager_shutdown :: ()
     {
         assert(resource.load_count == 0);
 
-        resource_release(resource);
+        free(resource.data_path);
+        free(resource.name);
         free(resource);
     }
 
@@ -173,13 +174,6 @@ resource_unload :: (resource: *Resource)
         resource.unload_function(resource);
         log_verbose("unloaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
-}
-
-resource_release :: (resource: *Resource)
-{
-    if resource.release_function != null resource.release_function(resource);
-    free(resource.data_path);
-    free(resource.name);
 }
 
 resource_save_to_disk :: (resource: *Resource) -> bool

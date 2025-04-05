@@ -15,7 +15,6 @@ Resource :: struct
     load_count: u32;
     load_function: #type (resource: *Resource) -> bool;
     unload_function: #type (resource: *Resource);
-    release_function: #type (resource: *Resource);
 
     is_loaded_without_errors: bool = false;
 }

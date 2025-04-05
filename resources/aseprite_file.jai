@@ -4,7 +4,6 @@ AsepriteFile :: struct
 
     load_function = aseprite_data_load;
     unload_function = aseprite_data_unload;
-    release_function = aseprite_data_release;
 
     //Note: we still have the problem that data is non-existent until we load the resource, therefore if we just create the resource and save it, it will be empty and clear all the ids
     // That may be a shortcoming of embedding resources like this, but maybe that's okay
@@ -93,17 +92,11 @@ aseprite_data_unload :: (resource: *Resource)
     {
         resource_unload(animation);
     }
-    table_clear(*animations);
+    table_reset(*animations);
+    table_free(*animations);
 
     resource_unload(texture);
     texture = null;
 
     resource_remove_file_watch(resource, name);
-}
-
-aseprite_data_release :: (resource: *Resource)
-{
-    using t: = cast(*AsepriteFile) resource;
-    
-    table_free(*animations);
 }
