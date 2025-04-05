@@ -1,25 +1,14 @@
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
-EditorState :: struct
+YAE : struct @serialize_optin
 {
+    debugger_handle : *void;
+    
     app_window_rect: IntRect = .{0, 30, 800, 600}; @serialize
     console_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
     debugger_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
 
-    resources_open: bool; @serialize
-    imgui_demo_open: bool; @serialize
-    imgui_font_open: bool; @serialize
-
-    animation_editor_open: bool; @serialize
-}
-
-animation_editor: AnimationEditor;
-editor_settings_save_requested: = false;
-
-YAE : struct
-{
-    debugger_handle : *void;
-    editor_state: EditorState;
+    editor: Editor; @serialize
 };
 
 // a YAE_COMPILE_TIME_INFO constant is generated at compile time. See compile_time.jai
@@ -38,7 +27,6 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
 
     debugger_handle = find_window_by_title_containing("RemedyBG");
 
-
     // Normalize working directory
     exe_directory: = path_strip_filename(get_path_of_running_executable());
     root_directory: = tprint("%/..", exe_directory);
@@ -48,6 +36,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     // Init basic stuff
     serialization_manager_init(compile_time_info.custom_serialize_types); // custom_serialize_types is generated at build time. See build.jai
     resource_manager_init(compile_time_info.resource_types, "data"); // resource_types is generated at build time. See build.jai
+    editor_init(*editor);
 
     // Init Window
     window_flags: rl.ConfigFlags;
@@ -58,13 +47,13 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     rl.SetExitKey(.KEY_NULL);
 
     // Set windows positions
-    if read_json_file(EDITOR_SETTINGS_PATH, *editor_state, DEFAULT_SERIALIZATION_PARAMS)
+    if read_json_file(YAE_SETTINGS_PATH, *YAE)
     {
         console_handle: = get_console_window_handle();
 
-        if editor_state.app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), editor_state.app_window_rect); }
-        if editor_state.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), editor_state.console_window_rect); }
-        if editor_state.debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, editor_state.debugger_window_rect); }
+        if YAE.app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), YAE.app_window_rect); }
+        if YAE.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), YAE.console_window_rect); }
+        if YAE.debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, YAE.debugger_window_rect); }
     }
 
     // Init ImGui
@@ -91,23 +80,19 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     };
     raylib_imgui_init(imgui_config);
 
-    // Init animation editor
-    animation=, _: = resource_load(Animation, "./data/animations/test.res");
-    resource_save_to_disk(animation, "./data/animations/test.res");
-    animation_editor_init(*animation_editor, animation);
-
     log_verbose("yae initialized.");
 }
-animation: *Animation;
 
 yae_shutdown :: ()
 {
-    log_verbose("shutting down yae...");
+    using YAE;
 
-    resource_unload(animation);
+    log_verbose("shutting down yae...");
 
     raylib_imgui_shutdown();
     rl.CloseWindow();
+
+    editor_shutdown(*editor);
     resource_manager_shutdown();
     serialization_manager_shutdown();
 
@@ -134,72 +119,21 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
     {
         reset_temporary_storage();
         dt: = rl.GetFrameTime();
-        prev_editor_state: = editor_state;
 
-        console_handle: = get_console_window_handle();
-
-        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success editor_state.app_window_rect = rect; }
-        { success, rect: = get_window_rect(get_console_window_handle());    if success editor_state.console_window_rect = rect; }
-        { success, rect: = get_window_rect(debugger_handle);                if success editor_state.debugger_window_rect = rect; }
+        // Settings cache & update
+        prev_yae_state: = YAE;
+        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success YAE.app_window_rect = rect; }
+        { success, rect: = get_window_rect(get_console_window_handle());    if success YAE.console_window_rect = rect; }
+        { success, rect: = get_window_rect(debugger_handle);                if success YAE.debugger_window_rect = rect; }
         
         // Update
         {
             resource_manager_update();
-
             raylib_imgui_new_frame(dt);
 
             if update_function != null { update_function(dt); }
 
-            if (editor_state.imgui_demo_open)
-            {
-                ImGui.ShowDemoWindow(*editor_state.imgui_demo_open);
-            }
-
-            if (editor_state.imgui_font_open)
-            {
-                font_atlas: = ImGui.GetIO().Fonts;
-                atlas_size: = ImGui.ImVec2.{xx font_atlas.TexWidth, xx font_atlas.TexHeight};
-
-                ImGui.SetNextWindowContentSize(atlas_size);
-                if ImGui.Begin("ImGui Font", null, /*.NoResize |*/ .NoTitleBar | .NoScrollbar| .NoScrollWithMouse)
-                {
-                    ImGui.Image(font_atlas.TexID, atlas_size);
-                }
-                ImGui.End();
-            }
-
-            if ImGui.BeginMainMenuBar()
-            {
-                if ImGui.BeginMenu("Windows")
-                {
-                    ImGui.MenuItem("Resources", "", *editor_state.resources_open);
-                    ImGui.MenuItem("Animation Editor", "", *editor_state.animation_editor_open);
-                    ImGui.MenuItem("ImGui Demo", "", *editor_state.imgui_demo_open);
-                    ImGui.MenuItem("ImGui Font", "", *editor_state.imgui_font_open);
-
-                    ImGui.EndMenu();
-                }
-            }
-            ImGui.EndMainMenuBar();
-
-            prev_resources_open: = editor_state.resources_open;
-            if editor_state.resources_open
-            {
-                if ImGui.Begin("Resources", *editor_state.resources_open)
-                {
-                    resource_browser_update();
-                }
-                ImGui.End();
-            }
-
-            if editor_state.animation_editor_open
-            {
-                if ImGui.Begin("Animation Editor", *editor_state.animation_editor_open)
-                {
-                    animation_editor_update(*animation_editor, dt);
-                }
-                ImGui.End();
-            }
+            editor_update(*editor, dt);
         }
 
         // Draw
@@ -212,23 +146,23 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
             if draw_function != null { draw_function(); }
 
             raylib_imgui_render();
-            rl.DrawFPS(rl.GetScreenWidth() - 90, 10);
+            rl.DrawFPS(rl.GetScreenWidth() - 90, 25);
         }
 
-        editor_settings_save_requested = memcmp(*prev_editor_state, *editor_state, size_of(EditorState)) != 0;
-        if editor_settings_save_requested
+        // Settings compare & save
+        settings_save_requested: = memcmp(*prev_yae_state, *YAE, size_of(type_of(YAE))) != 0;
+        if settings_save_requested
         {
-            editor_settings_save_requested = false;
-            make_directory_if_it_does_not_exist(get_directory(EDITOR_SETTINGS_PATH), true);
-            write_json_file(EDITOR_SETTINGS_PATH, *editor_state, DEFAULT_SERIALIZATION_PARAMS);
+            settings_save_requested = false;
+            make_directory_if_it_does_not_exist(get_directory(YAE_SETTINGS_PATH), true);
+            write_json_file(YAE_SETTINGS_PATH, *YAE);
         }
     }
 }
 
 #scope_file
 
-EDITOR_SETTINGS_PATH :: "temp/editor_settings.json";
-DEFAULT_SERIALIZATION_PARAMS :: SerializationParams.{ filters = .[.{ .IN, type_info(EditorState), "serialize" }]};
+YAE_SETTINGS_PATH :: "temp/yae_settings.json";
 
 #import "System";
 rl :: #import "raylib";

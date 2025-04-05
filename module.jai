@@ -37,6 +37,7 @@
 #load "tools/reflection.jai";
 #load "tools/os.jai";
 
+#load "editor/editor.jai";
 #load "editor/animation_editor.jai";
 #load "editor/resource_browser.jai";
 
