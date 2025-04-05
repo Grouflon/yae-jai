@@ -38,6 +38,8 @@
 #load "editor/animation_editor.jai";
 #load "editor/resource_browser.jai";
 
+#load "compile_time.jai";
+
 #scope_module
 
 #import,dir "./modules/jaison";
