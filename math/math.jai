@@ -49,15 +49,15 @@ round :: inline (value: float) -> float
         return floor(value + 0.5);
 }
 
-sign :: inline (value: float) -> float
+sign :: inline (value: $T) -> T
 {
     if value >= 0
     {
-        return 1.0;
+        return 1;
     }
     else
     {
-        return -1.0;
+        return -1;
     }
 }
 
