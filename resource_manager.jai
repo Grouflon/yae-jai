@@ -35,8 +35,12 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct, resource_folders:
         {
             if ends_with(info.short_name, RESOURCE_EXTENSION)
             {
-                resource: = resource_read_header_from_disk(info.full_name);
-                if resource == null return;
+                resource: = resource_read_headers_from_disk(info.full_name);
+                if resource == null
+                {
+                    log_warning("couldn't read resource from \"%\"", info.full_name, section= *RESOURCE_LOG_SECTION);
+                    return;
+                }
 
                 assert(resource.data_path.count > 0);
                 resource_register_name(resource, resource.data_path);
@@ -200,43 +204,6 @@ resource_save_to_disk :: (resource: *Resource, file_path: string) -> bool
     return true;
 }
 
-resource_read_header_from_disk :: (file_path: string) -> *Resource
-{
-    using manager: = resource_manager();
-
-    serializer: JsonSerializer;
-    if !json_serializer_open_json_file(*serializer, file_path)
-    {
-        log_warning("could not parse resource %", file_path, section= *RESOURCE_LOG_SECTION);
-        return null;
-    }
-
-    resource: *Resource;
-    {
-        serializer_begin(*serializer, .READ);
-        defer serializer_end(*serializer);
-
-        if !serializer_begin_object(*serializer)
-        {
-            log_warning("resource file % does not contain a root object", file_path, section= *RESOURCE_LOG_SECTION);
-            return null;
-        }
-        defer serializer_end_object(*serializer);
-
-        if !resource_serialize_header(*serializer, *resource)
-        {
-            log_warning("failed to serialize resource %", file_path);
-            return null;
-        }
-    }
-
-    assert(resource != null);
-      
-    resource.data_path = copy_string(normalize_path(file_path));
-
-    return resource;
-}
-
 resource_rename :: (resource: *Resource, name: string)
 {
     assert(resource != null);
@@ -269,7 +236,7 @@ resource_register_name :: (resource: *Resource, name: string)
 
     if table_contains(*resource_name_to_id, name)
     {
-        log_warning("name \"%\" already registered for resource %", name, resource.name);
+        log_warning("name \"%\" already registered for resource \"%\"", name, resource.name);
         return;
     }
 
@@ -287,7 +254,7 @@ resource_unregister_name :: (resource: *Resource, name: string)
     success, id: = table_remove(*resource_name_to_id, name);
     if !success
     {
-        log_warning("name \"%\" not registered for resource %", name, resource.name);
+        log_warning("name \"%\" not registered for resource \"%\"", name, resource.name);
         return;
     }
     assert(id == resource.id);
@@ -499,6 +466,60 @@ resource_serialize :: (serializer: *Serializer, resource_ptr: **Resource, key: s
 
 #scope_file
 
+resource_read_headers_from_disk :: (file_path: string) -> *Resource
+{
+    using manager: = resource_manager();
+
+    serializer: JsonSerializer;
+    if !json_serializer_open_json_file(*serializer, file_path)
+    {
+        return null;
+    }
+
+    // we recursively visit the whole file to pre-create all embedded resources
+    visit_header :: (serializer: *Serializer, key: string = "") -> *Resource
+    {
+        resource: *Resource;
+        keys: []string;
+        size: s64;
+
+        if serializer_begin_object(serializer, *keys, key)
+        {
+            defer serializer_end_object(serializer);
+
+            resource_serialize_header(serializer, *resource);
+
+            for member_key: keys
+            {
+                visit_header(serializer, member_key);
+            }
+        }
+        else if serializer_begin_array(serializer, *size, key)
+        {
+            defer serializer_end_array(serializer);
+
+            for i: 0..size-1
+            {
+                visit_header(serializer);
+            }
+        }
+
+        return resource;
+    }
+
+    serializer_begin(*serializer, .READ);
+    resource: = visit_header(*serializer);
+    serializer_end(*serializer);
+
+    if resource != null
+    {
+        free(resource.data_path);
+        resource.data_path = copy_string(normalize_path(file_path));
+    }
+
+    return resource;
+}
+
 // This is supposed to be called with the object already opened
 resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource) -> bool
 {
@@ -512,7 +533,6 @@ resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource)
         temp_id: ResourceIDBase;
         if !serialize(serializer, *temp_id, "id")
         {
-            log_warning("Missing id field in resource", section= *RESOURCE_LOG_SECTION);
             return false;
         }
 
@@ -520,14 +540,12 @@ resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource)
         type_name: string;
         if !serialize(serializer, *type_name, "type", *temporary_allocator)
         {
-            log_warning("Missing type field in resource", section= *RESOURCE_LOG_SECTION);
             return false;
         }
 
         ti, success: = table_find(*resource_type_by_name, type_name);
         if !success
         {
-            log_warning("Unknown resource type % in resource", type_name, section= *RESOURCE_LOG_SECTION);
             return false;
         }
         type = ti;
@@ -536,7 +554,6 @@ resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource)
         resource: = resource_get_or_create(type, temp_id);
         if resource == null
         {
-            log_warning("Failed to create resource % (%)", temp_id, type.name);
             return false;
         }
         << resource_ptr = resource;
@@ -546,7 +563,6 @@ resource_serialize_header :: (serializer: *Serializer, resource_ptr: **Resource)
         resource: = <<resource_ptr;
         if resource == null
         {
-            log_warning("Unable to write null resource");
             return false;
         }
 
