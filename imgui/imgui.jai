@@ -69,6 +69,24 @@ EditValue :: (label: string, value: *$T) -> bool
     return EditValue(label, value, type_info(T));
 }
 
+EditStructMembers :: (value: *$T) -> bool
+{
+    info: = type_info(T);
+    if info.type != .STRUCT return false;
+
+    return EditStructMembers(value, value, cast(*Type_Info_Struct)info);
+}
+
+EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
+{
+    modified: = false;
+    for member_type_info: info_struct.members
+    {
+        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+    }
+    return modified;
+}
+
 EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
 {
     // Parse metadata
@@ -120,10 +138,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                     {
                         defer ImGui.TreePop();
 
-                        for member_type_info: info_struct.members
-                        {
-                            modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
-                        }
+                        modified = EditStructMembers(value, info_struct);
                     }
                 }
             }
