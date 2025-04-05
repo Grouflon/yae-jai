@@ -66,6 +66,7 @@ draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _f
 
 draw_sprite :: (_position: Vector2, _sprite: *Sprite, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
 {
+    if _sprite == null return;
     if _sprite.texture == null return;
     if !is_loaded(_sprite.texture) return;
 
