@@ -428,7 +428,7 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
         if ImGui.Button("\uf050")
         {
             animation_player_stop(*player);
-            animation_player_set_frame(*player, xx (player.current_animation.frames.count - 1));
+            animation_player_set_frame(*player, player.current_animation.frame_count - 1);
         }
 
         ImGui.SameLine(0,10);
@@ -490,8 +490,8 @@ animation_editor_viewport_draw :: (using editor: *AnimationEditor)
 animation_editor_frame_sprite :: (using editor: *AnimationEditor)
 {
     FRAME_MARGIN :: Vector2.{50, 50};
-    i, frame: = animation_player_current_frame(*player);
-    sprite_size: = size(frame.sprite.bounds);
+    bounds: = animation_frame_bounds(player.current_animation, player.current_frame);
+    sprite_size: = size(bounds);
 
     viewport_align_points(*editor.viewport, FRAME_MARGIN, .{0, sprite_size.y}, editor.viewport.size - FRAME_MARGIN, .{sprite_size.x, 0}, true);
     zoom: float = min(editor.viewport.zoom.x, editor.viewport.zoom.y);

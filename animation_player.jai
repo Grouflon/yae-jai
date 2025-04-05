@@ -64,7 +64,7 @@ animation_player_set_frame :: (using player: *AnimationPlayer, frame: s32)
     assert(player != null);
     if current_animation == null { return; }
 
-    current_frame = positive_mod(frame, xx current_animation.frames.count);
+    current_frame = positive_mod(frame, xx current_animation.frame_count);
     current_time_s = cast(float)(current_frame) / current_animation.frames_per_second;
 
     animation_player_update(player, 0);
@@ -81,31 +81,15 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
 
     // Update loops
     frame_time: = 1.0 / current_animation.frames_per_second;
-    animation_duration: = cast(float) current_animation.frames.count * frame_time;
+    animation_duration: = cast(float) current_animation.frame_count * frame_time;
     while animation_duration > 0 && current_time_s > animation_duration
     {
         current_time_s -= animation_duration;
         current_repeat_count += 1;
-        // if animation_data.repeat_count > 0 && current_repeat_count >= animation_data.repeat_count
-        // {
-        //     current_time_ms = animation_duration;
-        //     is_playing = false;
-        // }
     }
-
 
     // Update frame
     current_frame = floor_to_s32(current_time_s / frame_time);
-}
-
-animation_player_current_frame :: (using player: *AnimationPlayer) -> index: s32, frame: AnimationFrame
-{
-    assert(player != null);
-
-    if current_animation == null { return -1, .{}; }
-    if current_frame < 0 || current_frame >= current_animation.frames.count { return -1, .{}; }
-
-    return current_frame, current_animation.frames[current_frame];
 }
 
 animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
@@ -113,7 +97,16 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
     assert(player != null);
 
     if current_animation == null { return; }
-    if (current_frame < 0 || current_frame >= current_animation.frames.count) { return; }
+    if (current_frame < 0 || current_frame >= current_animation.frame_count) { return; }
 
-    draw_sprite(position, current_animation.frames[current_frame].sprite, flip_x, flip_y, tint);
+    events: = animation_get_events_for_frame(current_animation, current_frame);
+
+    for event: events
+    {
+        if event.type == .SPRITE
+        {
+            draw_sprite(position, event.sprite.sprite, flip_x, flip_y, tint);
+        }
+    }
+
 }

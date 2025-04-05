@@ -6,16 +6,10 @@ Animation :: struct
     unload_function = animation_unload;
 
     frames_per_second: float = 10.0; @serialize
-    frame_count: u32 = 0; @serialize
+    frame_count: s32 = 0; @serialize
 
     layers: [..]AnimationLayer; @serialize
     events: [..]AnimationEvent; @serialize
-    frames: [..]AnimationFrame;
-}
-
-AnimationFrame :: struct
-{
-    sprite: *Sprite;
 }
 
 AnimationLayer :: struct
@@ -46,11 +40,13 @@ AnimationEventSprite :: struct
     sprite: *Sprite;
 }
 
-animation_add_layer :: (using animation: *Animation, layer_name: string)
+animation_add_layer :: (using animation: *Animation, layer_name: string) -> s32
 {
     array_add(*animation.layers, .{
         name = copy_string(layer_name),
     });
+
+    return xx (animation.layers.count - 1);
 }
 
 animation_remove_layer :: (using animation: *Animation, index: s32)
@@ -101,6 +97,30 @@ animation_get_events_for_frame :: (using animation: *Animation, frame: s32) -> [
     return result;
 }
 
+animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
+{
+    bounds: Bounds;
+    initialized: = false;
+    frame_events: = animation_get_events_for_frame(animation, frame);
+    for event: frame_events
+    {
+        if event.type != .SPRITE continue;
+        if event.sprite.sprite == null continue;
+
+        if !initialized
+        {
+            bounds = event.sprite.sprite.bounds;
+            initialized = true;
+        }
+        else
+        {
+            bounds = combine(bounds, event.sprite.sprite.bounds);
+        }
+    }
+
+    return bounds;
+}
+
 serialize_animation_event :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> bool, bool
 {
     event: *AnimationEvent = xx data;
@@ -141,5 +161,4 @@ animation_unload :: (resource: *Resource)
 
     array_free(layers);
     array_free(events);
-    array_free(frames);
 }

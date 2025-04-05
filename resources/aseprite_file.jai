@@ -70,15 +70,21 @@ aseprite_data_load :: (resource: *Resource) -> bool
     for tag: aseprite_data.frame_tags
     {
         animation: = resource_get_or_create(Animation, tprint("%.%", name, tag.name));
+        resource_load(animation);
 
-        array_clear(*animation.frames);
+        animation.frame_count = tag.end_frame - tag.start_frame;
+        layer_index: = animation_add_layer(animation, "Sprites");
+
         for i: tag.start_frame..tag.end_frame
         {
-            array_add(*animation.frames, .{ sprite = texture.sprites[i] });
+            animation_add_event(animation, .{
+                type = .SPRITE,
+                layer_index = layer_index,
+                begin = i - tag.start_frame,
+                sprite = .{ sprite = texture.sprites[i] },
+            });
         }
         table_add(*animations, tag.name, animation);
-
-        resource_load(animation);
     }
 
     return true;
