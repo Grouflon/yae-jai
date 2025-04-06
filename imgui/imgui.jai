@@ -150,63 +150,57 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         case .INTEGER;
         {
             info_int: = cast(*Type_Info_Integer) info;
-            value_s32: s32;
-            min_s32: s32;
-            max_s32: s32;
+
+            data_type: ImGui.DataType;
+            signed_min: s64;
+            signed_max: s64;
+            signed_step: s64;
+            unsigned_min: u64;
+            unsigned_max: u64;
+            unsigned_step: u64;
+            data_min: *void;
+            data_max: *void;
+            data_step: *void;
+
+            float_step: float = 1.0;
+            if has_step_override { float_step = xx step_override; }
 
             if info_int.signed
             {
                 if info_int.runtime_size == {
-                    case 1; { value_s32 = cast(s32)<<cast(*s8)value; min_s32 = S8_MIN; max_s32 = S8_MAX; }
-                    case 2; { value_s32 = cast(s32)<<cast(*s16)value; min_s32 = S16_MIN; max_s32 = S16_MAX; }
-                    case 4; { value_s32 = cast(s32)<<cast(*s32)value; min_s32 = S32_MIN; max_s32 = S32_MAX; }
-                    case 8; { value_s32 = cast(s32)<<cast(*s64)value; min_s32 = S32_MIN; max_s32 = S32_MAX; }
+                    case 1; { data_type = .S8; signed_min = S8_MIN; signed_max = S8_MAX; }
+                    case 2; { data_type = .S16; signed_min = S16_MIN; signed_max = S16_MAX; }
+                    case 4; { data_type = .S32; signed_min = S32_MIN; signed_max = S32_MAX; }
+                    case 8; { data_type = .S64; signed_min = S64_MIN; signed_max = S64_MAX; }
                 }
+                if has_min_override { signed_min = max(signed_min, cast(s64)min_override); }
+                if has_max_override { signed_max = min(signed_max, cast(s64)max_override); }
+                signed_step = xx float_step;
+                data_min = *signed_min;
+                data_max = *signed_max;
+                data_step = *signed_step;
             }
             else
             {
                 if info_int.runtime_size == {
-                    case 1; { value_s32 = cast(s32)<<cast(*u8)value; min_s32 = 0; max_s32 = U8_MAX; }
-                    case 2; { value_s32 = cast(s32)<<cast(*u16)value; min_s32 = 0; max_s32 = U16_MAX; }
-                    case 4; { value_s32 = cast(s32)<<cast(*u32)value; min_s32 = 0; max_s32 = S32_MAX; }
-                    case 8; { value_s32 = cast(s32)<<cast(*u64)value; min_s32 = 0; max_s32 = S32_MAX; }
+                    case 1; { data_type = .U8; unsigned_min = 0; unsigned_max = U8_MAX; }
+                    case 2; { data_type = .U16; unsigned_min = 0; unsigned_max = U16_MAX; }
+                    case 4; { data_type = .U32; unsigned_min = 0; unsigned_max = U32_MAX; }
+                    case 8; { data_type = .U64; unsigned_min = 0; unsigned_max = U64_MAX; }
                 }
+                if has_min_override { unsigned_min = max(unsigned_min, cast(u64)min_override); }
+                if has_max_override { unsigned_max = min(unsigned_max, cast(u64)max_override); }
+                unsigned_step = xx float_step;
+                data_min = *unsigned_min;
+                data_max = *unsigned_max;
+                data_step = *unsigned_step;
             }
-
-            step: float = 0.1;
-            if has_step_override { step = xx step_override; }
-            if has_min_override { min_s32 = max(min_s32, cast(s32)min_override); }
-            if has_max_override { max_s32 = min(max_s32, cast(s32)max_override); }
 
             if widget_type ==
             {
-                case .DRAG;   { modified = ImGui.DragInt(c_label, *value_s32, step, min_s32, max_s32); }
-                case .SLIDER; { modified = ImGui.SliderInt(c_label, *value_s32, min_s32, max_s32); }
-                case;         { modified = ImGui.InputInt(c_label, *value_s32, cast(s32)step); }
-            }
-
-            if modified
-            {
-                value_s32 = clamp(value_s32, min_s32, max_s32);
-
-                if info_int.signed
-                {
-                    if info_int.runtime_size == {
-                        case 1; { <<cast(*s8)value = cast(s8)value_s32; }
-                        case 2; { <<cast(*s16)value = cast(s16)value_s32; }
-                        case 4; { <<cast(*s32)value = cast(s32)value_s32; }
-                        case 8; { <<cast(*s64)value = cast(s64)value_s32; }
-                    }
-                }
-                else
-                {
-                    if info_int.runtime_size == {
-                        case 1; { <<cast(*u8)value = cast(u8)value_s32; }
-                        case 2; { <<cast(*u16)value = cast(u16)value_s32; }
-                        case 4; { <<cast(*u32)value = cast(u32)value_s32; }
-                        case 8; { <<cast(*u64)value = cast(u64)value_s32; }
-                    }
-                }
+                case .DRAG;   { modified = ImGui.DragScalar(c_label, data_type, value, float_step, data_min, data_max); }
+                case .SLIDER; { modified = ImGui.SliderScalar(c_label, data_type, value, data_min, data_max); }
+                case;         { modified = ImGui.InputScalar(c_label, data_type, value, data_step); }
             }
         }
         case .FLOAT;
@@ -289,4 +283,5 @@ parse_note :: (note_string: string) -> Note
 
 #poke_name ImGui InputText;
 #poke_name ImGui EditValue;
+#poke_name ImGui EditStructMembers;
 
