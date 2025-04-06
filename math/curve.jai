@@ -422,7 +422,7 @@ EditValue :: (label: string, value: *Curve) -> bool
     {
         func :: (data: *void, idx: s32) -> float #c_call
         {
-            ctx: Context;
+            ctx: #Context;
             push_context ctx
             {
                 curve: *Curve = data;

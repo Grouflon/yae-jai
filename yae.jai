@@ -36,7 +36,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     // Init basic stuff
     serialization_manager_init(compile_time_info.custom_serialize_types); // custom_serialize_types is generated at build time. See build.jai
     resource_manager_init(compile_time_info.resource_types, "data"); // resource_types is generated at build time. See build.jai
-    editor_init(*editor);
+    editor_init();
 
     // Init Window
     window_flags: rl.ConfigFlags;
@@ -92,7 +92,7 @@ yae_shutdown :: ()
     raylib_imgui_shutdown();
     rl.CloseWindow();
 
-    editor_shutdown(*editor);
+    editor_shutdown();
     resource_manager_shutdown();
     serialization_manager_shutdown();
 
@@ -133,7 +133,7 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
 
             if update_function != null { update_function(dt); }
 
-            editor_update(*editor, dt);
+            editor_update(dt);
         }
 
         // Draw

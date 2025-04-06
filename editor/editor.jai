@@ -4,22 +4,23 @@ Editor :: struct @serialize_optin
     imgui_demo_open: bool; @serialize
     imgui_font_open: bool; @serialize
 
-    animation_editor_open: bool; @serialize
-    animation_editor: AnimationEditor;
+    edited_resources: [..]ResourceEditor; @serialize
 }
 
-editor_init :: (using editor: *Editor)
+editor_init :: ()
 {
-
+    using YAE.editor;
 }
 
-editor_shutdown :: (using editor: *Editor)
+editor_shutdown :: ()
 {
-
+    using YAE.editor;
 }
 
-editor_update :: (using editor: *Editor, dt: float)
+editor_update :: (dt: float)
 {
+    using YAE.editor;
+
     if (imgui_demo_open)
     {
         ImGui.ShowDemoWindow(*imgui_demo_open);
@@ -43,7 +44,6 @@ editor_update :: (using editor: *Editor, dt: float)
         if ImGui.BeginMenu("Windows")
         {
             ImGui.MenuItem("Resources", "", *resources_open);
-            ImGui.MenuItem("Animation Editor", "", *animation_editor_open);
             ImGui.MenuItem("ImGui Demo", "", *imgui_demo_open);
             ImGui.MenuItem("ImGui Font", "", *imgui_font_open);
 
@@ -62,12 +62,46 @@ editor_update :: (using editor: *Editor, dt: float)
         ImGui.End();
     }
 
-    if animation_editor_open
+    for < resource_editor, i: edited_resources
     {
-        if ImGui.Begin("Animation Editor", *animation_editor_open)
-        {
-            animation_editor_update(*animation_editor, dt);
-        }
-        ImGui.End();
+        resource_editor_update(*resource_editor, dt);
+        if !resource_editor.is_open editor_close_resource(i);
     }
+}
+
+editor_open_resource :: (resource: *Resource)
+{
+    using YAE.editor;
+
+    if array_find(
+        edited_resources,
+        (item: ResourceEditor, user_data: *void) -> bool { return item.resource == user_data; },
+        resource
+    ) return;
+
+    resource_editor: ResourceEditor = .{ resource = resource, is_open = true };
+    resource_editor_init(*resource_editor);
+
+    array_add(*edited_resources, resource_editor);
+}
+
+editor_close_resource :: (resource: *Resource)
+{
+    using YAE.editor;
+    
+    found, i: = array_find(
+        edited_resources,
+        (item: ResourceEditor, user_data: *void) -> bool { return item.resource == user_data; },
+        resource
+    );
+    if !found return;
+
+    editor_close_resource(i);
+}
+
+editor_close_resource :: (index: s64)
+{
+    using YAE.editor;
+    resource_editor_shutdown(*edited_resources[index]);
+    array_ordered_remove_by_index(*edited_resources, index);
 }

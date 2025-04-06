@@ -10,19 +10,32 @@ AnimationEditor :: struct
     event_popup_layer: s32 = -1;
 }
 
-animation_editor_init :: (using editor: *AnimationEditor, animation: *Animation)
+animation_editor_init :: (resource_editor: *ResourceEditor)
 {
-    animation_player_set_animation(*player, animation);
-    viewport = .{};
+    assert(resource_editor != null);
+
+    editor: = New(AnimationEditor);
+    resource_editor.payload = editor;
+
+    animation_player_set_animation(*editor.player, cast(*Animation) resource_editor.resource);
 }
 
-animation_editor_update :: (using editor: *AnimationEditor, dt: float)
+animation_editor_shutdown :: (resource_editor: *ResourceEditor)
 {
-    if editor == null return;
+    assert(resource_editor != null);
+
+    free(resource_editor.payload);
+    resource_editor.payload = null;
+}
+
+animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
+{
+    assert(resource_editor != null);
+    using editor: = cast(*AnimationEditor) resource_editor.payload;
 
     dockspace_id: = ImGui.GetID("animation_dockspace");
     animation_editor_window_class: = ImGui.WindowClass.{ ClassId = dockspace_id };
-    dockspace_size: = ImGui.GetContentRegionAvail();
+    dockspace_size: = max(ImGui.GetContentRegionAvail(), xy(16));
     animation: = editor.player.current_animation;
     animation_changed: = false;
 
@@ -86,6 +99,8 @@ animation_editor_update :: (using editor: *AnimationEditor, dt: float)
 
     // Draw viewport scene
     animation_editor_viewport_draw(editor);
+
+    return false; // Implement if we ever need to detect modifications
 }
 
 #scope_file

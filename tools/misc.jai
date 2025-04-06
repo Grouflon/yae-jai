@@ -55,6 +55,17 @@ array_clear :: (array: *[..]$T)
     array.count = 0;
 }
 
+array_find :: (array: []$T, compare_function: #type (item:T, user_data: *void) -> bool, user_data: *void = null) -> bool, s64
+{
+    if compare_function == null return false, -1;
+
+    for item, i: array
+    {
+        if compare_function(item, user_data) return true, i;
+    }
+    return false, -1;
+}
+
 table_clear :: (table: *Table)
 {
     table_reset(table);

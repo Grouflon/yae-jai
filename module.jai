@@ -40,6 +40,7 @@
 #load "editor/editor.jai";
 #load "editor/animation_editor.jai";
 #load "editor/resource_browser.jai";
+#load "editor/resource_editor.jai";
 
 #scope_module
 

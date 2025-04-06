@@ -1,0 +1,54 @@
+ResourceEditor :: struct
+{
+    resource: *Resource;
+    payload: *void;
+    is_open: bool;
+}
+
+resource_editor_init :: (resource_editor: *ResourceEditor)
+{
+    assert(resource_editor != null);
+    if resource_editor.resource == null return;
+
+    if resource_editor.resource.type ==
+    {
+        case type_info(Animation); animation_editor_init(resource_editor);
+    }
+}
+
+resource_editor_shutdown :: (resource_editor: *ResourceEditor)
+{
+    assert(resource_editor != null);
+    if resource_editor.resource == null return;
+
+    if resource_editor.resource.type ==
+    {
+        case type_info(Animation); animation_editor_shutdown(resource_editor);
+    }
+}
+
+resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
+{
+    assert(resource_editor != null);
+    if resource_editor.resource == null return false;
+
+    modified: = false;
+    if ImGui.Begin(temp_c_string(resource_editor.resource.name), *resource_editor.is_open)
+    {
+        if resource_editor.resource.type ==
+        {
+            case type_info(Animation); modified = animation_editor_update(resource_editor, dt);
+            case; modified = default_resource_editor_update(resource_editor, dt);
+        }
+    }
+    ImGui.End();
+    return modified;
+}
+
+default_resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
+{
+    assert(resource_editor != null);
+    assert(resource_editor.resource != null);
+
+    return ImGui.EditStructMembers(resource_editor.resource, resource_editor.resource.type);
+}

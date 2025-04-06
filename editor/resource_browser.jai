@@ -59,7 +59,7 @@ resource_browser_update :: ()
             ImGui.Selectable(temp_c_string(resource.name), false, .SpanAllColumns | .AllowOverlap);
             if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
             {
-                log("coucou");
+                editor_open_resource(resource);
             }
 
             ImGui.TableNextColumn();
