@@ -33,11 +33,6 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     set_working_directory(root_directory);
     log_verbose("working directory: %", get_working_directory());
 
-    // Init basic stuff
-    serialization_manager_init(compile_time_info.custom_serialize_types); // custom_serialize_types is generated at build time. See build.jai
-    resource_manager_init(compile_time_info.resource_types, "data"); // resource_types is generated at build time. See build.jai
-    editor_init();
-
     // Init Window
     window_flags: rl.ConfigFlags;
     window_flags |= .FLAG_WINDOW_RESIZABLE;
@@ -46,7 +41,13 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     rl.SetTargetFPS(60);
     rl.SetExitKey(.KEY_NULL);
 
-    // Set windows positions
+    // Init serialization
+    serialization_manager_init(compile_time_info.custom_serialize_types); // custom_serialize_types is generated at build time. See build.jai
+
+    // Init & gather resources
+    resource_manager_init(compile_time_info.resource_types, "data"); // resource_types is generated at build time. See build.jai
+
+    // Read settings
     if read_json_file(YAE_SETTINGS_PATH, *YAE)
     {
         console_handle: = get_console_window_handle();
@@ -55,6 +56,9 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
         if YAE.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), YAE.console_window_rect); }
         if YAE.debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, YAE.debugger_window_rect); }
     }
+
+    // Init stuff
+    editor_init();
 
     // Init ImGui
     imgui_config: RaylibImGuiConfig = .{
@@ -90,11 +94,12 @@ yae_shutdown :: ()
     log_verbose("shutting down yae...");
 
     raylib_imgui_shutdown();
-    rl.CloseWindow();
 
     editor_shutdown();
     resource_manager_shutdown();
     serialization_manager_shutdown();
+
+    rl.CloseWindow();
 
     // Memory leak check
     #if YAE_DEBUG_MEMORY

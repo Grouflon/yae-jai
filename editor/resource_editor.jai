@@ -27,13 +27,19 @@ resource_editor_shutdown :: (resource_editor: *ResourceEditor)
     }
 }
 
+resource_editor_clear_window_settings :: (resource_editor: *ResourceEditor)
+{
+    ImGui.ClearWindowSettings(temp_c_string(get_editor_window_name(resource_editor)));
+}
+
 resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 {
     assert(resource_editor != null);
     if resource_editor.resource == null return false;
 
     modified: = false;
-    if ImGui.Begin(temp_c_string(resource_editor.resource.name), *resource_editor.is_open)
+    ImGui.SetNextWindowSize(.{400, 300}, .FirstUseEver);
+    if ImGui.Begin(temp_c_string(get_editor_window_name(resource_editor)), *resource_editor.is_open)
     {
         if resource_editor.resource.type ==
         {
@@ -51,4 +57,14 @@ default_resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) 
     assert(resource_editor.resource != null);
 
     return ImGui.EditStructMembers(resource_editor.resource, resource_editor.resource.type);
+}
+
+#scope_file
+
+get_editor_window_name :: (resource_editor: *ResourceEditor) -> string
+{
+    if resource_editor == null return "";
+    if resource_editor.resource == null return "";
+
+    return tprint("%: %", resource_editor.resource.type.name, resource_editor.resource.name);
 }

@@ -32,11 +32,18 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 {
     assert(resource_editor != null);
     using editor: = cast(*AnimationEditor) resource_editor.payload;
+    assert(editor != null);
 
-    dockspace_id: = ImGui.GetID("animation_dockspace");
+    animation: = player.current_animation;
+    if animation == null
+    {
+        resource_editor.is_open = false;
+        return false;
+    }
+
+    dockspace_id: = ImGui.GetID(tprint("% animation_dockspace", resource_editor.resource.id));
     animation_editor_window_class: = ImGui.WindowClass.{ ClassId = dockspace_id };
     dockspace_size: = max(ImGui.GetContentRegionAvail(), xy(16));
-    animation: = editor.player.current_animation;
     animation_changed: = false;
 
     PROPERTIES_NAME :: "\uf03a Properties";

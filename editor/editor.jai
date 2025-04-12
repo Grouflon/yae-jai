@@ -10,11 +10,21 @@ Editor :: struct @serialize_optin
 editor_init :: ()
 {
     using YAE.editor;
+
+    for *resource_editor: edited_resources
+    {
+        resource_editor_init(resource_editor);
+    }
 }
 
 editor_shutdown :: ()
 {
     using YAE.editor;
+
+    for *resource_editor: edited_resources
+    {
+        resource_editor_shutdown(resource_editor);
+    }
 }
 
 editor_update :: (dt: float)
@@ -64,8 +74,13 @@ editor_update :: (dt: float)
 
     for < resource_editor, i: edited_resources
     {
+        if !resource_editor.is_open || resource_editor.resource == null
+        {
+            editor_close_resource(i);
+            continue;
+        }
+
         resource_editor_update(*resource_editor, dt);
-        if !resource_editor.is_open editor_close_resource(i);
     }
 }
 
@@ -102,6 +117,9 @@ editor_close_resource :: (resource: *Resource)
 editor_close_resource :: (index: s64)
 {
     using YAE.editor;
-    resource_editor_shutdown(*edited_resources[index]);
+    resource_editor: = *edited_resources[index];
+
+    resource_editor_clear_window_settings(resource_editor);
+    resource_editor_shutdown(resource_editor);
     array_ordered_remove_by_index(*edited_resources, index);
 }
