@@ -2,27 +2,18 @@ resource_browser_update :: ()
 {
     table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg | .Sortable | .Hideable;
 
-    Column :: struct
-    {
-        name: *u8;
-        flags: ImGui.TableColumnFlags;
-    }
-
-    COLUMNS :: Column.[
-        .{"ID",         0},
-        .{"Name",       .NoHide},
-        .{"Type",       0},
-        .{"Load count", 0},
+    COLUMNS :: ImGui.ColumnDefinition.[
+        .{"ID", 0, 0},
+        .{"Name", .NoHide, 0},
+        .{"Type", 0, 0},
+        .{"Load count", 0, 0},
     ];
 
     if ImGui.BeginTable("resource_browser", COLUMNS.count, table_flags, .{0, 0})
     {
         defer ImGui.EndTable();
 
-        for column, i: COLUMNS
-        {
-            ImGui.TableSetupColumn(column.name, column.flags);
-        }
+        ImGui.TableSetupColumns(COLUMNS);
         ImGui.TableSetupScrollFreeze(0, 1);
 
         ImGui.TableHeadersRow();
