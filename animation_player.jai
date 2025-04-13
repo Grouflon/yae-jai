@@ -25,7 +25,6 @@ animation_player_set_animation :: (using player: *AnimationPlayer, animation: *A
 animation_player_play :: (using player: *AnimationPlayer, animation: *Animation)
 {
     assert(player != null);
-    assert(animation != null);
 
     if current_animation == animation return;
     
