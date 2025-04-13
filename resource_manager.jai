@@ -198,30 +198,6 @@ resource_save_to_disk :: (resource: *Resource, file_path: string) -> bool
     return true;
 }
 
-resource_rename :: (resource: *Resource, name: string)
-{
-    assert(resource != null);
-
-    using manager: = resource_manager();
-
-    if compare(name, resource.name) == 0 return;
-
-    if resource.name.count > 0
-    {
-        resource_unregister_name(resource, name);
-        free(resource.name);
-        resource.name.count = 0;
-    }
-    
-    normalized_name: = normalize_resource_name(name); // Not sure this should be done automatically here, or manually outside
-    resource.name = copy_string(normalized_name);
-
-    if resource.name.count > 0
-    {
-        resource_register_name(resource, resource.name);
-    }
-}
-
 resource_register_name :: (resource: *Resource, name: string)
 {
     assert(resource != null);
@@ -290,7 +266,7 @@ resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
     return resource;
 }
 
-resource_get_or_create :: (ti: *Type_Info_Struct, id: ResourceIDBase) -> *Resource
+resource_get_or_create :: (ti: *Type_Info_Struct, id: ResourceIDBase) -> resource: *Resource, created: bool
 {
     assert(ti != null);
 
@@ -301,32 +277,32 @@ resource_get_or_create :: (ti: *Type_Info_Struct, id: ResourceIDBase) -> *Resour
         resource = resource_create(ti, id);
         assert(resource != null);
     }
-    return resource;
+    return resource, !found;
 }
 
-resource_get_or_create :: ($T: Type, name: string) -> *T
+resource_get_or_create :: ($T: Type, name: string) -> resource: *T, created: bool
 {
     using manager: = resource_manager();
 
     if name.count == 0
     {
         log_warning("Can't get Resource with empty name.", section= *RESOURCE_LOG_SECTION);
-        return null;
+        return null, false;
     }
 
     ti: = cast(*Type_Info_Struct) type_info(T);
     normalized_name: = normalize_resource_name(name);
     id, found: = table_find(*resource_name_to_id, normalized_name);
     if !found { id = 0; }
-    resource: = resource_get_or_create(ti, id);
+    resource, created: = resource_get_or_create(ti, id);
     assert(resource != null);
     if resource.type != type_info(T)
     {
         log_error("Can't get Resource \"%\": Does not match the requested type (is %, expects %).", name, resource.type.name, ti.name, section= *RESOURCE_LOG_SECTION);
-        return null;
+        return null, false;
     }
     resource_rename(resource, normalized_name);
-    return xx resource;
+    return xx resource, created;
 }
 
 resource_register :: (resource: *Resource)
@@ -507,8 +483,7 @@ resource_read_headers_from_disk :: (file_path: string) -> *Resource
 
     if resource != null
     {
-        free(resource.data_path);
-        resource.data_path = copy_string(normalize_path(file_path));
+        resource_set_data_path(resource, file_path);
     }
 
     return resource;
@@ -583,15 +558,6 @@ resource_serialize_body :: (serializer: *Serializer, resource: *Resource) -> boo
     assert(resource.type != null);
 
     return serialize(serializer, resource, resource.type, "data");
-}
-
-normalize_resource_name :: (name: string) -> string
-{
-    // If not a file, leave it as is
-    if !file_exists(name)
-        return name;
-
-    return normalize_path(name);
 }
 
 generate_resource_id :: () -> ResourceIDBase

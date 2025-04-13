@@ -5,7 +5,7 @@ TextureFile :: struct
     load_function = texture_load;
     unload_function = texture_unload;
 
-    sprites: [..]*Sprite; @embed @serialize
+    sprites: [..]*Sprite; @serialize @embed
 
     texture: Texture2D;
 }

@@ -2,107 +2,177 @@ AsepriteFile :: struct
 {
     #as using base: Resource;
 
-    load_function = aseprite_data_load;
-    unload_function = aseprite_data_unload;
+    load_function = aseprite_file_load;
+    unload_function = aseprite_file_unload;
 
-    //Note: we still have the problem that data is non-existent until we load the resource, therefore if we just create the resource and save it, it will be empty and clear all the ids
-    // That may be a shortcoming of embedding resources like this, but maybe that's okay
-    texture: *TextureFile; @embed @serialize
-    animations: Table(string, *Animation); // to embed at some point to be able to maintain id. Bur require table serialization
+    data: AsepriteData;
+
+    texture: *TextureFile; @serialize
+    animations: Table(StringHash, *Animation); @serialize
+
+    aseprite_frame_to_sprite_index: Table(s32, s32);
 }
 
 get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
 {
-    animation, success: = table_find(*aseprite_file.animations, name);
+    animation, success: = table_find(*aseprite_file.animations, string_hash(name));
     if !success return null;
     return animation;
 }
 
 #scope_file
 
-aseprite_data_load :: (resource: *Resource) -> bool
+aseprite_file_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*AsepriteFile) resource;
+    modified: = false;
+    defer if modified resource_save_to_disk(resource);
 
     resource_add_file_watch(resource, name);
 
-    aseprite_data: AsepriteData;
+    if (!aseprite_load_data(*data, name))
     {
-        push_allocator(temporary_allocator);
-        if (!aseprite_load_data(*aseprite_data, name))
-        {
-            log_error("failed to load aseprite data file \"%\"", name);
-            return false;
-        }
+        log_error("failed to load aseprite data file \"%\"", name);
+        return false;
     }
 
     // Texture
     if texture == null
     {
-        texture = resource_get_or_create(TextureFile, aseprite_data.image_path);
+        texture=, created: = resource_get_or_create(TextureFile, data.image_path);
+        if created
+        {
+            resource_set_data_path(texture, tprint("%0%", data.image_path, RESOURCE_EXTENSION));
+            resource_save_to_disk(texture);
+        }
+        modified = true;
     }
     assert(texture != null);
 
     success: = resource_load(texture);
     if !success
     {
-        log_error("failed to load aseprite texture \"%\"", texture.name);
+        log_error("failed to load texture \"%\"", texture.name);
         return false;
     }
 
-    // Sprites
-    array_clear(*texture.sprites);
-    for frame: aseprite_data.frames
+    // Add unknown animations
+    existing_tags: Table(StringHash, bool);
+    existing_tags.allocator = temporary_allocator;
+    for tag: data.frame_tags
     {
-        sprite: = resource_get_or_create(Sprite, frame.name);
-        if sprite == null continue;
+        name_hash: = string_hash(tag.name);
 
-        sprite.texture = texture;
-        sprite.bounds = .{ 
-            Vector2.{xx frame.frame.x, xx frame.frame.y },
-            Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
-        };
-        array_add(*texture.sprites, sprite);
+        table_add(*existing_tags, name_hash, true);
+
+        _, found: = table_find(*animations, name_hash);
+        if !found
+        {
+            table_add(*animations, name_hash, null);
+            modified = true;
+        }
+
+        // animation: = resource_get_or_create(Animation, tprint("%.%", name, tag.name));
+        // resource_load(animation);
+
+        // animation.frame_count = tag.end_frame - tag.start_frame;
+        // layer_index: = animation_add_layer(animation, "Sprites");
+
+        // for i: tag.start_frame..tag.end_frame
+        // {
+        //     animation_add_event(animation, .{
+        //         type = .SPRITE,
+        //         layer_index = layer_index,
+        //         begin = i - tag.start_frame,
+        //         sprite = .{ sprite = texture.sprites[i] },
+        //     });
+        // }
+        // table_add(*animations, tag.name, animation);
     }
 
-    // Animations
-    table_clear(*animations);
-    for tag: aseprite_data.frame_tags
+    // Remove unknown animations
+    for animation, name: animations
     {
-        animation: = resource_get_or_create(Animation, tprint("%.%", name, tag.name));
-        resource_load(animation);
-
-        animation.frame_count = tag.end_frame - tag.start_frame;
-        layer_index: = animation_add_layer(animation, "Sprites");
-
-        for i: tag.start_frame..tag.end_frame
+        if !table_contains(*existing_tags, name)
         {
-            animation_add_event(animation, .{
-                type = .SPRITE,
-                layer_index = layer_index,
-                begin = i - tag.start_frame,
-                sprite = .{ sprite = texture.sprites[i] },
-            });
+            table_remove(*animations, name);
+            continue;
         }
-        table_add(*animations, tag.name, animation);
+
+        if animation != null
+        {
+            resource_load(animation);
+        }
     }
 
     return true;
 }
 
-aseprite_data_unload :: (resource: *Resource)
+aseprite_file_unload :: (resource: *Resource)
 {
     using t: = cast(*AsepriteFile) resource;
 
-    for animation: animations
+    for animation, name: animations
     {
         resource_unload(animation);
     }
-    table_reset(*animations);
-    table_free(*animations);
+    table_reset_and_free(*animations);
+    table_reset_and_free(*aseprite_frame_to_sprite_index);
 
     resource_unload(texture);
     texture = null;
 
+    aseprite_release_data(*data);
+
     resource_remove_file_watch(resource, name);
+}
+
+aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
+{
+    assert(aseprite_file != null);
+    assert(aseprite_file.is_loaded_without_errors);
+
+    // Sprites
+    bounds_to_sprite_index: Table(Bounds, s32);
+    bounds_to_sprite_index.allocator = temporary_allocator;
+
+    // Build existing sprite table, remove duplicates (should never happen if the code is right, but we handle it anyway)
+    for < sprite, i: texture.sprites
+    {
+        entry, added: = find_or_add(*bounds_to_sprite_index, sprite.bounds);
+        if !added
+        {
+            array_ordered_remove_by_index(*texture.sprites, i);
+            continue;
+        }
+        <<entry = i;
+    }
+
+    // Match aseprite sprites with engine sprites
+    table_reset(*aseprite_frame_to_sprite_index);
+    for frame, i: data.frames
+    {
+        bounds: = Bounds.{ 
+            Vector2.{xx frame.frame.x, xx frame.frame.y },
+            Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
+        };
+
+        index, found: = table_find(*bounds_to_sprite_index, bounds);
+        if !found
+        {
+            sprite: = resource_create(Sprite);
+            assert(sprite != null);
+
+            resource_rename(sprite, frame.name);
+            sprite.texture = texture;
+            sprite.bounds = bounds;
+
+            array_add(*texture.sprites, sprite);
+            index = texture.sprites.count - 1;
+        }
+
+        table_set(*aseprite_to_resource_index, i, index);
+    }
+
+    // @NOTE: this will keep obsolete sprites, but maybe that's for the better as there's no risk it breaks any animation that way
 }
