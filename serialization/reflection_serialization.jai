@@ -99,6 +99,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     verify(serialize(serializer, vector));
                     verify(serialize(serializer, vector+1));
                     verify(serializer_end_array(serializer));
+                    return true;
                 }
                 case type_info(Vector3);
                 {
@@ -110,6 +111,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     verify(serialize(serializer, vector+1));
                     verify(serialize(serializer, vector+2));
                     verify(serializer_end_array(serializer));
+                    return true;
                 }
                 case type_info(Quaternion);
                 {
@@ -122,11 +124,70 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     verify(serialize(serializer, vector+2));
                     verify(serialize(serializer, vector+3));
                     verify(serializer_end_array(serializer));
+                    return true;
                 }
 
                 case;
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
+
+                    // Table
+                    if info_struct.name == "Table"
+                    {
+                        assert(info_struct.specified_parameters.count == 6);
+                        assert(info_struct.specified_parameters[0].type.type == .TYPE);
+                        assert(info_struct.specified_parameters[0].offset_into_constant_storage >= 0);
+                        assert(info_struct.specified_parameters[1].type.type == .TYPE);
+                        assert(info_struct.specified_parameters[1].offset_into_constant_storage >= 0);
+
+                        key_type: *Type_Info = <<cast(**Type_Info)(info_struct.constant_storage.data + info_struct.specified_parameters[0].offset_into_constant_storage);
+                        value_type: *Type_Info = <<cast(**Type_Info)(info_struct.constant_storage.data + info_struct.specified_parameters[1].offset_into_constant_storage);
+
+                        if key_type != type_info(StringHash)
+                        {
+                            log_warning("unsupported Table key type (%): Only StringHash is supported for now", <<key_type);
+                            return false;
+                        }
+
+                        serialize_table :: (serializer: *Serializer, table: *Table(StringHash, $Dummy_Value_Type), value_type_info: *Type_Info, key: string, params: SerializationParams, ctx: ReflectionContext) -> bool
+                        {
+                            keys: [..]string;
+                            keys.allocator = temporary_allocator;
+
+                            if serializer.mode == .WRITE
+                            {
+                                for _, key: table
+                                {
+                                    array_add(*keys, tprint("%", key.str));
+                                }
+                            }
+
+                            if !serializer_begin_object(serializer, *keys, key) return false;
+                            defer verify(serializer_end_object(serializer));
+
+                            for key: keys
+                            {
+                                //NOTE: Need to convert string to number for int types. Can do this with a preprocessor
+                                key_hash: = string_hash(key);
+                                value_ptr: = find_or_add(table, key_hash);
+                                serialize(serializer, value_ptr, value_type_info, key, params, ctx);
+                            }
+                            return true;
+                        }
+
+                        if value_type.runtime_size ==
+                        {
+                            case 1; return serialize_table(serializer, cast(*Table(StringHash,u8))data, value_type, key, params, ctx);
+                            case 2; return serialize_table(serializer, cast(*Table(StringHash,u16))data, value_type, key, params, ctx);
+                            case 4; return serialize_table(serializer, cast(*Table(StringHash,u32))data, value_type, key, params, ctx);
+                            case 8; return serialize_table(serializer, cast(*Table(StringHash,u64))data, value_type, key, params, ctx);
+                            case;
+                            {
+                                log_warning("unsupported Table value type (%)", <<value_type);
+                                return false;
+                            }
+                        }
+                    }
 
                     // Custom serialize
                     custom_serialize_function: = get_custom_serialize_function(info_struct);
@@ -173,9 +234,13 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
                         next_context.member = member_type_info;
                         member_data: = data + member_type_info.offset_in_bytes;
-                        verify(serialize(serializer, member_data, member_type_info.type, key, params, next_context));
+
+                        // NOTE: for now we don't do anything if one of the members fails. We'll probably need a flag to define behavior but let's wait for use cases
+                        serialize(serializer, member_data, member_type_info.type, key, params, next_context);
                     }
                     verify(serializer_end_object(serializer));
+
+                    return true;
                 }
             }
         }
@@ -202,6 +267,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     case 8; { if !serialize(serializer, cast(*u64)data, key) return false; }
                 }
             }
+            return true;
         }
         case .FLOAT;
         {
@@ -210,14 +276,17 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 case 4; { if !serialize(serializer, cast(*float32)data, key) return false; }
                 case 8; { if !serialize(serializer, cast(*float64)data, key) return false; }
             }
+            return true;
         }
         case .BOOL;
         {
             if !serialize(serializer, cast(*bool)data, key) return false;
+            return true;
         }
         case .STRING;
         {
             if !serialize(serializer, cast(*string)data, key) return false;
+            return true;
         }
         case .ENUM;
         {
@@ -276,6 +345,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     case 8; { if !serialize_enum_value(serializer, cast(*u64)data, info_enum, key) return false; }
                 }
             }
+            return true;
         }
         case .ARRAY;
         {
@@ -331,9 +401,10 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 verify(serialize(serializer, element_data, info_array.element_type, "", params, ctx));
             }
             verify(serializer_end_array(serializer));
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 #scope_file
