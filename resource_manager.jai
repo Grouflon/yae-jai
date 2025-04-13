@@ -135,6 +135,7 @@ resource_load :: (resource: *Resource) -> bool
     if resource.load_count == 0 && resource.load_function != null
     {
         log_verbose("loading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
+        log_indent();
 
         if resource.data_path.count > 0
         {
@@ -149,6 +150,7 @@ resource_load :: (resource: *Resource) -> bool
         }
 
         resource.is_loaded_without_errors = resource.load_function(resource);
+        log_unindent();
         log_verbose("loaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
     resource.load_count += 1;

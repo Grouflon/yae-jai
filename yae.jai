@@ -24,6 +24,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     context.logger = yae_logger;
 
     log_verbose("Initializing yae...");
+    log_indent();
 
     debugger_handle = find_window_by_title_containing("RemedyBG");
 
@@ -84,6 +85,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     };
     raylib_imgui_init(imgui_config);
 
+    log_unindent();
     log_verbose("yae initialized.");
 }
 
@@ -92,6 +94,7 @@ yae_shutdown :: ()
     using YAE;
 
     log_verbose("shutting down yae...");
+    log_indent();
 
     raylib_imgui_shutdown();
 
@@ -115,6 +118,7 @@ yae_shutdown :: ()
         }
     }
 
+    log_unindent();
     log_verbose("yae shut down.");
 }
 

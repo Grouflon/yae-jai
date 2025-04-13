@@ -10,6 +10,16 @@ log_verbose :: (format_string: string, args: .. Any, loc := #caller_location, fl
     log(format_string, ..args, loc, new_flags, user_flags, section);
 } @PrintLike
 
+log_indent :: ()
+{
+    log_indent_level += 1;
+}
+
+log_unindent :: ()
+{
+    assert(log_indent_level > 0);
+    log_indent_level -= 1;
+}
 
 yae_logger :: (message: string, data: *void, info: Log_Info)
 {
@@ -52,9 +62,28 @@ yae_logger :: (message: string, data: *void, info: Log_Info)
         defer Windows.SetConsoleTextAttribute(handle, COLOR_DEFAULT);
     }
 
-    runtime_support_default_logger(message, data, info);
+    processed_message: = message;
+
+    if log_indent_level > 0
+    {
+        b: String_Builder;
+        b.allocator = temporary_allocator;
+
+        init_string_builder(*b, message.count + log_indent_level * 2);
+
+        for i: 0..log_indent_level-1
+        {
+            append(*b, "  ");
+        }
+        append(*b, message);
+        processed_message = builder_to_string(*b);
+    }
+
+    runtime_support_default_logger(processed_message, data, info);
 }
 
 #scope_file
+
+log_indent_level: u8 = 0;
 
 Windows :: #import "Windows";
