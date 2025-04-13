@@ -10,6 +10,21 @@ IM_COL32_G_SHIFT :: 8;
 IM_COL32_B_SHIFT :: 16;
 IM_COL32_A_SHIFT :: 24;
 
+ColumnDefinition :: struct
+{
+    name: *u8;
+    flags: ImGui.TableColumnFlags;
+    base_width: float;
+}
+
+TableSetupColumns :: (columns: []ColumnDefinition)
+{
+    for column: columns
+    {
+        ImGui.TableSetupColumn(column.name, column.flags, column.base_width);
+    }
+}
+
 InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
 {
     InputTextCallback_UserData :: struct
@@ -284,4 +299,6 @@ parse_note :: (note_string: string) -> Note
 #poke_name ImGui InputText;
 #poke_name ImGui EditValue;
 #poke_name ImGui EditStructMembers;
+#poke_name ImGui ColumnDefinition;
+#poke_name ImGui TableSetupColumns;
 
