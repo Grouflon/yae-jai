@@ -10,6 +10,7 @@
 #load "tilemap.jai";
 #load "resource_manager.jai";
 #load "resource.jai";
+#load "string_hash.jai";
 
 #load "imgui/imgui.jai";
 #load "imgui/imgui_canvas.jai";

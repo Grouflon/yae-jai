@@ -101,6 +101,8 @@ yae_shutdown :: ()
 
     rl.CloseWindow();
 
+    free_string_hash_repository();
+
     // Memory leak check
     #if YAE_DEBUG_MEMORY
     {
