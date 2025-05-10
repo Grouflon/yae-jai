@@ -65,16 +65,16 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         if is_subclass_of(ti, Resource)
         {
             resource_ptr: = cast(**Resource) data;
-            resource: = <<resource_ptr;
 
             // If embed, serialize data directyly
             success: = false;
             if has_note(ctx.member, "embed")
             {
-                success = resource_serialize(serializer, *resource, key);
+                success = resource_serialize(serializer, resource_ptr, key);
             }
             else // else serialize id
             {
+                resource: = <<resource_ptr;
                 id: ResourceIDBase = ifx resource != null then resource.id else 0;
                 success = serialize(serializer, *id, key);
                 <<resource_ptr = get(id);
