@@ -31,7 +31,23 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
             ImGui.TableSetupColumns(COLUMNS);
             ImGui.TableHeadersRow();
 
-            
+            if aseprite_file.texture != null
+            {
+                ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Selectable(temp_c_string(aseprite_file.texture.name), false, .SpanAllColumns | .AllowOverlap);
+                if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
+                {
+                    editor_open_resource(aseprite_file.texture);
+                }
+
+                ImGui.TableNextColumn();
+                if ImGui.Button("Sync Sprites")
+                {
+                    aseprite_file_sync_sprites(aseprite_file);
+                    resource_save_to_disk(aseprite_file.texture);
+                }
+            }
         }
     }
 

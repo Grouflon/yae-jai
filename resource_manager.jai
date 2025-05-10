@@ -232,6 +232,13 @@ resource_unregister_name :: (resource: *Resource, name: string)
     assert(id == resource.id);
 }
 
+resource_create :: ($T: Type, id: ResourceIDBase = 0) -> *T
+{
+    resource: = resource_create(type_info(T), id);
+    assert(resource.type == type_info(T));
+    return cast(*T)resource;
+}
+
 resource_create :: (ti: *Type_Info_Struct, id: ResourceIDBase = 0) -> *Resource
 {
     assert(ti != null);

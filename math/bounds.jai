@@ -94,3 +94,18 @@ combine :: (a: $T/BoundsBase, bounds: ..T) -> T
     }
     return final_bounds;
 }
+
+operator == :: (a: $T/BoundsBase, b: T) -> bool
+{
+    return a.min == b.min && a.max == b.max;
+}
+
+#scope_file
+
+get_hash :: (bounds: $T/BoundsBase) -> u32
+{
+    return Hash.sdbm_hash(*bounds, type_info(T).runtime_size);
+}
+
+Hash :: #import "Hash";
+#poke_name Hash get_hash;

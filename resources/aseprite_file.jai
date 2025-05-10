@@ -10,7 +10,7 @@ AsepriteFile :: struct
     texture: *TextureFile; @serialize
     animations: Table(StringHash, *Animation); @serialize
 
-    aseprite_frame_to_sprite_index: Table(s32, s32);
+    aseprite_frame_to_sprite_index: Table(s64, s64);
 }
 
 get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
@@ -18,6 +18,56 @@ get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
     animation, success: = table_find(*aseprite_file.animations, string_hash(name));
     if !success return null;
     return animation;
+}
+
+aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
+{
+    assert(aseprite_file != null);
+    assert(aseprite_file.is_loaded_without_errors);
+
+    // Sprites
+    bounds_to_sprite_index: Table(Bounds, s64);
+    bounds_to_sprite_index.allocator = temporary_allocator;
+
+    // Build existing sprite table, remove duplicates (should never happen if the code is right, but we handle it anyway)
+    for < sprite, i: texture.sprites
+    {
+        entry, added: = find_or_add(*bounds_to_sprite_index, sprite.bounds);
+        if !added
+        {
+            array_ordered_remove_by_index(*texture.sprites, i);
+            continue;
+        }
+        <<entry = xx i;
+    }
+
+    // Match aseprite sprites with engine sprites
+    table_reset(*aseprite_frame_to_sprite_index);
+    for frame, i: data.frames
+    {
+        bounds: = Bounds.{ 
+            Vector2.{xx frame.frame.x, xx frame.frame.y },
+            Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
+        };
+
+        index, found: = table_find(*bounds_to_sprite_index, bounds);
+        if !found
+        {
+            sprite: = resource_create(Sprite);
+            assert(sprite != null);
+
+            resource_rename(sprite, frame.name);
+            sprite.texture = texture;
+            sprite.bounds = bounds;
+
+            array_add(*texture.sprites, sprite);
+            index = texture.sprites.count - 1;
+        }
+
+        table_set(*aseprite_frame_to_sprite_index, i, index);
+    }
+
+    // @NOTE: this will keep obsolete sprites, but maybe that's for the better as there's no risk it breaks any animation that way
 }
 
 #scope_file
@@ -125,54 +175,4 @@ aseprite_file_unload :: (resource: *Resource)
     aseprite_release_data(*data);
 
     resource_remove_file_watch(resource, name);
-}
-
-aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
-{
-    assert(aseprite_file != null);
-    assert(aseprite_file.is_loaded_without_errors);
-
-    // Sprites
-    bounds_to_sprite_index: Table(Bounds, s32);
-    bounds_to_sprite_index.allocator = temporary_allocator;
-
-    // Build existing sprite table, remove duplicates (should never happen if the code is right, but we handle it anyway)
-    for < sprite, i: texture.sprites
-    {
-        entry, added: = find_or_add(*bounds_to_sprite_index, sprite.bounds);
-        if !added
-        {
-            array_ordered_remove_by_index(*texture.sprites, i);
-            continue;
-        }
-        <<entry = i;
-    }
-
-    // Match aseprite sprites with engine sprites
-    table_reset(*aseprite_frame_to_sprite_index);
-    for frame, i: data.frames
-    {
-        bounds: = Bounds.{ 
-            Vector2.{xx frame.frame.x, xx frame.frame.y },
-            Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
-        };
-
-        index, found: = table_find(*bounds_to_sprite_index, bounds);
-        if !found
-        {
-            sprite: = resource_create(Sprite);
-            assert(sprite != null);
-
-            resource_rename(sprite, frame.name);
-            sprite.texture = texture;
-            sprite.bounds = bounds;
-
-            array_add(*texture.sprites, sprite);
-            index = texture.sprites.count - 1;
-        }
-
-        table_set(*aseprite_to_resource_index, i, index);
-    }
-
-    // @NOTE: this will keep obsolete sprites, but maybe that's for the better as there's no risk it breaks any animation that way
 }

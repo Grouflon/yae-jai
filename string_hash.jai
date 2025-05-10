@@ -34,14 +34,14 @@ operator == :: (a: StringHash, b: StringHash) -> bool
     return a.hash == b.hash;
 }
 
+#scope_file
+
+string_hash_repository : Table(u32, string);
+
 get_hash :: (string_hash: StringHash) -> u32
 {
     return string_hash.hash;
 }
-
-#scope_file
-
-string_hash_repository : Table(u32, string);
 
 Hash :: #import "Hash";
 
