@@ -1,6 +1,6 @@
 Animation :: struct
 {
-    #as using base: Resource;
+    #as using _resource: Resource;
 
     load_function = animation_load;
     unload_function = animation_unload;

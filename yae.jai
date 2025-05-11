@@ -11,13 +11,6 @@ YAE : struct @serialize_optin
     editor: Editor; @serialize
 };
 
-// a YAE_COMPILE_TIME_INFO constant is generated at compile time. See compile_time.jai
-YaeCompileTimeInfo :: struct
-{
-    resource_types: []*Type_Info_Struct;
-    custom_serialize_types: []CustomSerializeType;
-}
-
 yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, title: string)
 {
     using YAE;
@@ -34,6 +27,11 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     set_working_directory(root_directory);
     log_verbose("working directory: %", get_working_directory());
 
+    // Init core stuff
+    object_registry_init(compile_time_info.object_types);
+    resource_manager_init(compile_time_info.resource_types);
+    serialization_manager_init(compile_time_info.custom_serialize_types);
+
     // Init Window
     window_flags: rl.ConfigFlags;
     window_flags |= .FLAG_WINDOW_RESIZABLE;
@@ -42,11 +40,8 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     rl.SetTargetFPS(60);
     rl.SetExitKey(.KEY_NULL);
 
-    // Init serialization
-    serialization_manager_init(compile_time_info.custom_serialize_types); // custom_serialize_types is generated at build time. See build.jai
-
-    // Init & gather resources
-    resource_manager_init(compile_time_info.resource_types, "data"); // resource_types is generated at build time. See build.jai
+    // Gather resources
+    resource_manager_gather_and_watch_resources("data");
 
     // Read settings
     if read_json_file(YAE_SETTINGS_PATH, *YAE)
@@ -99,11 +94,12 @@ yae_shutdown :: ()
     raylib_imgui_shutdown();
 
     editor_shutdown();
-    resource_manager_shutdown();
-    serialization_manager_shutdown();
 
     rl.CloseWindow();
 
+    serialization_manager_shutdown();
+    resource_manager_shutdown();
+    object_registry_shutdown();
     free_string_hash_repository();
 
     // Memory leak check

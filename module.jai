@@ -1,16 +1,16 @@
-#load "yae.jai";
 #load "animation_player.jai";
 #load "compile_time.jai";
 #load "draw.jai";
 #load "log.jai";
+#load "object.jai";
 #load "pixel_perfect_viewport.jai";
-#load "viewport.jai";
 #load "raylib_imgui.jai";
-#load "statemachine.jai";
-#load "tilemap.jai";
-#load "resource_manager.jai";
 #load "resource.jai";
+#load "statemachine.jai";
 #load "string_hash.jai";
+#load "tilemap.jai";
+#load "viewport.jai";
+#load "yae.jai";
 
 #load "imgui/imgui.jai";
 #load "imgui/imgui_canvas.jai";

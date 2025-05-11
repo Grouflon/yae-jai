@@ -1,6 +1,6 @@
 AsepriteFile :: struct
 {
-    #as using base: Resource;
+    #as using _resource: Resource;
 
     load_function = aseprite_file_load;
     unload_function = aseprite_file_unload;
@@ -53,10 +53,10 @@ aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
         index, found: = table_find(*bounds_to_sprite_index, bounds);
         if !found
         {
-            sprite: = resource_create(Sprite);
+            sprite: = object_create(Sprite);
             assert(sprite != null);
 
-            resource_rename(sprite, frame.name);
+            object_rename(sprite, frame.name);
             sprite.texture = texture;
             sprite.bounds = bounds;
 
@@ -90,11 +90,6 @@ aseprite_file_load :: (resource: *Resource) -> bool
     if texture == null
     {
         texture=, created: = resource_get_or_create(TextureFile, data.image_path);
-        if created
-        {
-            resource_set_data_path(texture, tprint("%0%", data.image_path, RESOURCE_EXTENSION));
-            resource_save_to_disk(texture);
-        }
         modified = true;
     }
     assert(texture != null);

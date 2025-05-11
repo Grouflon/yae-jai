@@ -1,3 +1,11 @@
+// a YAE_COMPILE_TIME_INFO constant is generated at compile time. see `yae_notify_compiler_message` TYPECHECKED_ALL_WE_CAN notify
+YaeCompileTimeInfo :: struct
+{
+    object_types: []*Type_Info_Struct;
+    resource_types: []*Type_Info_Struct;
+    custom_serialize_types: []CustomSerializeType;
+}
+
 yae_notify_compiler_message :: (w: Workspace, message: *Message)
 {
     if message.kind ==
@@ -9,8 +17,15 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
             {
                 struct_type_info: = st.expression.defined_type;
 
-                if is_subclass_of(struct_type_info, "Resource")
+                if is_subclass_of(struct_type_info, Object, false)
                 {
+                    log("object: %", struct_type_info.name);
+                    array_add(*object_types, struct_type_info);
+                }
+
+                if is_subclass_of(struct_type_info, Resource, false)
+                {
+                    log("resource: %", struct_type_info.name);
                     array_add(*resource_types, struct_type_info);
                 }
 
@@ -35,6 +50,17 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                         sb: String_Builder;
                         init_string_builder(*sb);
                         append(*sb, "YAE_COMPILE_TIME_INFO : YaeCompileTimeInfo : .{\n");
+
+                        // Object Types
+                        {
+                            append(*sb, "object_types= .[\n");
+                            for struct_type_info, i: object_types
+                            {
+                                if i > 0 append(*sb, ",\n");
+                                append(*sb, tprint("type_info(%)", struct_type_info.name));
+                            }
+                            append(*sb, "],\n");
+                        }
 
                         // Resource Types
                         {
@@ -73,6 +99,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
 
 #scope_file
 
+object_types: [..]*Type_Info_Struct;
 resource_types: [..]*Type_Info_Struct;
 custom_serialize_table: Table(*Type_Info_Struct, string);
 

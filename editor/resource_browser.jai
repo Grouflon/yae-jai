@@ -9,6 +9,8 @@ resource_browser_update :: ()
         .{"Load count", 0, 0},
     ];
 
+    resources: = get_objects_by_type(Resource);
+
     if ImGui.BeginTable("resource_browser", COLUMNS.count, table_flags, .{0, 0})
     {
         defer ImGui.EndTable();
@@ -18,7 +20,6 @@ resource_browser_update :: ()
 
         ImGui.TableHeadersRow();
 
-        resources: = resource_manager().resources;
         current_sort_specs = ImGui.TableGetSortSpecs();
         if current_sort_specs != null && current_sort_specs.SpecsCount > 0
         {
@@ -39,7 +40,7 @@ resource_browser_update :: ()
             });
         }
 
-        for resource : resource_manager().resources
+        for resource : resources
         {
             ImGui.TableNextRow();
 

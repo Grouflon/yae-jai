@@ -39,45 +39,45 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
 
-    // Resource ID, override
-    if is_subclass_of(info, ResourceIDBase)
+    // Object ID, override
+    if is_subclass_of(info, ObjectIDBase)
     {
         // If embed, serialize data directyly
         if has_note(ctx.member, "embed")
         {
-            id_ptr: = cast(*ResourceIDBase) data;
-            resource: = get(<<id_ptr);
-            if !resource_serialize(serializer, *resource, key) return false;
-            <<id_ptr = ifx resource != null then resource.id else 0;
+            id_ptr: = cast(*ObjectIDBase) data;
+            object: = get(<<id_ptr);
+            if !object_serialize(serializer, *object, key) return false;
+            <<id_ptr = ifx object != null then object.id else 0;
 
             return true;
         }
         else // else serialize id
         {
-            return serialize(serializer, cast(*ResourceIDBase) data, key);
+            return serialize(serializer, cast(*ObjectIDBase) data, key);
         }
     }
 
-    // Resource pointer, override
+    // Object pointer, override
     if info.type == .POINTER
     {
         ti: = (cast(*Type_Info_Pointer) info).pointer_to;
-        if is_subclass_of(ti, Resource)
+        if is_subclass_of(ti, Object)
         {
-            resource_ptr: = cast(**Resource) data;
+            object_ptr: = cast(**Object) data;
 
             // If embed, serialize data directyly
             success: = false;
             if has_note(ctx.member, "embed")
             {
-                success = resource_serialize(serializer, resource_ptr, key);
+                success = object_serialize(serializer, object_ptr, key);
             }
             else // else serialize id
             {
-                resource: = <<resource_ptr;
-                id: ResourceIDBase = ifx resource != null then resource.id else 0;
+                object: = <<object_ptr;
+                id: ObjectIDBase = ifx object != null then object.id else 0;
                 success = serialize(serializer, *id, key);
-                <<resource_ptr = get(id);
+                <<object_ptr = get(id);
             }
 
             return success;

@@ -69,8 +69,13 @@ is_subclass_of :: (info: *Type_Info, of: *Type_Info, check_self: bool = true) ->
     if check_self && info == of return true;
 
     if info.type != .STRUCT return false;
+    if of.type != .STRUCT return false;
 
     info_struct := cast(*Type_Info_Struct) info;
+    of_struct := cast(*Type_Info_Struct) of;
+
+    if check_self && info_struct.name == of_struct.name return true;
+
     if info_struct.members.count == 0 return false;
 
     member: = info_struct.members[0];
@@ -78,4 +83,20 @@ is_subclass_of :: (info: *Type_Info, of: *Type_Info, check_self: bool = true) ->
 
     sub_type := member.type;
     return is_subclass_of(sub_type, of);
+}
+
+get_parent_type :: (info: *Type_Info) -> *Type_Info
+{
+    if info == null return null;
+    if info.type != .STRUCT return null;
+
+    info_struct := cast(*Type_Info_Struct) info;
+    for member: info_struct.members
+    {
+        if member.flags & .AS
+        {
+            return member.type;
+        }
+    }
+    return null;
 }

@@ -121,7 +121,7 @@ animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
     animation_changed: = false;
     animation: = editor.player.current_animation;
     assert(animation != null);
-    sprites: = get_resources_by_type(Sprite);
+    sprites: = get_objects_by_type(Sprite);
     event_ptr: = animation.events.data + selected_event_index;
 
     if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
