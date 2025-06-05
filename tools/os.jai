@@ -147,6 +147,37 @@ close_window :: (handle: *void) -> bool
     return false;
 }
 
+
+SaveFileDialogParams :: struct
+{
+    initial_path: string;
+    extension: string;
+
+    max_path_length: u32 = 512;
+}
+
+save_file_dialog :: () -> bool, string
+{
+    MAX_PATH :: 512;
+    file_name: [MAX_PATH]u8;
+
+
+    params: Windows.OPENFILENAMEA;
+    params.lStructSize = size_of(Windows.OPENFILENAMEA);
+    params.lpstrFilter = "Resource Files (*.res)\0*.res\0All Files (*.*)\0*.*\0";
+    params.lpstrFile = file_name.data;
+    params.nMaxFile = MAX_PATH;
+    params.lpstrInitialDir = "./data";
+    params.Flags = 0x00080000 | 0x00000004; // .OFN_EXPLORER | .OFN_HIDEREADONLY;
+    params.lpstrDefExt = "res";
+
+    result: = Windows.GetSaveFileNameA(*params) == .TRUE;
+
+    log("%", to_string(file_name.data));
+
+    return result, copy_temporary_string(to_string(file_name.data));
+}
+
 #scope_file
 
 #if OS == .WINDOWS

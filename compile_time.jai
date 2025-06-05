@@ -19,13 +19,11 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
 
                 if is_subclass_of(struct_type_info, Object, false)
                 {
-                    log("object: %", struct_type_info.name);
                     array_add(*object_types, struct_type_info);
                 }
 
                 if is_subclass_of(struct_type_info, Resource, false)
                 {
-                    log("resource: %", struct_type_info.name);
                     array_add(*resource_types, struct_type_info);
                 }
 

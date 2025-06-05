@@ -62,10 +62,22 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
 
             for animation, hash : aseprite_file.animations
             {
+                ImGui.PushID(hash.str);
+                defer ImGui.PopID();
+                
                 ImGui.TableNextRow();
 
                 ImGui.TableNextColumn();
                 ImGui.Text("%", hash.str);
+
+                ImGui.TableNextColumn();
+                if animation == null
+                {
+                    if ImGui.Button("Create Animation")
+                    {
+                        save_file_dialog();
+                    }
+                }
             }
         }
     }
