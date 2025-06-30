@@ -141,11 +141,11 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
         aseprite.format = enum_name_to_value(AsepriteImageFormat, json_get(meta, "format", .STRING).str);
         aseprite.size = parse_box(json_get(meta, "size"));
-        aseprite.scale = cast(float)atof(temp_c_string(json_get(meta, "scale", .STRING).str));
+        aseprite.scale = string_to_float(json_get(meta, "scale", .STRING).str);
 
         // Tags
         {
-            json_tags, found: = table_find(meta.object, "frameTags");
+            found, json_tags: = table_find_new(meta.object, "frameTags");
             if found
             {
                 array_resize(*aseprite.frame_tags, json_tags.array.count);
@@ -165,7 +165,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
         // Layers
         {
-            json_layers, found: = table_find(meta.object, "layers");
+            found, json_layers: = table_find_new(meta.object, "layers");
             if found
             {
                 array_resize(*aseprite.layers, json_layers.array.count);
@@ -235,19 +235,19 @@ parse_box :: (_value: JSON_Value) -> AsepriteBox
 
     box: AsepriteBox;
     {
-        value, success: = table_find(_value.object, "x");
+        success, value: = table_find_new(_value.object, "x");
         if success { box.x = cast(s32)value.number; }
     }
     {
-        value, success: = table_find(_value.object, "y");
+        success, value: = table_find_new(_value.object, "y");
         if success { box.y = cast(s32)value.number; }
     }
     {
-        value, success: = table_find(_value.object, "w");
+        success, value: = table_find_new(_value.object, "w");
         if success { box.w = cast(s32)value.number; }
     }
     {
-        value, success: = table_find(_value.object, "h");
+        success, value: = table_find_new(_value.object, "h");
         if success { box.h = cast(s32)value.number; }
     }
 
@@ -277,8 +277,8 @@ parse_tag :: (_value: JSON_Value) -> AsepriteFrameTag
     tag.end_frame = cast(s32)json_get(_value, "to", .NUMBER).number;
     tag.direction = enum_name_to_value(AsepriteDirection, json_get(_value, "direction", .STRING).str);
     {
-        val, success: = table_find(_value.object, "repeat");
-        if success { tag.repeat_count = cast(s32)atof(temp_c_string(val.str)); } 
+        success, val: = table_find_new(_value.object, "repeat");
+        if success { tag.repeat_count = cast(s32)string_to_float(val.str); } 
     }
     tag.color = copy_string(json_get(_value, "color", .STRING).str); // Would be better to directly convert it to color but fuck it for now
 

@@ -214,7 +214,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
                     for key : keys
                     {
-                        member_type_info, success: = table_find(*key_to_type_info, key);
+                        success, member_type_info: = table_find_new(*key_to_type_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
 
                         // @serialize filter

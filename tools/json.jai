@@ -19,7 +19,7 @@ json_try_get :: (value: JSON_Value, key: string) -> bool, JSON_Value
     assert(value.type == .OBJECT);
     
     table := value.object;
-    key_value, success := table_find(table, key);
+    success, key_value := table_find_new(table, key);
     return success, key_value;
 }
 
@@ -28,7 +28,7 @@ json_try_copy_string :: (value: JSON_Value, key: string, out_string: *string) ->
     assert(out_string != null);
     assert(value.type == .OBJECT);
 
-    key_value, success := table_find(value.object, key);
+    success, key_value := table_find_new(value.object, key);
     if !success { return false; }
     if key_value.type != .STRING { return false; }
 

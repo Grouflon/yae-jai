@@ -75,7 +75,8 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                 {
                     if ImGui.Button("Create Animation")
                     {
-                        save_file_dialog();
+                        success, path: = save_file_dialog("./data", "res", "Resource File");
+                        
                     }
                 }
             }

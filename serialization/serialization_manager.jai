@@ -31,7 +31,7 @@ get_custom_serialize_function :: (ti: *Type_Info) -> CustomSerializationFunction
 {
     using serialization_manager;
 
-    f, found: = table_find(*custom_serialize_registry, ti);
+    found, f: = table_find_new(*custom_serialize_registry, ti);
     if found return f;
     return null;
 }

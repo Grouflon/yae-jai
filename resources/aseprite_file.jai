@@ -15,7 +15,7 @@ AsepriteFile :: struct
 
 get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
 {
-    animation, success: = table_find(*aseprite_file.animations, string_hash(name));
+    success, animation: = table_find_new(*aseprite_file.animations, string_hash(name));
     if !success return null;
     return animation;
 }
@@ -50,7 +50,7 @@ aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
             Vector2.{xx (frame.frame.x + frame.frame.w), xx (frame.frame.y + frame.frame.h) }
         };
 
-        index, found: = table_find(*bounds_to_sprite_index, bounds);
+        found, index: = table_find_new(*bounds_to_sprite_index, bounds);
         if !found
         {
             sprite: = object_create(Sprite);
@@ -110,7 +110,7 @@ aseprite_file_load :: (resource: *Resource) -> bool
 
         table_add(*existing_tags, name_hash, true);
 
-        _, found: = table_find(*animations, name_hash);
+        found: = table_find_new(*animations, name_hash);
         if !found
         {
             table_add(*animations, name_hash, null);

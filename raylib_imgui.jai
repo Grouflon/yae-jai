@@ -93,7 +93,7 @@ raylib_imgui_render :: ()
     if fb_width == 0 || fb_height == 0 return;
 
     draw_data: = ImGui.GetDrawData();
-    draw_data.ScaleClipRects(draw_data, *io.DisplayFramebufferScale);
+    // draw_data.ScaleClipRects(draw_data, *io.DisplayFramebufferScale);
 
     DrawRenderBatchActive();
     DisableBackfaceCulling();
@@ -148,19 +148,22 @@ RaylibImgGuiState :: struct
 global_state: RaylibImgGuiState;
 
 
-load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config: []RaylibImGuiFont)
+load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config: []RaylibImGuiFont, scale: float)
 {
     fonts.Clear(fonts);
 
     if load_default_font
     {
-        font: = fonts.AddFontDefault(fonts);
+        cfg: ImGui.ImFontConfig;
+        ImGui.ImFontConfig.Constructor(*cfg);
+        cfg.SizePixels = 14 * scale;
+        font: = fonts.AddFontDefault(fonts, *cfg);
         assert(font != null);
     }
 
     for font_config: fonts_config
     {
-        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(font_config.path), font_config.size, *font_config.config, font_config.range.data);
+        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(font_config.path), font_config.size * scale, *font_config.config, font_config.range.data);
         assert(font != null);
     }
 
@@ -210,8 +213,7 @@ update_display_size :: (io: *ImGui.IO)
 update_scale :: (io: *ImGui.IO, scale: float)
 {
     // Setup Font
-    io.FontGlobalScale = scale;
-    load_fonts(io.Fonts, global_state.config.load_default_font, global_state.config.fonts);
+    load_fonts(io.Fonts, global_state.config.load_default_font, global_state.config.fonts, scale);
 
     // Setup Theme
     if global_state.config.theme ==
@@ -254,7 +256,7 @@ update_mouse_cursor :: (io: *ImGui.IO)
 
     change_cursor :: (cursor: ImGui.MouseCursor)
     {
-        raylib_cursor, found: = table_find(*imgui_raylib_cursors, cursor);
+        found, raylib_cursor: = table_find_new(*imgui_raylib_cursors, cursor);
         if !found { raylib_cursor = .MOUSE_CURSOR_DEFAULT; }
 
         if global_state.config.change_cursor_callback != null
@@ -381,7 +383,7 @@ update_keyboard_events :: (io: *ImGui.IO)
     // Key Pressed/Released
     for raylib_key: KeyboardKey.KEY_NULL..KeyboardKey.KEY_KP_EQUAL
     {
-        imgui_key, found: = table_find(*raylib_imgui_keymap, raylib_key);
+        found, imgui_key: = table_find_new(*raylib_imgui_keymap, raylib_key);
         if !found { continue; }
 
         if IsKeyPressed(xx raylib_key)

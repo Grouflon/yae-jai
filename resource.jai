@@ -22,7 +22,7 @@ resource_set_data_path :: (resource: *Resource, data_path: string)
     resource.data_path = copy_string(normalize_path(data_path));
 }
 
-resource_load :: ($T: Type, name: string) -> *T, bool #must
+resource_load :: ($T: Type, name: string) -> *T, bool
 {
     resource: = object_get_or_create(T, name);
     if resource == null { return null, false; }

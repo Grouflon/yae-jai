@@ -26,7 +26,7 @@ get :: (id: ObjectIDBase) -> *Object
 {
     using registry: = *object_registry;
 
-    object, success: = table_find(*object_by_id, id);
+    success, object: = table_find_new(*object_by_id, id);
     if !success { return null; }
     return object;
 }
@@ -124,7 +124,7 @@ object_get_or_create :: (ti: *Type_Info_Struct, id: ObjectIDBase = 0) -> object:
     assert(ti != null);
     using registry: = *object_registry;
 
-    object, found: = table_find(*object_by_id, id);
+    found, object: = table_find_new(*object_by_id, id);
     if !found
     {
         object = object_create(ti, id);
@@ -145,7 +145,7 @@ object_get_or_create :: ($T: Type, name: string) -> object: *T, created: bool
     }
 
     ti: = cast(*Type_Info_Struct) type_info(T);
-    object, found: = table_find(*object_by_name, string_hash(name));
+    found, object: = table_find_new(*object_by_name, string_hash(name));
     if !found
     {
         object = object_create(ti);
@@ -204,7 +204,7 @@ object_serialize_header :: (serializer: *Serializer, object_ptr: **Object) -> bo
             return false;
         }
 
-        ti, success: = table_find(*object_type_by_name, string_hash(type_name));
+        success, ti: = table_find_new(*object_type_by_name, string_hash(type_name));
         if !success
         {
             return false;
