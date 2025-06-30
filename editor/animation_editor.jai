@@ -373,6 +373,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
 animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
 {
+    ImGui.PushStyleColor(.ImGuiCol_ChildBg, Vector4.{0,0,0, 0.5});
+    ImGui.PushStyleVar(.WindowPadding, xy(2));
+    ImGui.PushStyleVar(.ChildRounding, 4);
+
     animation_changed: = false;
     animation: = editor.player.current_animation;
     viewport_size: = ImGui.GetContentRegionAvail();
@@ -413,12 +417,17 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
         viewport_pan(*editor.viewport, d);
     }
 
+    // Zoom Display
+    ImGui.SetCursorPos(.{viewport_size.x - 30, 33});
+    if ImGui.BeginChild("zoom", .{}, .AlwaysUseWindowPadding | .AutoResizeX | .AutoResizeY)
+    {
+        ImGui.Text("%\%", cast(u32)(editor.viewport.zoom.x * 100));
+    }
+    ImGui.EndChild();
+
     // Controls
     controls_size: = Vector2.{120, 0};
     ImGui.SetCursorPos(.{(viewport_size.x - controls_size.x) * 0.5 + 9, viewport_size.y - controls_size.y - 10});
-    ImGui.PushStyleColor(.ImGuiCol_ChildBg, Vector4.{0,0,0, 0.7});
-    ImGui.PushStyleVar(.WindowPadding, xy(2));
-    ImGui.PushStyleVar(.ChildRounding, 4);
     if ImGui.BeginChild("controls", controls_size, .AlwaysUseWindowPadding | .AutoResizeY)
     {
         // rewind
@@ -465,6 +474,7 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
             animation_changed = true;
         }
     }
+
     ImGui.EndChild();
     ImGui.PopStyleVar(2);
     ImGui.PopStyleColor();
