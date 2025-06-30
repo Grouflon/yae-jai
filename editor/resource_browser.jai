@@ -1,3 +1,5 @@
+first_update: = true;
+
 resource_browser_update :: ()
 {
     table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg | .Sortable | .Hideable;
@@ -23,6 +25,12 @@ resource_browser_update :: ()
         current_sort_specs = ImGui.TableGetSortSpecs();
         if current_sort_specs != null && current_sort_specs.SpecsCount > 0
         {
+            if first_update
+            {
+                first_update = false;
+                ImGui.TableSetColumnSortDirection(1, .Ascending, false);
+            }
+
             bubble_sort(resources, (a: *Resource, b: *Resource) -> s64
             {
                 sort_spec: = current_sort_specs.Specs[0];
