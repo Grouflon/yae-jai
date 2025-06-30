@@ -61,11 +61,6 @@ object_rename :: (object: *Object, name: string)
         free(object.name);
         object.name = .{};
     }
-
-    if object.type == type_info(Sprite)
-    {
-        log("alala");
-    }
     
     object.name = copy_string(name);
 
