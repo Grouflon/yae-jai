@@ -156,7 +156,7 @@ load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config:
     {
         cfg: ImGui.ImFontConfig;
         ImGui.ImFontConfig.Constructor(*cfg);
-        cfg.SizePixels = 14 * scale;
+        cfg.SizePixels = 13 * scale;
         font: = fonts.AddFontDefault(fonts, *cfg);
         assert(font != null);
     }
