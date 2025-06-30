@@ -1,7 +1,7 @@
 StringHash :: struct
 {
-    hash: u32;
     str: string;
+    hash: u32;
 }
 
 string_hash :: (str: string) -> StringHash
@@ -17,7 +17,7 @@ string_hash :: (str: string) -> StringHash
     {
         assert(<<str_ptr == str, "Hash Collision: %(%) vs %(%)", str, hash, <<str_ptr, hash);
     }
-    return .{hash, <<str_ptr};
+    return .{<<str_ptr, hash};
 }
 
 free_string_hash_repository :: ()
