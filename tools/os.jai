@@ -153,29 +153,58 @@ SaveFileDialogParams :: struct
     initial_path: string;
     extension: string;
 
+    Filter :: struct
+    {
+        name: string;
+        wildcard: string;
+    }
+    filters: []Filter;
+
     max_path_length: u32 = 512;
 }
 
-save_file_dialog :: () -> bool, string
+save_file_dialog :: (initial_path: string, extension: string, extension_description: string) -> bool, string
 {
-    MAX_PATH :: 512;
-    file_name: [MAX_PATH]u8;
+    params: = SaveFileDialogParams.{
+        initial_path = initial_path,
+        extension = extension
+    };
 
+    filters: [..]SaveFileDialogParams.Filter;
+    filters.allocator = temporary_allocator;
+    array_add(*filters, .{ extension_description, tprint("*.%", extension) });
+    array_add(*filters, .{ "All Files", "*.*" });
+    params.filters = filters;
 
-    params: Windows.OPENFILENAMEA;
-    params.lStructSize = size_of(Windows.OPENFILENAMEA);
-    params.lpstrFilter = "Resource Files (*.res)\0*.res\0All Files (*.*)\0*.*\0";
-    params.lpstrFile = file_name.data;
-    params.nMaxFile = MAX_PATH;
-    params.lpstrInitialDir = "./data";
-    params.Flags = 0x00080000 | 0x00000004; // .OFN_EXPLORER | .OFN_HIDEREADONLY;
-    params.lpstrDefExt = "res";
+    success, path: = save_file_dialog(params);
+    return success, path;
+}
 
-    result: = Windows.GetSaveFileNameA(*params) == .TRUE;
+save_file_dialog :: (params: SaveFileDialogParams) -> bool, string
+{
+    push_allocator(temporary_allocator);
+    file_name: *u8 = xx alloc(params.max_path_length);
+    memset(file_name, 0, params.max_path_length);
 
-    log("%", to_string(file_name.data));
+    filter_str_builder: String_Builder;
+    init_string_builder(*filter_str_builder);
+    for filter: params.filters
+    {
+        append(*filter_str_builder, tprint("%1 (%2)\0%2\0", filter.name, filter.wildcard));
+    }
 
-    return result, copy_temporary_string(to_string(file_name.data));
+    arg_struct: Windows.OPENFILENAMEA;
+    arg_struct.lStructSize = size_of(Windows.OPENFILENAMEA);
+    arg_struct.lpstrFilter = temp_c_string(builder_to_string(*filter_str_builder));
+    arg_struct.lpstrFile = file_name;
+    arg_struct.nMaxFile = params.max_path_length;
+    arg_struct.lpstrInitialDir = temp_c_string(get_absolute_path(params.initial_path));
+    arg_struct.Flags = 0x00080000 | 0x00000004; // .OFN_EXPLORER | .OFN_HIDEREADONLY;
+    arg_struct.lpstrDefExt = temp_c_string(params.extension);
+
+    result: = Windows.GetSaveFileNameA(*arg_struct) == .TRUE;
+
+    return result, copy_temporary_string(to_string(file_name));
 }
 
 #scope_file
