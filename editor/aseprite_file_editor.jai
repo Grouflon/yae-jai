@@ -42,11 +42,6 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                 }
 
                 ImGui.TableNextColumn();
-                if ImGui.Button("Sync Sprites")
-                {
-                    aseprite_file_sync_sprites(aseprite_file);
-                    resource_save_to_disk(aseprite_file.texture);
-                }
             }
         }
     }
@@ -68,15 +63,42 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                 ImGui.TableNextRow();
 
                 ImGui.TableNextColumn();
-                ImGui.Text("%", hash.str);
+
+                if animation == null
+                {
+                    ImGui.Text("%", hash.str);
+                }
+                else
+                {
+                    ImGui.Selectable(temp_c_string(hash.str), false, .AllowOverlap);
+                    if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
+                    {
+                        editor_open_resource(animation);
+                    }
+                }
 
                 ImGui.TableNextColumn();
                 if animation == null
                 {
                     if ImGui.Button("Create Animation")
                     {
-                        success, path: = save_file_dialog("./data", "res", "Resource File");
-                        
+                        success, path: = save_file_dialog("./data", RESOURCE_EXTENSION, "Resource File");
+                        if success
+                        {
+                            path.count -= 4;
+                            animation = resource_get_or_create(Animation, path);
+                            resource_load(animation);
+                            animation_import_from_aseprite_file(animation, aseprite_file, hash.str);
+                            table_set(*aseprite_file.animations, hash, animation);
+                            resource_save_to_disk(aseprite_file);
+                        }
+                    }
+                }
+                else
+                {
+                    if ImGui.Button("Reimport")
+                    {
+                        animation_import_from_aseprite_file(animation, aseprite_file, hash.str);
                     }
                 }
             }

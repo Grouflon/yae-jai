@@ -65,6 +65,19 @@ animation_remove_layer :: (using animation: *Animation, index: s32)
     array_ordered_remove_by_index(*animation.layers, index);
 }
 
+animation_remove_layers :: (animation: *Animation, name: string)
+{
+    assert(animation != null);
+    
+    for *< layer, i: animation.layers
+    {
+        if layer.name == name
+        {
+            animation_remove_layer(animation, xx i);
+        }
+    }
+}
+
 animation_add_event :: (using animation: *Animation, event: AnimationEvent)
 {
     assert(animation != null);

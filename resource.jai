@@ -1,5 +1,5 @@
 RESOURCE_LOG_SECTION :: Log_Section.{ "Resource" };
-RESOURCE_EXTENSION :: ".res";
+RESOURCE_EXTENSION :: "res";
 
 // Resource
 Resource :: struct @serialize_optin
@@ -110,7 +110,7 @@ resource_get_or_create :: ($T: Type, path: string) -> resource: *T, created: boo
 
     if created
     {
-        resource_set_data_path(resource, tprint("%0%", normalized_path, RESOURCE_EXTENSION));
+        resource_set_data_path(resource, tprint("%.%", normalized_path, RESOURCE_EXTENSION));
         resource_save_to_disk(resource);
     }
 
@@ -208,7 +208,7 @@ resource_manager_gather_and_watch_resources :: (resource_folders: ..string)
     {
         visit_files(resource_folder, true, manager, (info: *File_Visit_Info, user_data: *ResourceManager)
         {
-            if ends_with(info.short_name, RESOURCE_EXTENSION)
+            if ends_with(info.short_name, tprint(".%",RESOURCE_EXTENSION))
             {
                 resource: = resource_read_headers_from_disk(info.full_name);
                 if resource == null

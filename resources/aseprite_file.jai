@@ -20,10 +20,45 @@ get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
     return animation;
 }
 
+animation_import_from_aseprite_file :: (animation: *Animation, aseprite_file: *AsepriteFile, aseprite_animation_name: string)
+{
+    assert(aseprite_file != null);
+    assert(animation != null);
+
+    assert(animation.is_loaded_without_errors);
+
+    SPRITE_LAYER_NAME :: "SPRITES";
+
+    tag_found, tag_index: = table_find_new(*aseprite_file.data.name_to_tag, aseprite_animation_name);
+    if !tag_found return;
+    tag: = aseprite_file.data.frame_tags[tag_index];
+
+    animation_remove_layers(animation, SPRITE_LAYER_NAME);
+
+    animation.frame_count = tag.end_frame - tag.start_frame + 1;
+    layer_index: = animation_add_layer(animation, SPRITE_LAYER_NAME);
+
+    for i: tag.start_frame..tag.end_frame
+    {
+        sprite_found, sprite_index: = table_find_new(*aseprite_file.aseprite_frame_to_sprite_index, i);
+        if !sprite_found continue;
+
+        animation_add_event(animation, .{
+            type = .SPRITE,
+            layer_index = layer_index,
+            begin = i - tag.start_frame,
+            sprite = .{ sprite = aseprite_file.texture.sprites[sprite_index] },
+        });
+    }
+
+    resource_save_to_disk(animation);
+}
+
+#scope_file
+
 aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
 {
     assert(aseprite_file != null);
-    assert(aseprite_file.is_loaded_without_errors);
 
     // Sprites
     bounds_to_sprite_index: Table(Bounds, s64);
@@ -70,8 +105,6 @@ aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
     // @NOTE: this will keep obsolete sprites, but maybe that's for the better as there's no risk it breaks any animation that way
 }
 
-#scope_file
-
 aseprite_file_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*AsepriteFile) resource;
@@ -101,6 +134,8 @@ aseprite_file_load :: (resource: *Resource) -> bool
         return false;
     }
 
+    aseprite_file_sync_sprites(t);
+
     // Add unknown animations
     existing_tags: Table(StringHash, bool);
     existing_tags.allocator = temporary_allocator;
@@ -116,23 +151,6 @@ aseprite_file_load :: (resource: *Resource) -> bool
             table_add(*animations, name_hash, null);
             modified = true;
         }
-
-        // animation: = resource_get_or_create(Animation, tprint("%.%", name, tag.name));
-        // resource_load(animation);
-
-        // animation.frame_count = tag.end_frame - tag.start_frame;
-        // layer_index: = animation_add_layer(animation, "Sprites");
-
-        // for i: tag.start_frame..tag.end_frame
-        // {
-        //     animation_add_event(animation, .{
-        //         type = .SPRITE,
-        //         layer_index = layer_index,
-        //         begin = i - tag.start_frame,
-        //         sprite = .{ sprite = texture.sprites[i] },
-        //     });
-        // }
-        // table_add(*animations, tag.name, animation);
     }
 
     // Remove unknown animations
