@@ -151,7 +151,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     timeline_frame_begin: Vector2;
     timeline_frame_end: Vector2 = ImGui.GetCursorScreenPos() + ImGui.GetContentRegionAvail() + .{-1,-1};
 
-    table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .HighlightHoveredColumn | .Resizable | .RowBg;
+    table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg;
     column_count: s32 = frame_count + 3;
     if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
     {
@@ -177,7 +177,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
             if i == 0
             {
-                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, CELL_HEIGHT-1};
+                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, -1};
             }
             else
             {
@@ -271,11 +271,21 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             animation_changed = true;
         }
 
-        // Draw events
+        // Frames section
         if ImGui.GetScrollMaxX() > 0 timeline_frame_end.y -= 12;
         if ImGui.GetScrollMaxY() > 0 timeline_frame_end.x -= 12;
         draw_list: = ImGui.GetWindowDrawList();
+
+        // Draw frame line
         draw_list.PushClipRect(draw_list, timeline_frame_begin, timeline_frame_end);
+        if editor.player.current_frame >= 0
+        {
+            line_x: = (editor.player.current_frame + 1) * CELL_WIDTH - 1;
+            draw_list.AddLine(draw_list, .{timeline_frame_origin.x + line_x, timeline_frame_origin.y - (CELL_HEIGHT+1)}, .{timeline_frame_origin.x + line_x, timeline_frame_end.y}, 0xff00ffff);
+        }
+
+        // Draw events
+        draw_list.PushClipRect(draw_list, timeline_frame_begin + .{0, CELL_HEIGHT}, timeline_frame_end);
         // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF); // debug: see clipping rect
         clicked_on_something: = false;
         for event, event_i: animation.events
@@ -303,6 +313,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         }
 
         // Clicks on timeline
+        // @NOTE(remi): Should probably move above events drawing, so that we dont mix up logic and drawing like now
         if ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false)
         {
             relative_mouse_pos: = ImGui.GetMousePos() - timeline_frame_origin;
@@ -312,11 +323,13 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
             ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
 
+            // Clear event
             if ImGui.IsMouseClicked(.Left) && !clicked_on_something
             {
                 selected_event_index = -1;
             }
 
+            // Hover events
             EVENT_POPUP_NAME :: "frame event";
             if is_valid_cell && ImGui.IsMouseClicked(.Right)
             {
@@ -325,10 +338,19 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 ImGui.OpenPopup(EVENT_POPUP_NAME);
             }
 
+            // Drag event
             if is_valid_cell && selected_event_index >= 0 && ImGui.IsMouseDragging(.Left)
             {
                 animation.events[selected_event_index].layer_index = hovered_layer;
                 animation.events[selected_event_index].begin = hovered_frame;
+            }
+
+            // Pick Frame
+            if selected_event_index < 0 && ImGui.IsMouseDown(.Left)
+            {
+                frame: = clamp(hovered_frame, 0, animation.frame_count-1);
+                animation_player_stop(*editor.player);
+                animation_player_set_frame(*editor.player, frame);
             }
         }
         else
