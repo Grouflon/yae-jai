@@ -42,7 +42,7 @@ resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     if resource_editor.resource == null return false;
 
     modified: = false;
-    ImGui.SetNextWindowSize(.{400, 300}, .FirstUseEver);
+    ImGui.SetNextWindowSize(.{700, 500}, .FirstUseEver);
     if ImGui.Begin(temp_c_string(get_editor_window_name(resource_editor)), *resource_editor.is_open)
     {
         id: *void = cast(*void)resource_editor.resource.id;

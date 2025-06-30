@@ -5,6 +5,8 @@ Editor :: struct @serialize_optin
     imgui_font_open: bool; @serialize
 
     edited_resources: [..]ResourceEditor; @serialize
+
+    window_drag_disabled_count: s32 = 0;
 }
 
 editor_init :: ()
@@ -65,6 +67,7 @@ editor_update :: (dt: float)
     prev_resources_open: = resources_open;
     if resources_open
     {
+        ImGui.SetNextWindowSize(.{500, 300}, .FirstUseEver);
         if ImGui.Begin("Resources", *resources_open)
         {
             resource_browser_update();
@@ -122,4 +125,26 @@ editor_close_resource :: (index: s64)
     resource_editor_clear_window_settings(resource_editor);
     resource_editor_shutdown(resource_editor);
     array_ordered_remove_by_index(*edited_resources, index);
+}
+
+editor_push_window_drag_disabled :: ()
+{
+    using YAE.editor;
+
+    if window_drag_disabled_count == 0
+    {
+        ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+    }
+    window_drag_disabled_count += 1;
+}
+
+editor_pop_window_drag_disabled :: ()
+{
+    using YAE.editor;
+
+    window_drag_disabled_count -= 1;
+    if window_drag_disabled_count == 0
+    {
+        ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = false;
+    }
 }

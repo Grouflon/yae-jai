@@ -3,6 +3,7 @@ AnimationEditor :: struct
     player: AnimationPlayer;
     viewport: ViewportBase;
     is_dragging: = false;
+    is_drag_zone_hovered: = false;
     edited_layer_name_index: s32 = -1;
     selected_event_index: s32 = -1;
     focus_requested: bool = false;
@@ -23,6 +24,12 @@ animation_editor_init :: (resource_editor: *ResourceEditor)
 animation_editor_shutdown :: (resource_editor: *ResourceEditor)
 {
     assert(resource_editor != null);
+    using t: = cast(*AnimationEditor)resource_editor;
+
+    if is_drag_zone_hovered
+    {
+        editor_pop_window_drag_disabled();
+    }
 
     free(resource_editor.payload);
     resource_editor.payload = null;
@@ -46,10 +53,6 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     dockspace_size: = max(ImGui.GetContentRegionAvail(), xy(16));
     animation_changed: = false;
 
-    PROPERTIES_NAME :: "\uf03a Properties";
-    TIMELINE_NAME :: "\uf008 Timeline";
-    VIEWPORT_NAME :: "Viewport";
-
     // Build default dockspace
     if ImGui.DockBuilderGetNode(dockspace_id) == null
     {
@@ -58,12 +61,12 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
         ImGui.DockBuilderSetNodeSize(dockspace_id, dockspace_size);
 
         dock_main_id: = dockspace_id; // This variable will track the document node, however we are not using it here as we aren't docking anything into it.
-        dock_id_prop: = ImGui.DockBuilderSplitNode(dock_main_id, .ImGuiDir_Right, 0.20, null, *dock_main_id);
+        dock_id_prop: = ImGui.DockBuilderSplitNode(dock_main_id, .ImGuiDir_Right, 0.30, null, *dock_main_id);
         dock_id_bottom: = ImGui.DockBuilderSplitNode(dock_main_id, .ImGuiDir_Down, 0.40, null, *dock_main_id);
 
-        ImGui.DockBuilderDockWindow(PROPERTIES_NAME, dock_id_prop);
-        ImGui.DockBuilderDockWindow(TIMELINE_NAME, dock_id_bottom);
-        ImGui.DockBuilderDockWindow(VIEWPORT_NAME, dock_main_id);
+        ImGui.DockBuilderDockWindow(properties_window_name(resource_editor), dock_id_prop);
+        ImGui.DockBuilderDockWindow(timeline_window_name(resource_editor), dock_id_bottom);
+        ImGui.DockBuilderDockWindow(viewport_window_name(resource_editor), dock_main_id);
         ImGui.DockBuilderFinish(dockspace_id);
     }
     else
@@ -73,7 +76,7 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
     // Properties
     ImGui.SetNextWindowClass(*animation_editor_window_class);
-    if ImGui.Begin(PROPERTIES_NAME, null)
+    if ImGui.Begin(properties_window_name(resource_editor), null)
     {
         animation_changed = animation_editor_properties_update(editor) || animation_changed;
     }
@@ -81,7 +84,7 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
     // Timeline
     ImGui.SetNextWindowClass(*animation_editor_window_class);
-    if ImGui.Begin(TIMELINE_NAME, null)
+    if ImGui.Begin(timeline_window_name(resource_editor), null)
     {
         animation_changed = animation_editor_timeline_update(editor) || animation_changed;
     }
@@ -89,7 +92,7 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
     // Viewport
     ImGui.SetNextWindowClass(*animation_editor_window_class);
-    if ImGui.Begin(VIEWPORT_NAME, null)
+    if ImGui.Begin(viewport_window_name(resource_editor), null)
     {
         animation_changed = animation_editor_viewport_update(editor) || animation_changed;
     }
@@ -111,6 +114,10 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 }
 
 #scope_file
+
+properties_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf03a Properties##%", editor.resource.id)); }
+timeline_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf008 Timeline##%", editor.resource.id)); }
+viewport_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("Viewport##%", editor.resource.id)); }
 
 ZOOM_STEP :: 0.5;
 
@@ -314,7 +321,9 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
         // Clicks on timeline
         // @NOTE(remi): Should probably move above events drawing, so that we dont mix up logic and drawing like now
-        if ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false)
+        previous_is_drag_zone_hovered: = is_drag_zone_hovered;
+        is_drag_zone_hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false);
+        if is_drag_zone_hovered
         {
             relative_mouse_pos: = ImGui.GetMousePos() - timeline_frame_origin;
             hovered_frame: = cast(s32) round(relative_mouse_pos.x / CELL_WIDTH) - 1;
@@ -353,9 +362,15 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 animation_player_set_frame(*editor.player, frame);
             }
         }
-        else
+
+        // Disable window drag
+        if !previous_is_drag_zone_hovered && is_drag_zone_hovered
         {
-            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = false;
+            editor_push_window_drag_disabled();
+        }
+        else if previous_is_drag_zone_hovered && !is_drag_zone_hovered
+        {
+            editor_pop_window_drag_disabled();
         }
 
         // Event popup
