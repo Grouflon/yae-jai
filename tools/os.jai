@@ -177,6 +177,7 @@ save_file_dialog :: (initial_path: string, extension: string, extension_descript
     params.filters = filters;
 
     success, path: = save_file_dialog(params);
+    path = normalize_path(path);
     return success, path;
 }
 
@@ -199,7 +200,7 @@ save_file_dialog :: (params: SaveFileDialogParams) -> bool, string
     arg_struct.lpstrFile = file_name;
     arg_struct.nMaxFile = params.max_path_length;
     arg_struct.lpstrInitialDir = temp_c_string(get_absolute_path(params.initial_path));
-    arg_struct.Flags = 0x00080000 | 0x00000004; // .OFN_EXPLORER | .OFN_HIDEREADONLY;
+    arg_struct.Flags = 0x00080000 | 0x00000004 | 0x00000008; // .OFN_EXPLORER | .OFN_HIDEREADONLY | .OFN_NOCHANGEDIR;
     arg_struct.lpstrDefExt = temp_c_string(params.extension);
 
     result: = Windows.GetSaveFileNameA(*arg_struct) == .TRUE;
