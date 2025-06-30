@@ -37,7 +37,7 @@ AnimationEvent :: struct @custom_serialize(serialize_animation_event)
 
 AnimationEventSprite :: struct
 {
-    sprite: *Sprite;
+    sprite: *Sprite; @serialize
 }
 
 animation_add_layer :: (using animation: *Animation, layer_name: string) -> s32
