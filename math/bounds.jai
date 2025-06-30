@@ -1,7 +1,7 @@
 BoundsBase :: struct(vector_type: Type)
 {
-    min: vector_type;
-    max: vector_type;
+    min: vector_type; @serialize
+    max: vector_type; @serialize
 }
 
 Bounds :: BoundsBase(Vector2);

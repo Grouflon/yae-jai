@@ -113,6 +113,19 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     verify(serializer_end_array(serializer));
                     return true;
                 }
+                case type_info(Vector4);
+                {
+                    vector: *float = data;
+                    size: s64 = 4;
+                    if !serializer_begin_array(serializer, *size, key) return false;
+                    if size != 4 return false;
+                    verify(serialize(serializer, vector));
+                    verify(serialize(serializer, vector+1));
+                    verify(serialize(serializer, vector+2));
+                    verify(serialize(serializer, vector+3));
+                    verify(serializer_end_array(serializer));
+                    return true;
+                }
                 case type_info(Quaternion);
                 {
                     vector: *float = data;
@@ -208,7 +221,6 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
                     // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
                     keys, key_to_type_info, notes: = gather_members_flat(info_struct);
-                    serialize_optin: = has_note(notes, "serialize_optin");
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
 
@@ -216,9 +228,6 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     {
                         success, member_type_info: = table_find_new(*key_to_type_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
-
-                        // @serialize filter
-                        if serialize_optin && !has_note(member_type_info, "serialize") { continue; }
 
                         // params filters
                         skip: = false;
@@ -445,6 +454,8 @@ gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type:
         }
         else
         {
+            if !has_note(*member_type_info, "serialize") { continue; }
+
             array_add(keys, member_type_info.name);
             table_add(key_to_type, member_type_info.name, info.members.data + i);
         }

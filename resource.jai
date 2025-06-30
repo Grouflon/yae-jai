@@ -2,7 +2,7 @@ RESOURCE_LOG_SECTION :: Log_Section.{ "Resource" };
 RESOURCE_EXTENSION :: "res";
 
 // Resource
-Resource :: struct @serialize_optin
+Resource :: struct
 {
     #as using _object: Object;
 

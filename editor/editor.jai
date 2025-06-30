@@ -1,4 +1,4 @@
-Editor :: struct @serialize_optin
+Editor :: struct
 {
     resources_open: bool; @serialize
     imgui_demo_open: bool; @serialize

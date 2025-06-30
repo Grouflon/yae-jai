@@ -14,7 +14,7 @@ Animation :: struct
 
 AnimationLayer :: struct
 {
-    name: string;
+    name: string; @serialize
 }
 
 AnimationEventType :: enum

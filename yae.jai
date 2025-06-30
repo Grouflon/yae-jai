@@ -1,6 +1,6 @@
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
-YAE : struct @serialize_optin
+YAE : struct
 {
     debugger_handle : *void;
     

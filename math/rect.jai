@@ -1,6 +1,6 @@
 RectBase :: struct($T: Type)
 {
-    x, y, w, h: T;
+    x, y, w, h: T; @serialize
 }
 
 Rect :: RectBase(float);
