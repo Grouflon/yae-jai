@@ -100,3 +100,65 @@ get_parent_type :: (info: *Type_Info) -> *Type_Info
     }
     return null;
 }
+
+enum_value_to_index :: (value: *void, info_enum: *Type_Info_Enum) -> s64
+{
+    assert(info_enum != null);
+
+    s64_value: s64;
+    if info_enum.internal_type.signed
+    {
+        if info_enum.internal_type.runtime_size ==
+        {
+            case 1; { s64_value = xx << cast(*s8)value; }
+            case 2; { s64_value = xx << cast(*s16)value; }
+            case 4; { s64_value = xx << cast(*s32)value; }
+            case 8; { s64_value = xx << cast(*s64)value; }
+        }
+    }
+    else
+    {
+        if info_enum.internal_type.runtime_size ==
+        {
+            case 1; { s64_value = xx << cast(*u8)value; }
+            case 2; { s64_value = xx << cast(*u16)value; }
+            case 4; { s64_value = xx << cast(*u32)value; }
+            case 8; { s64_value = xx << cast(*u64)value; }
+        }
+    }
+
+    for enum_value, i : info_enum.values
+    {
+        if enum_value == s64_value return i;
+    }
+    return -1;
+}
+
+enum_index_to_value :: (index: s64, info_enum: *Type_Info_Enum, value: *void)
+{
+    assert(info_enum != null);
+
+    if index < 0 || index >= info_enum.values.count return;
+
+    s64_value: = info_enum.values[index];
+    if info_enum.internal_type.signed
+    {
+        if info_enum.internal_type.runtime_size ==
+        {
+            case 1; { typed_value: = cast(*s8)value; <<typed_value = xx s64_value; }
+            case 2; { typed_value: = cast(*s16)value; <<typed_value = xx s64_value; }
+            case 4; { typed_value: = cast(*s32)value; <<typed_value = xx s64_value; }
+            case 8; { typed_value: = cast(*s64)value; <<typed_value = xx s64_value; }
+        }
+    }
+    else
+    {
+        if info_enum.internal_type.runtime_size ==
+        {
+            case 1; { typed_value: = cast(*u8)value; <<typed_value = xx s64_value; }
+            case 2; { typed_value: = cast(*u16)value; <<typed_value = xx s64_value; }
+            case 4; { typed_value: = cast(*u32)value; <<typed_value = xx s64_value; }
+            case 8; { typed_value: = cast(*u64)value; <<typed_value = xx s64_value; }
+        }
+    }
+}
