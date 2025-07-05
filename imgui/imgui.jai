@@ -25,6 +25,7 @@ TableSetupColumns :: (columns: []ColumnDefinition)
     }
 }
 
+// str modifications will always be allocated with the temporary allocator
 InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
 {
     InputTextCallback_UserData :: struct
@@ -49,8 +50,7 @@ InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, 
             }
             else if data.EventFlag == .CallbackEdit
             {
-                free(user_data.str.data);
-                <<(user_data.str) = copy_string(to_string(data.Buf));
+                <<(user_data.str) = copy_temporary_string(to_string(data.Buf));
             }
             else if (user_data.chain_callback != null)
             {
@@ -63,6 +63,7 @@ InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, 
     }
 
     assert((flags & .ImGuiInputTextFlags_CallbackResize) == 0);
+    assert((flags & .ImGuiInputTextFlags_CallbackEdit) == 0);
     flags |= .CallbackResize;
     flags |= .CallbackEdit;
 
@@ -76,7 +77,8 @@ InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, 
     memcpy(buffer, str.data, str.count);
     buffer[str.count] = 0;
 
-    return ImGui.InputText(temp_c_string(label), buffer, xx (str.count+1), flags, InputText_Callback, *cb_user_data);
+    modified: = ImGui.InputText(temp_c_string(label), buffer, xx (str.count+1), flags, InputText_Callback, *cb_user_data);
+    return modified;
 }
 
 EditValue :: (label: string, value: *$T) -> bool
@@ -143,6 +145,17 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                 case type_info(Curve);
                 {
                     modified = EditValue(label, cast(*Curve)value);
+                }
+
+                case type_info(StringHash);
+                {
+                    hash_ptr: = cast(*StringHash)value;
+                    temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
+                    if InputText(label, *temp_str)
+                    {
+                        <<hash_ptr = string_hash(temp_str);
+                        modified = true;
+                    }
                 }
 
                 case; // Generic structs
@@ -253,7 +266,34 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         }
         case .STRING;
         {
-            modified = InputText(label, value);
+            str_ptr: = cast(*string)value;
+            temp_str: = copy_temporary_string(<<str_ptr);
+            if InputText(label, *temp_str)
+            {
+                free(str_ptr.data);
+                <<str_ptr = copy_string(temp_str);
+                modified = true;
+            }
+        }
+        case .ENUM;
+        {
+            info_enum: = cast(*Type_Info_Enum) info;
+
+            getter :: (user_data: *void, idx: s32) -> *u8 #c_call
+            {
+                ctx: #Context;
+                push_context ctx
+                {
+                    info_enum: = cast(*Type_Info_Enum) user_data;
+                    if idx < 0 || idx >= info_enum.names.count { return ""; }
+                    return temp_c_string(info_enum.names[idx]);
+                }
+            }
+
+            // Combo :: (label: *u8, current_item: *s32, getter: #type (user_data: *void, idx: s32) -> *u8 #c_call, user_data: *void, items_count: s32, popup_max_height_in_items: s32 = -1) -> bool
+            index: s32 = xx enum_value_to_index(value, info_enum);
+            modified = ImGui.Combo(c_label, *index, getter, xx info_enum, xx info_enum.names.count);
+            enum_index_to_value(xx index, info_enum, value);
         }
     }
     return modified;
