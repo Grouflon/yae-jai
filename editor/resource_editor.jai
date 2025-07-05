@@ -1,8 +1,8 @@
 ResourceEditor :: struct
 {
-    resource: *Resource;
+    resource: *Resource; @serialize
     payload: *void;
-    is_open: bool;
+    is_open: bool; @serialize
 }
 
 resource_editor_init :: (resource_editor: *ResourceEditor)
