@@ -140,6 +140,15 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     return true;
                 }
 
+                case type_info(StringHash);
+                {
+                    string_hash_ptr: = cast(*StringHash)data;
+                    str : =  string_hash_ptr.str;
+                    if !serialize(serializer, *str, key) return false;
+                    <<string_hash_ptr = string_hash(str);
+                    return true;
+                }
+
                 case;
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
