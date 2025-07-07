@@ -66,6 +66,37 @@ array_find :: (array: []$T, compare_function: #type (item:T, user_data: *void) -
     return false, -1;
 }
 
+array_move_item :: (array: []$T, from: s64, to: s64)
+{
+    array_move_item(array.data, array.size, type_info(T), from, to);
+}
+
+array_move_item :: (data:*void, size: s64, element_type: *Type_Info, from: s64, to: s64)
+{
+    if from == to return;
+    assert(data != null);
+    assert(element_type != null);
+    assert(from >= 0 && from < size);
+    assert(to >= 0 && to < size);
+
+    element_size: = element_type.runtime_size;
+
+    if to < from
+    {
+        for #v2 < i: (to+1)..from // This is really weird jai
+        {
+            mem_swap(data + i * element_size, data + (i-1) * element_size, element_size);
+        }
+    }
+    else
+    {
+        for i: from..(to-1)
+        {
+            mem_swap(data + i * element_size, data + (i+1) * element_size, element_size);
+        }
+    }
+}
+
 table_clear :: (table: *Table)
 {
     table_reset(table);
@@ -90,4 +121,17 @@ verify :: (result: bool)
 rgba :: (color: Color, a: float) -> Color
 {
     return Color.{color.r, color.g, color.b, xx (a * 255) };
+}
+
+cprint :: (format_string: string, args: .. Any) -> *u8
+{
+    return temp_c_string(tprint(format_string, ..args));
+}
+
+mem_swap :: (a: *void, b: *void, size: s64)
+{
+    tmp: = talloc(size);
+    memcpy(tmp, b, size);
+    memcpy(b, a, size);
+    memcpy(a, tmp, size);
 }
