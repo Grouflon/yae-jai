@@ -99,12 +99,12 @@ EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
     modified: = false;
     for member_type_info: info_struct.members
     {
-        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, false, member_type_info.type, member_type_info.notes) || modified;
     }
     return modified;
 }
 
-EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
+EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, notes: []string = .[]) -> bool
 {
     // Parse metadata
     WidgetType :: enum
@@ -134,7 +134,8 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
     }
 
     // Display widget
-    c_label: = temp_c_string(label);
+    unique_label: = tprint(ifx hide_label then "##%_%" else "%##%", label, value);
+    c_label: = temp_c_string(unique_label);
     modified: bool = false;
 
     if info.type == {
@@ -144,14 +145,14 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
             {
                 case type_info(Curve);
                 {
-                    modified = EditValue(label, cast(*Curve)value);
+                    modified = EditValue(unique_label, cast(*Curve)value);
                 }
 
                 case type_info(StringHash);
                 {
                     hash_ptr: = cast(*StringHash)value;
                     temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
-                    if InputText(label, *temp_str)
+                    if InputText(unique_label, *temp_str)
                     {
                         <<hash_ptr = string_hash(temp_str);
                         modified = true;
@@ -162,11 +163,18 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
 
-                    if ImGui.TreeNodeEx(c_label, .DefaultOpen)
+                    if hide_label
                     {
-                        defer ImGui.TreePop();
+                        modified = EditStructMembers(value, info_struct);                        
+                    }
+                    else
+                    {
+                        if ImGui.TreeNodeEx(c_label, .DefaultOpen)
+                        {
+                            defer ImGui.TreePop();
 
-                        modified = EditStructMembers(value, info_struct);
+                            modified = EditStructMembers(value, info_struct);
+                        }
                     }
                 }
             }
@@ -268,7 +276,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         {
             str_ptr: = cast(*string)value;
             temp_str: = copy_temporary_string(<<str_ptr);
-            if InputText(label, *temp_str)
+            if InputText(unique_label, *temp_str)
             {
                 free(str_ptr.data);
                 <<str_ptr = copy_string(temp_str);
@@ -290,10 +298,165 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                 }
             }
 
-            // Combo :: (label: *u8, current_item: *s32, getter: #type (user_data: *void, idx: s32) -> *u8 #c_call, user_data: *void, items_count: s32, popup_max_height_in_items: s32 = -1) -> bool
             index: s32 = xx enum_value_to_index(value, info_enum);
             modified = ImGui.Combo(c_label, *index, getter, xx info_enum, xx info_enum.names.count);
             enum_index_to_value(xx index, info_enum, value);
+        }
+        case .ARRAY;
+        {
+            info_array: = cast(*Type_Info_Array) info;
+            size: s64;
+            data: *void;
+            array_resizable: *Resizable_Array;
+            element_size: = info_array.element_type.runtime_size;
+
+            if info_array.array_type == {
+                case .FIXED;
+                {
+                    size = info_array.array_count;
+                    data = value;
+                }
+                case .VIEW;
+                {
+                    array_view: *Array_View_64 = value;
+                    size = array_view.count;
+                    data = array_view.data;
+                }
+                case .RESIZABLE;
+                {
+                    array_resizable = value;
+                    size = array_resizable.count;
+                    data = array_resizable.data;
+                }
+            }
+
+            opened: = ImGui.TreeNode(c_label, "%(%)", label, size);
+
+            // Table context menu
+            if array_resizable != null
+            {
+                if ImGui.BeginPopupContextItem()
+                {
+                    defer ImGui.EndPopup();
+
+                    if ImGui.Selectable("Add First")
+                    {
+                        maybe_grow(array_resizable, size+1);
+                        memset(data + size * element_size, 0, element_size);
+                        array_resizable.count += 1;
+                        size += 1;
+                        array_move_item(data, size, info_array.element_type, size-1, 0);
+                        modified = true;
+                    }
+
+                    if ImGui.Selectable("Add Last")
+                    {
+                        maybe_grow(array_resizable, size+1);
+                        memset(data + size * element_size, 0, element_size);
+                        array_resizable.count += 1;
+                        size += 1;
+                        modified = true;
+                    }
+
+                    if ImGui.Selectable("Clear")
+                    {
+                        array_resizable.count = 0;
+                        modified = true;
+                    }
+                }
+            }
+
+            if opened
+            {
+                defer ImGui.TreePop();
+
+                table_flags: ImGui.TableFlags =  .BordersH | .RowBg;
+
+                array_width: = ImGui.GetContentRegionAvail().x;
+                row_positions: [..]Vector2;
+                row_positions.allocator = *temporary_allocator;
+
+                if ImGui.BeginTable(c_label, 2, table_flags, .{0, 0})
+                {
+                    defer ImGui.EndTable();
+
+                    // Setup Table
+                    column_flags: ImGui.TableColumnFlags = .NoResize | .NoReorder | .NoHide;
+                    ImGui.TableSetupColumn("index", column_flags | .WidthFixed, 30);
+                    ImGui.TableSetupColumn("value", column_flags);
+
+                    for i: 0..(size-1)
+                    {
+                        // Index column
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        cursor: = ImGui.GetCursorPos();
+                        array_add(*row_positions, cursor);
+                        ImGui.Text("[%]", i);
+                        if ImGui.IsItemHovered()
+                        {
+                            ImGui.SetMouseCursor(.ResizeAll);
+                        }
+                        if (ImGui.BeginDragDropSource(.ImGuiDragDropFlags_SourceAllowNullID))
+                        {
+                            ImGui.SetDragDropPayload(cprint("array_%_%", label, value), *i, size_of(type_of(i)));
+                            ImGui.Text("[%]", i);
+                            ImGui.SetMouseCursor(.ResizeAll);
+                            ImGui.EndDragDropSource();
+                        }
+                        if ImGui.BeginPopupContextItem(cprint("[%]", i))
+                        {
+                            defer ImGui.EndPopup();
+
+                            if ImGui.Selectable("Duplicate")
+                            {
+                                maybe_grow(array_resizable, size+1);
+                                memcpy(data + size * element_size, data + i * element_size, element_size);
+                                array_resizable.count += 1;
+                                size += 1;
+                                array_move_item(data, size, info_array.element_type, size-1, i+1);
+                                modified = true;
+                            }
+
+                            if ImGui.Selectable("Delete")
+                            {
+                                array_move_item(data, size, info_array.element_type, i, size-1);
+                                array_resizable.count -= 1;
+                                size -= 1;
+                                modified = true;
+                            }
+                        }
+
+                        // Value Column
+                        ImGui.TableNextColumn();
+                        element_data: = data + i * element_size;
+                        modified = EditValue("", element_data, true, info_array.element_type) || modified;
+                    }
+                }
+
+                // In between cells drop zones
+                array_add(*row_positions, ImGui.GetCursorPos() - .{0, 2});
+                for position, i: row_positions
+                {
+                    ImGui.SetCursorPos(position - .{0, 5});
+                    ImGui.InvisibleButton(cprint("drop %", i), .{array_width, 8});
+                    if (ImGui.BeginDragDropTarget())
+                    {
+                        payload: = ImGui.AcceptDragDropPayload(cprint("array_%_%", label, value));
+                        if payload != null
+                        {
+                            assert(payload.DataSize == size_of(type_of(i)));
+                            dragged_i: = <<cast(*s64)payload.Data;
+                            target_i: = ifx i > dragged_i then i-1 else i;
+
+                            if dragged_i == target_i continue;
+
+                            array_move_item(data, size, info_array.element_type, dragged_i, target_i);
+                        }
+                        ImGui.EndDragDropTarget();
+                    }
+                }
+            }
         }
     }
     return modified;
