@@ -133,6 +133,17 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
         }
     }
 
+    // Common Float settings
+    min_float: float = -FLOAT32_MAX;
+    max_float: float = FLOAT32_MAX;
+    step_float: = 0.1;
+    if has_step_override { step_float = step_override; }
+    if has_min_override { min_float = max(min_float, min_override); }
+    if has_max_override { max_float = min(max_float, max_override); }
+    // Slider does not behave well with huge values. We set bounds to something arbitrary to prevent crash
+    if widget_type == .SLIDER && !has_min_override { min_float = 0; }
+    if widget_type == .SLIDER && !has_max_override { max_float = 100; }
+
     // Display widget
     unique_label: = tprint(ifx hide_label then "##%_%" else "%##%", label, value);
     c_label: = temp_c_string(unique_label);
@@ -143,6 +154,37 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
         {
             if info ==
             {
+                case type_info(Vector2);
+                {
+                    if widget_type ==
+                    {
+                        case .DRAG; ImGui.DragFloat2(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; ImGui.SliderFloat2(c_label, value, min_float, max_float);
+                        case; ImGui.InputFloat2(c_label, value);
+                    }
+                }
+
+                case type_info(Vector3);
+                {
+                    if widget_type ==
+                    {
+                        case .DRAG; ImGui.DragFloat3(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; ImGui.SliderFloat3(c_label, value, min_float, max_float);
+                        case; ImGui.InputFloat3(c_label, value);
+                    }
+                }
+
+                case type_info(Vector4); #through;
+                case type_info(Quaternion);
+                {
+                    if widget_type ==
+                    {
+                        case .DRAG; ImGui.DragFloat4(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; ImGui.SliderFloat4(c_label, value, min_float, max_float);
+                        case; ImGui.InputFloat4(c_label, value);
+                    }
+                }
+
                 case type_info(Curve);
                 {
                     modified = EditValue(unique_label, cast(*Curve)value);
@@ -241,25 +283,18 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
         }
         case .FLOAT;
         {
-            value_float: float;
-            min_float: float;
-            max_float: float;
+            value_float: float32;
 
             if info.runtime_size == {
-                case 4; { value_float = cast(float)<<cast(*float32)value; min_float = FLOAT32_MIN; max_float = FLOAT32_MAX; }
-                case 8; { value_float = cast(float)<<cast(*float32)value; min_float = FLOAT32_MIN; max_float = FLOAT32_MAX; }
+                case 4; { value_float = cast(float)<<cast(*float32)value; }
+                case 8; { value_float = cast(float)<<cast(*float32)value; }
             }
-
-            step: = 0.1;
-            if has_step_override { step = step_override; }
-            if has_min_override { min_float = max(min_float, min_override); }
-            if has_max_override { max_float = min(max_float, max_override); }
 
             if widget_type ==
             {
-                case .DRAG;   { modified = ImGui.DragFloat(c_label, *value_float, step, min_float, max_float); }
+                case .DRAG;   { modified = ImGui.DragFloat(c_label, *value_float, step_float, min_float, max_float); }
                 case .SLIDER; { modified = ImGui.SliderFloat(c_label, *value_float, min_float, max_float); }
-                case;         { modified = ImGui.InputFloat(c_label, *value_float, step); }
+                case;         { modified = ImGui.InputFloat(c_label, *value_float, step_float); }
             }
 
             if modified
@@ -330,6 +365,24 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
                 }
             }
 
+            add_last :: (array_resizable: *Resizable_Array, info_array: *Type_Info_Array , data_ptr: **void, size_ptr: *s64)
+            {
+                maybe_grow(array_resizable, array_resizable.count+1);
+                element_size: = info_array.element_type.runtime_size;
+                element_ptr: = array_resizable.data + array_resizable.count * element_size;
+                if info_array.element_type.type == .STRUCT && (cast(*Type_Info_Struct)info_array.element_type).initializer != null
+                {
+                    (cast(*Type_Info_Struct)info_array.element_type).initializer(element_ptr);
+                }
+                else
+                {
+                    memset(element_ptr, 0, element_size);
+                }
+                array_resizable.count += 1;
+                <<data_ptr = array_resizable.data;
+                <<size_ptr = array_resizable.count;
+            }
+
             opened: = ImGui.TreeNode(c_label, "%(%)", label, size);
 
             // Table context menu
@@ -341,20 +394,14 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
 
                     if ImGui.Selectable("Add First")
                     {
-                        maybe_grow(array_resizable, size+1);
-                        memset(data + size * element_size, 0, element_size);
-                        array_resizable.count += 1;
-                        size += 1;
+                        add_last(array_resizable, info_array, *data, *size);
                         array_move_item(data, size, info_array.element_type, size-1, 0);
                         modified = true;
                     }
 
                     if ImGui.Selectable("Add Last")
                     {
-                        maybe_grow(array_resizable, size+1);
-                        memset(data + size * element_size, 0, element_size);
-                        array_resizable.count += 1;
-                        size += 1;
+                        add_last(array_resizable, info_array, *data, *size);
                         modified = true;
                     }
 
@@ -404,33 +451,48 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
                             ImGui.SetMouseCursor(.ResizeAll);
                             ImGui.EndDragDropSource();
                         }
-                        if ImGui.BeginPopupContextItem(cprint("[%]", i))
+                        if array_resizable != null
                         {
-                            defer ImGui.EndPopup();
-
-                            if ImGui.Selectable("Duplicate")
+                            if ImGui.BeginPopupContextItem(cprint("[%]", i))
                             {
-                                maybe_grow(array_resizable, size+1);
-                                memcpy(data + size * element_size, data + i * element_size, element_size);
-                                array_resizable.count += 1;
-                                size += 1;
-                                array_move_item(data, size, info_array.element_type, size-1, i+1);
-                                modified = true;
-                            }
+                                defer ImGui.EndPopup();
 
-                            if ImGui.Selectable("Delete")
-                            {
-                                array_move_item(data, size, info_array.element_type, i, size-1);
-                                array_resizable.count -= 1;
-                                size -= 1;
-                                modified = true;
+                                if ImGui.Selectable("Delete")
+                                {
+                                    array_move_item(data, size, info_array.element_type, i, size-1);
+                                    array_resizable.count -= 1;
+                                    size -= 1;
+                                    modified = true;
+                                }
+
+                                if ImGui.Selectable("Duplicate")
+                                {
+                                    add_last(array_resizable, info_array, *data, *size);
+                                    memcpy(data + (size-1) * element_size, data + i * element_size, element_size);
+                                    array_move_item(data, size, info_array.element_type, size-1, i+1);
+                                    modified = true;
+                                }
+
+                                if ImGui.Selectable("Add Before")
+                                {
+                                    add_last(array_resizable, info_array, *data, *size);
+                                    array_move_item(data, size, info_array.element_type, size-1, i);
+                                    modified = true;
+                                }
+
+                                if ImGui.Selectable("Add After")
+                                {
+                                    add_last(array_resizable, info_array, *data, *size);
+                                    array_move_item(data, size, info_array.element_type, size-1, i+1);
+                                    modified = true;
+                                }
                             }
                         }
 
                         // Value Column
                         ImGui.TableNextColumn();
                         element_data: = data + i * element_size;
-                        modified = EditValue("", element_data, true, info_array.element_type) || modified;
+                        modified = EditValue("", element_data, true, info_array.element_type, notes) || modified;
                     }
                 }
 
