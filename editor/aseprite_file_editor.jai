@@ -15,7 +15,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
 
     aseprite_file: = cast(*AsepriteFile)resource_editor.resource;
 
-    COLUMNS :: ImGui.ColumnDefinition.[
+    COLUMNS :: ImGui_ColumnDefinition.[
         .{"Name", 0, 0},
         .{"Linked Resource", 0, 0},
     ];
@@ -28,7 +28,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
         {
             defer ImGui.EndTable();
 
-            ImGui.TableSetupColumns(COLUMNS);
+            ImGui_TableSetupColumns(COLUMNS);
             ImGui.TableHeadersRow();
 
             if aseprite_file.texture != null
@@ -52,7 +52,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
         {
             defer ImGui.EndTable();
 
-            ImGui.TableSetupColumns(COLUMNS);
+            ImGui_TableSetupColumns(COLUMNS);
             ImGui.TableHeadersRow();
 
             for animation, hash : aseprite_file.animations

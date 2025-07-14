@@ -67,7 +67,7 @@ default_resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) 
     assert(resource_editor != null);
     assert(resource_editor.resource != null);
 
-    return ImGui.EditStructMembers(resource_editor.resource, resource_editor.resource.type);
+    return ImGui_EditStructMembers(resource_editor.resource, resource_editor.resource.type);
 }
 
 #scope_file

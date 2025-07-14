@@ -3,21 +3,19 @@ IM_COL32 :: (r: u8, g: u8, b: u8, a: u8) -> u32 #expand
     return ((cast(u32)r) << IM_COL32_R_SHIFT) | ((cast(u32)g) << IM_COL32_G_SHIFT) | ((cast(u32)b) << IM_COL32_B_SHIFT) | ((cast(u32)a) << IM_COL32_A_SHIFT);
 }
 
-#scope_file
-
 IM_COL32_R_SHIFT :: 0;
 IM_COL32_G_SHIFT :: 8;
 IM_COL32_B_SHIFT :: 16;
 IM_COL32_A_SHIFT :: 24;
 
-ColumnDefinition :: struct
+ImGui_ColumnDefinition :: struct
 {
     name: *u8;
     flags: ImGui.TableColumnFlags;
     base_width: float;
 }
 
-TableSetupColumns :: (columns: []ColumnDefinition)
+ImGui_TableSetupColumns :: (columns: []ImGui_ColumnDefinition)
 {
     for column: columns
     {
@@ -26,7 +24,7 @@ TableSetupColumns :: (columns: []ColumnDefinition)
 }
 
 // str modifications will always be allocated with the temporary allocator
-InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
+ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
 {
     InputTextCallback_UserData :: struct
     {
@@ -81,20 +79,15 @@ InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, 
     return modified;
 }
 
-EditValue :: (label: string, value: *$T) -> bool
-{
-    return EditValue(label, value, type_info(T));
-}
-
-EditStructMembers :: (value: *$T) -> bool
+ImGui_EditStructMembers :: (value: *$T) -> bool
 {
     info: = type_info(T);
     if info.type != .STRUCT return false;
 
-    return EditStructMembers(value, cast(*Type_Info_Struct)info);
+    return ImGui_EditStructMembers(value, cast(*Type_Info_Struct)info);
 }
 
-EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
+ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
 {
     modified: = false;
     for member_type_info: info_struct.members
@@ -103,18 +96,18 @@ EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
 
         if member_type_info.flags & .AS && member_type_info.type.type == .STRUCT
         {
-            EditStructMembers(member_value, cast(*Type_Info_Struct)member_type_info.type);
+            ImGui_EditStructMembers(member_value, cast(*Type_Info_Struct)member_type_info.type);
             continue;
         }
 
         if !has_note(*member_type_info, "serialize") continue;
 
-        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+        modified = ImGui_EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
     }
     return modified;
 }
 
-EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_Info_Struct, notes: []string = .[]) -> bool
+ImGui_EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_Info_Struct, notes: []string = .[]) -> bool
 {
     assert(object_ptr != null);
     assert(info_struct != null);
@@ -131,7 +124,7 @@ EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_In
             return false;
         }
 
-        return EditValue(label, object, info_struct, notes);
+        return ImGui_EditValue(label, object, info_struct, notes);
     }
     else
     {
@@ -150,7 +143,12 @@ EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_In
     }
 }
 
-EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
+ImGui_EditValue :: (label: string, value: *$T, notes: []string = .[]) -> bool
+{
+    return ImGui_EditValue(label, value, type_info(T), notes);
+}
+
+ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
 {
     // Labels
     u_label: = unique_label(label, value);
@@ -166,7 +164,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         info_struct: = cast(*Type_Info_Struct) info;
         object_type: = get_polymorphic_argument(*Type_Info_Struct, info_struct, 0);
 
-        modified: = EditObjectPointer(label, *object, object_type, notes);
+        modified: = ImGui_EditObjectPointer(label, *object, object_type, notes);
         <<id_ptr = ifx object != null then object.id else 0;
         return modified;
     }
@@ -176,7 +174,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         object_type: = cast(*Type_Info_Struct) (cast(*Type_Info_Pointer)info).pointer_to;
         object_ptr: **Object = value;
 
-        return EditObjectPointer(label, object_ptr, object_type, notes);
+        return ImGui_EditObjectPointer(label, object_ptr, object_type, notes);
     }
 
     // Parse metadata
@@ -227,32 +225,35 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
             {
                 case type_info(Vector2);
                 {
+                    if widget_type == .NONE { widget_type = .DRAG; } // Vector have drag input by default
                     if widget_type ==
                     {
-                        case .DRAG; ImGui.DragFloat2(c_label, value, step_float, min_float, max_float);
-                        case .SLIDER; ImGui.SliderFloat2(c_label, value, min_float, max_float);
-                        case; ImGui.InputFloat2(c_label, value);
+                        case .DRAG; modified = ImGui.DragFloat2(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; modified = ImGui.SliderFloat2(c_label, value, min_float, max_float);
+                        case; modified = ImGui.InputFloat2(c_label, value);
                     }
                 }
 
                 case type_info(Vector3);
                 {
+                    if widget_type == .NONE { widget_type = .DRAG; } // Vector have drag input by default
                     if widget_type ==
                     {
-                        case .DRAG; ImGui.DragFloat3(c_label, value, step_float, min_float, max_float);
-                        case .SLIDER; ImGui.SliderFloat3(c_label, value, min_float, max_float);
-                        case; ImGui.InputFloat3(c_label, value);
+                        case .DRAG; modified = ImGui.DragFloat3(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; modified = ImGui.SliderFloat3(c_label, value, min_float, max_float);
+                        case; modified = ImGui.InputFloat3(c_label, value);
                     }
                 }
 
                 case type_info(Vector4); #through;
                 case type_info(Quaternion);
                 {
+                    if widget_type == .NONE { widget_type = .DRAG; } // Vector have drag input by default
                     if widget_type ==
                     {
-                        case .DRAG; ImGui.DragFloat4(c_label, value, step_float, min_float, max_float);
-                        case .SLIDER; ImGui.SliderFloat4(c_label, value, min_float, max_float);
-                        case; ImGui.InputFloat4(c_label, value);
+                        case .DRAG; modified = ImGui.DragFloat4(c_label, value, step_float, min_float, max_float);
+                        case .SLIDER; modified = ImGui.SliderFloat4(c_label, value, min_float, max_float);
+                        case; modified = ImGui.InputFloat4(c_label, value);
                     }
                 }
 
@@ -265,10 +266,28 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                 {
                     hash_ptr: = cast(*StringHash)value;
                     temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
-                    if InputText(u_label, *temp_str)
+                    if ImGui_InputText(u_label, *temp_str)
                     {
                         <<hash_ptr = string_hash(temp_str);
                         modified = true;
+                    }
+                }
+
+                case type_info(Rect);
+                {
+                    if ImGui.TreeNodeEx(c_label, .DefaultOpen)
+                    {
+                        defer ImGui.TreePop();
+
+                        rect_ptr: = cast(*Rect)value;
+                        origin: = Vector2.{rect_ptr.x, rect_ptr.y};
+                        size: = Vector2.{rect_ptr.w, rect_ptr.h};
+                        modified = ImGui_EditValue("origin", *origin) || modified;
+                        modified = ImGui_EditValue("size", *size) || modified;
+                        rect_ptr.x = origin.x;
+                        rect_ptr.y = origin.y;
+                        rect_ptr.w = size.x;
+                        rect_ptr.h = size.y;
                     }
                 }
 
@@ -278,7 +297,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
 
                     if label.count == 0
                     {
-                        modified = EditStructMembers(value, info_struct);                        
+                        modified = ImGui_EditStructMembers(value, info_struct);                        
                     }
                     else
                     {
@@ -286,7 +305,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                         {
                             defer ImGui.TreePop();
 
-                            modified = EditStructMembers(value, info_struct);
+                            modified = ImGui_EditStructMembers(value, info_struct);
                         }
                     }
                 }
@@ -382,7 +401,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
         {
             str_ptr: = cast(*string)value;
             temp_str: = copy_temporary_string(<<str_ptr);
-            if InputText(u_label, *temp_str)
+            if ImGui_InputText(u_label, *temp_str)
             {
                 free(str_ptr.data);
                 <<str_ptr = copy_string(temp_str);
@@ -563,7 +582,7 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
                         // Value Column
                         ImGui.TableNextColumn();
                         element_data: = data + i * element_size;
-                        modified = EditValue("", element_data, info_array.element_type, notes) || modified;
+                        modified = ImGui_EditValue("", element_data, info_array.element_type, notes) || modified;
                     }
                 }
 
@@ -594,6 +613,8 @@ EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .
     }
     return modified;
 }
+
+#scope_file
 
 Note :: struct
 {
@@ -636,10 +657,3 @@ unique_label :: (label: string, value: *void) -> string
 }
 
 #import "String";
-
-#poke_name ImGui InputText;
-#poke_name ImGui EditValue;
-#poke_name ImGui EditStructMembers;
-#poke_name ImGui ColumnDefinition;
-#poke_name ImGui TableSetupColumns;
-

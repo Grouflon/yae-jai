@@ -4,7 +4,7 @@ resource_browser_update :: ()
 {
     table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg | .Sortable | .Hideable;
 
-    COLUMNS :: ImGui.ColumnDefinition.[
+    COLUMNS :: ImGui_ColumnDefinition.[
         .{"ID", 0, 0},
         .{"Name", .NoHide, 0},
         .{"Type", 0, 0},
@@ -17,7 +17,7 @@ resource_browser_update :: ()
     {
         defer ImGui.EndTable();
 
-        ImGui.TableSetupColumns(COLUMNS);
+        ImGui_TableSetupColumns(COLUMNS);
         ImGui.TableSetupScrollFreeze(0, 1);
 
         ImGui.TableHeadersRow();
