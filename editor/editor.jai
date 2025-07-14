@@ -83,7 +83,10 @@ editor_update :: (dt: float)
             continue;
         }
 
-        resource_editor_update(*resource_editor, dt);
+        if resource_editor_update(*resource_editor, dt)
+        {
+            resource_save_to_disk(resource_editor.resource);
+        }
     }
 }
 
