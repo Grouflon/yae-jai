@@ -27,27 +27,42 @@ animation_import_from_aseprite_file :: (animation: *Animation, aseprite_file: *A
 
     assert(animation.is_loaded_without_errors);
 
-    SPRITE_LAYER_NAME :: "SPRITES";
-
     tag_found, tag_index: = table_find_new(*aseprite_file.data.name_to_tag, aseprite_animation_name);
     if !tag_found return;
     tag: = aseprite_file.data.frame_tags[tag_index];
 
-    animation_remove_layers(animation, SPRITE_LAYER_NAME);
-
     animation.frame_count = tag.end_frame - tag.start_frame + 1;
-    layer_index: = animation_add_layer(animation, SPRITE_LAYER_NAME);
+    array_clear(*animation.sprite_events);
+
+    start_frame: s32 = -1;
+    current_sprite: *Sprite = null;
 
     for i: tag.start_frame..tag.end_frame
     {
         sprite_found, sprite_index: = table_find_new(*aseprite_file.aseprite_frame_to_sprite_index, i);
         if !sprite_found continue;
 
-        animation_add_event(animation, .{
-            type = .SPRITE,
-            layer_index = layer_index,
-            begin = i - tag.start_frame,
-            sprite = .{ sprite = aseprite_file.texture.sprites[sprite_index] },
+        sprite: = aseprite_file.texture.sprites[sprite_index];
+        if sprite != current_sprite
+        {
+            if current_sprite != null
+            {
+                array_add(*animation.sprite_events, .{
+                    begin = start_frame - tag.start_frame,
+                    end = (i-1) - tag.start_frame,
+                    sprite = current_sprite,
+                });
+            }
+            current_sprite = sprite;
+            start_frame = i;
+        }
+    }
+    if current_sprite != null
+    {
+        array_add(*animation.sprite_events, .{
+            begin = start_frame - tag.start_frame,
+            end = tag.end_frame - tag.start_frame,
+            sprite = current_sprite,
         });
     }
 

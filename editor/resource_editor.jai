@@ -51,7 +51,7 @@ resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
         if resource_editor.resource.type ==
         {
-            case type_info(Animation); modified = animation_editor_update(resource_editor, dt);
+            // case type_info(Animation); modified = animation_editor_update(resource_editor, dt);
             case type_info(AsepriteFile); modified = aseprite_file_editor_update(resource_editor, dt);
             case type_info(TextureFile); modified = texture_file_editor_update(resource_editor, dt);
             

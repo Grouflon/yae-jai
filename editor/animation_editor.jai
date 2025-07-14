@@ -131,14 +131,30 @@ animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
     sprites: = get_objects_by_type(Sprite);
     event_ptr: = animation.events.data + selected_event_index;
 
-    if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
+    animation_changed = ImGui.EditValue("type", *event_ptr.type) || animation_changed;
+    animation_changed = ImGui.EditValue("event_condition", *event_ptr.event_condition) || animation_changed;
+    animation_changed = ImGui.EditValue("dummy_string", *event_ptr.dummy_string) || animation_changed;
+    animation_changed = ImGui.EditValue("begin", *event_ptr.begin) || animation_changed;
+    animation_changed = ImGui.EditValue("end", *event_ptr.end) || animation_changed;
+
+    if event_ptr.type ==
     {
-        if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
-        for sprite: sprites
+        case .SPRITE;
         {
-            if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
+            if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
+            {
+                if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
+                for sprite: sprites
+                {
+                    if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
+                }
+                ImGui.EndCombo();
+            }
         }
-        ImGui.EndCombo();
+        case .FLIP;
+        {
+            animation_changed = ImGui.EditValue("flip_type", *event_ptr.flip.flip_type) || animation_changed;
+        }
     }
 
     return animation_changed;

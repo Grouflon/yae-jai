@@ -8,106 +8,28 @@ Animation :: struct
     frames_per_second: float = 10.0; @serialize
     frame_count: s32 = 0; @serialize
 
-    layers: [..]AnimationLayer; @serialize
-    events: [..]AnimationEvent; @serialize
+    sprite_events: [..]SpriteAnimationEvent; @serialize
 }
 
-AnimationLayer :: struct
+AnimationEvent :: struct // @custom_serialize(serialize_animation_event)
 {
-    name: string; @serialize
+    begin: s32; @serialize
+    end: s32 = -1; @serialize // included
 }
 
-AnimationEventType :: enum
+SpriteAnimationEvent :: struct
 {
-    NONE :: 0;
-    SPRITE;
-}
-
-AnimationEvent :: struct @custom_serialize(serialize_animation_event)
-{
-    type: AnimationEventType;
-    layer_index: s32;
-    begin: s32;
-    end: s32 = -1; // included
-
-    union {
-        sprite: AnimationEventSprite;
-    }
-}
-
-AnimationEventSprite :: struct
-{
+    #as using _event: AnimationEvent;
     sprite: *Sprite; @serialize
+    offset: Vector2; @serialize @drag;
+    flip_x: bool; @serialize;
+    flip_y: bool; @serialize;
 }
 
-animation_add_layer :: (using animation: *Animation, layer_name: string) -> s32
+is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool
 {
-    array_add(*animation.layers, .{
-        name = copy_string(layer_name),
-    });
-
-    return xx (animation.layers.count - 1);
-}
-
-animation_remove_layer :: (using animation: *Animation, index: s32)
-{
-    assert(animation != null);
-    valid: = index >= 0 && index < animation.layers.count;
-    if !valid { log_warning(tprint("animation \"%\": can't remove layer at index %", animation.name, index)); return; }
-
-    for *< event, i: events
-    {
-        if event.layer_index == index { animation_remove_event(animation, xx i); }
-        if event.layer_index > index { event.layer_index -= 1; }
-    }
-
-    free(animation.layers[index].name);
-    array_ordered_remove_by_index(*animation.layers, index);
-}
-
-animation_remove_layers :: (animation: *Animation, name: string)
-{
-    assert(animation != null);
-    
-    for *< layer, i: animation.layers
-    {
-        if layer.name == name
-        {
-            animation_remove_layer(animation, xx i);
-        }
-    }
-}
-
-animation_add_event :: (using animation: *Animation, event: AnimationEvent)
-{
-    assert(animation != null);
-    array_add(*animation.events, event);
-}
-
-animation_remove_event :: (using animation: *Animation, index: s32)
-{
-    assert(animation != null);
-    valid: = index >= 0 && index < animation.events.count;
-    if !valid { log_warning(tprint("animation \"%\": can't remove event at index %", animation.name, index)); return; }
-
-    array_ordered_remove_by_index(*animation.events, index);
-}
-
-animation_get_events_for_frame :: (using animation: *Animation, frame: s32) -> [..]AnimationEvent
-{
-    result: [..]AnimationEvent;
-    result.allocator = temporary_allocator;
-
-    valid: = frame >= 0 && frame < frame_count;
-    if !valid { log_warning(tprint("animation \"%\": can't get event at frame %", animation.name, frame)); return result; }
-
-    for * event: events
-    {
-        if frame < event.begin { continue; }
-        if frame == event.begin || frame <= event.end { array_add(*result, event); }
-    }
-
-    return result;
+    assert(event != null);
+    return frame == event.begin || (frame > event.begin && frame <= event.end);
 }
 
 animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
@@ -167,11 +89,5 @@ animation_unload :: (resource: *Resource)
 {
     using t: = cast(*Animation) resource;
 
-    for layer: layers
-    {
-        free(layer.name);
-    }
-
-    array_free(layers);
-    array_free(events);
+    array_reset(*sprite_events);
 }

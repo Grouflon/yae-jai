@@ -98,14 +98,12 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
     if current_animation == null { return; }
     if (current_frame < 0 || current_frame >= current_animation.frame_count) { return; }
 
-    events: = animation_get_events_for_frame(current_animation, current_frame);
-
-    for event: events
+    for event: current_animation.sprite_events
     {
-        if event.type == .SPRITE
-        {
-            draw_sprite(position, event.sprite.sprite, flip_x, flip_y, tint);
-        }
+        if !is_frame_within_event(current_frame, *event) continue;
+
+        draw_sprite(position + event.offset, event.sprite, event.flip_x ^ flip_x, event.flip_y ^ flip_y, tint);
     }
+}
 
 }
