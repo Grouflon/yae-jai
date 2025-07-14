@@ -91,7 +91,7 @@ EditStructMembers :: (value: *$T) -> bool
     info: = type_info(T);
     if info.type != .STRUCT return false;
 
-    return EditStructMembers(value, value, cast(*Type_Info_Struct)info);
+    return EditStructMembers(value, cast(*Type_Info_Struct)info);
 }
 
 EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
@@ -99,13 +99,86 @@ EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
     modified: = false;
     for member_type_info: info_struct.members
     {
-        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, false, member_type_info.type, member_type_info.notes) || modified;
+        member_value: = value + member_type_info.offset_in_bytes;
+
+        if member_type_info.flags & .AS && member_type_info.type.type == .STRUCT
+        {
+            EditStructMembers(member_value, cast(*Type_Info_Struct)member_type_info.type);
+            continue;
+        }
+
+        if !has_note(*member_type_info, "serialize") continue;
+
+        modified = EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
     }
     return modified;
 }
 
-EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, notes: []string = .[]) -> bool
+EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_Info_Struct, notes: []string = .[]) -> bool
 {
+    assert(object_ptr != null);
+    assert(info_struct != null);
+    assert(is_subclass_of(info_struct, Object));
+
+    object: = <<object_ptr;
+
+    if has_note(notes, "embed")
+    {
+        if object == null
+        {
+            // I don't know what to do about null objects yet
+            ImGui.Text("%: null embedded Object", label);
+            return false;
+        }
+
+        return EditValue(label, object, info_struct, notes);
+    }
+    else
+    {
+        objects: = get_objects_by_type_info(info_struct);
+        modified: = false;
+        if ImGui.BeginCombo(temp_c_string(unique_label(label, object_ptr)), ifx object != null then temp_c_string(object.name) else "null")
+        {
+            if ImGui.Selectable("null", object == null) { <<object_ptr = null; modified = true; }
+            for o: objects
+            {
+                if ImGui.Selectable(temp_c_string(o.name), object == o) { <<object_ptr = o; modified = true; }
+            }
+            ImGui.EndCombo();
+        }
+        return modified;
+    }
+}
+
+EditValue :: (label: string, value: *void, info: *Type_Info, notes: []string = .[]) -> bool
+{
+    // Labels
+    u_label: = unique_label(label, value);
+    c_label: = temp_c_string(u_label);
+
+    // Catch Object pointers
+    // ID(Object)
+    if info.type == .STRUCT && (cast(*Type_Info_Struct)info).name == "ID"
+    {
+        id_ptr: = cast(*ObjectIDBase) value;
+        object: = get(<<id_ptr);
+
+        info_struct: = cast(*Type_Info_Struct) info;
+        object_type: = get_polymorphic_argument(*Type_Info_Struct, info_struct, 0);
+
+        modified: = EditObjectPointer(label, *object, object_type, notes);
+        <<id_ptr = ifx object != null then object.id else 0;
+        return modified;
+    }
+    // *Object
+    if info.type == .POINTER && is_subclass_of((cast(*Type_Info_Pointer)info).pointer_to, Object)
+    {
+        object_type: = cast(*Type_Info_Struct) (cast(*Type_Info_Pointer)info).pointer_to;
+        object_ptr: **Object = value;
+
+        return EditObjectPointer(label, object_ptr, object_type, notes);
+    }
+
     // Parse metadata
     WidgetType :: enum
     {
@@ -145,8 +218,6 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
     if widget_type == .SLIDER && !has_max_override { max_float = 100; }
 
     // Display widget
-    unique_label: = tprint(ifx hide_label then "##%_%" else "%##%", label, value);
-    c_label: = temp_c_string(unique_label);
     modified: bool = false;
 
     if info.type == {
@@ -187,14 +258,14 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
 
                 case type_info(Curve);
                 {
-                    modified = EditValue(unique_label, cast(*Curve)value);
+                    modified = EditValue(u_label, cast(*Curve)value);
                 }
 
                 case type_info(StringHash);
                 {
                     hash_ptr: = cast(*StringHash)value;
                     temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
-                    if InputText(unique_label, *temp_str)
+                    if InputText(u_label, *temp_str)
                     {
                         <<hash_ptr = string_hash(temp_str);
                         modified = true;
@@ -205,7 +276,7 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
                 {
                     info_struct: = cast(*Type_Info_Struct) info;
 
-                    if hide_label
+                    if label.count == 0
                     {
                         modified = EditStructMembers(value, info_struct);                        
                     }
@@ -311,7 +382,7 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
         {
             str_ptr: = cast(*string)value;
             temp_str: = copy_temporary_string(<<str_ptr);
-            if InputText(unique_label, *temp_str)
+            if InputText(u_label, *temp_str)
             {
                 free(str_ptr.data);
                 <<str_ptr = copy_string(temp_str);
@@ -492,7 +563,7 @@ EditValue :: (label: string, value: *void, hide_label: bool, info: *Type_Info, n
                         // Value Column
                         ImGui.TableNextColumn();
                         element_data: = data + i * element_size;
-                        modified = EditValue("", element_data, true, info_array.element_type, notes) || modified;
+                        modified = EditValue("", element_data, info_array.element_type, notes) || modified;
                     }
                 }
 
@@ -557,6 +628,11 @@ parse_note :: (note_string: string) -> Note
     }
     return note;
     // find = sign, trim both sides, convert right side to all possible types
+}
+
+unique_label :: (label: string, value: *void) -> string
+{
+    return tprint("%##%", label, value);
 }
 
 #import "String";

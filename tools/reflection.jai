@@ -101,6 +101,12 @@ get_parent_type :: (info: *Type_Info) -> *Type_Info
     return null;
 }
 
+get_polymorphic_argument :: ($T: Type, info_struct: *Type_Info_Struct, index: s64) -> T
+{
+    assert(info_struct.specified_parameters.count > index);
+    return <<cast(*T)(info_struct.constant_storage.data + info_struct.specified_parameters[index].offset_into_constant_storage);
+}
+
 enum_value_to_index :: (value: *void, info_enum: *Type_Info_Enum) -> s64
 {
     assert(info_enum != null);

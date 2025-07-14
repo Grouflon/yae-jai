@@ -37,15 +37,18 @@ get_id :: (object: *$T/Object) -> ID(T)
     return .{object.id};
 }
 
-
 get_objects_by_type :: ($T: Type) -> []*T
 {
-    using registry: = *object_registry;
-    if !is_subclass_of(T, Object) return .[];
+    return cast,force([]*T)get_objects_by_type_info(type_info(T));
+}
 
-    ti: = cast(*Type_Info_Struct) type_info(T);
-    type_array: = find_or_add(*objects_by_type, ti);
-    return cast,force([]*T)<<type_array;
+get_objects_by_type_info :: (info: *Type_Info) -> []*Object
+{
+    using registry: = *object_registry;
+    if !is_subclass_of(info, Object) return .[];
+
+    type_array: = find_or_add(*objects_by_type, cast(*Type_Info_Struct)info);
+    return <<type_array;
 }
 
 object_rename :: (object: *Object, name: string)

@@ -157,13 +157,9 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     if info_struct.name == "Table"
                     {
                         assert(info_struct.specified_parameters.count == 6);
-                        assert(info_struct.specified_parameters[0].type.type == .TYPE);
-                        assert(info_struct.specified_parameters[0].offset_into_constant_storage >= 0);
-                        assert(info_struct.specified_parameters[1].type.type == .TYPE);
-                        assert(info_struct.specified_parameters[1].offset_into_constant_storage >= 0);
 
-                        key_type: *Type_Info = <<cast(**Type_Info)(info_struct.constant_storage.data + info_struct.specified_parameters[0].offset_into_constant_storage);
-                        value_type: *Type_Info = <<cast(**Type_Info)(info_struct.constant_storage.data + info_struct.specified_parameters[1].offset_into_constant_storage);
+                        key_type: = get_polymorphic_argument(*Type_Info, info_struct, 0);
+                        value_type: = get_polymorphic_argument(*Type_Info, info_struct, 1);
 
                         if key_type != type_info(StringHash)
                         {
