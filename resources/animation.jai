@@ -9,9 +9,10 @@ Animation :: struct
     frame_count: s32 = 0; @serialize
 
     sprite_events: [..]SpriteAnimationEvent; @serialize
+    box_events: [..]BoxAnimationEvent; @serialize
 }
 
-AnimationEvent :: struct // @custom_serialize(serialize_animation_event)
+AnimationEvent :: struct
 {
     begin: s32; @serialize
     end: s32 = -1; @serialize // included
@@ -21,9 +22,15 @@ SpriteAnimationEvent :: struct
 {
     #as using _event: AnimationEvent;
     sprite: *Sprite; @serialize
-    offset: Vector2; @serialize @drag;
+    offset: Vector2; @serialize;
     flip_x: bool; @serialize;
     flip_y: bool; @serialize;
+}
+
+BoxAnimationEvent :: struct
+{
+    #as using _event: AnimationEvent;
+    rect: Rect; @serialize
 }
 
 is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool
@@ -90,4 +97,5 @@ animation_unload :: (resource: *Resource)
     using t: = cast(*Animation) resource;
 
     array_reset(*sprite_events);
+    array_reset(*box_events);
 }

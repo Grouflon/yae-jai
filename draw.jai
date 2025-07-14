@@ -40,6 +40,19 @@ draw_cone :: (_start: Vector2, _target: Vector2, _angle_rad: float, _length: flo
     DrawLineV(_start, _start + tribord * _length, _color);
 }
 
+draw_outlined_rect :: (rect: Rect, color: Color = RED)
+{
+    bg_color: = color;
+    bg_color.a = bg_color.a / 2;
+
+    min_x, min_y, max_x, max_y:= get_rect_bounds(rect);
+    w: = max_x - min_x;
+    h: = max_y - min_y;
+
+    DrawRectangle(xx min_x, xx min_y, xx w, xx h, bg_color);
+    DrawRectangleLinesEx(.{min_x, min_y, w, h}, 1.0, color);
+}
+
 draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
 {
     if _frame_index >= _data.frames.count { return; }

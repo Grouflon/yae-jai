@@ -104,6 +104,11 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
 
         draw_sprite(position + event.offset, event.sprite, event.flip_x ^ flip_x, event.flip_y ^ flip_y, tint);
     }
-}
 
+    for event: current_animation.box_events
+    {
+        if !is_frame_within_event(current_frame, *event) continue;
+
+        draw_outlined_rect(position + event.rect);
+    }
 }
