@@ -31,6 +31,7 @@ BoxAnimationEvent :: struct
 {
     #as using _event: AnimationEvent;
     rect: Rect; @serialize
+    layer: u8; @serialize
 }
 
 is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool

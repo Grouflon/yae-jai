@@ -11,8 +11,8 @@
 // |_______________________|
 
 // with zoom = {1,1}
-// A -> {0,0} relative / {-w/2,h/2} absolute
-// B -> {w/2,h/2} relative / {0,0} absolute
+// A -> {0,0} relative = {-w/2,h/2} absolute
+// B -> {w/2,h/2} relative = {0,0} absolute
 
 
 ViewportBase :: struct

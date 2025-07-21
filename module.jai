@@ -1,9 +1,11 @@
 #load "animation_player.jai";
 #load "compile_time.jai";
 #load "draw.jai";
+#load "entity.jai";
 #load "log.jai";
 #load "object.jai";
 #load "pixel_perfect_viewport.jai";
+#load "physics.jai";
 #load "pool.jai";
 #load "raylib_imgui.jai";
 #load "resource.jai";

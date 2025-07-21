@@ -8,3 +8,10 @@
 
 # Pending topics
 - resource loads: who's responsible for this?
+
+# Media processing libs
+https://github.com/phoboslab/pl_mpeg/tree/master
+https://github.com/astoeckel/acinerella
+
+# Physics
+https://www.youtube.com/watch?v=Kvsvd67XUKw

@@ -109,6 +109,13 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
     {
         if !is_frame_within_event(current_frame, *event) continue;
 
-        draw_outlined_rect(position + event.rect);
+        color: = DARKGRAY;
+        if event.layer ==
+        {
+            case 0; color = GREEN;
+            case 1; color = RED;
+        }
+
+        draw_outlined_rect(position + event.rect, color);
     }
 }
