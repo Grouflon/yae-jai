@@ -4,6 +4,7 @@
 #load "log.jai";
 #load "object.jai";
 #load "pixel_perfect_viewport.jai";
+#load "pool.jai";
 #load "raylib_imgui.jai";
 #load "resource.jai";
 #load "statemachine.jai";
