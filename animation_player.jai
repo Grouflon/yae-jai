@@ -91,6 +91,19 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     current_frame = floor_to_s32(current_time_s / frame_time);
 }
 
+animation_player_get_current_box_events :: (using player: *AnimationPlayer) -> []BoxAnimationEvent
+{
+    result: [..]BoxAnimationEvent;
+    result.allocator = temporary_allocator;
+
+    for event: current_animation.box_events
+    {
+        if !is_frame_within_event(current_frame, *event) continue;
+        array_add(*result, event);
+    }
+    return result;
+}
+
 animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
     assert(player != null);
@@ -103,19 +116,5 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
         if !is_frame_within_event(current_frame, *event) continue;
 
         draw_sprite(position + event.offset, event.sprite, event.flip_x ^ flip_x, event.flip_y ^ flip_y, tint);
-    }
-
-    for event: current_animation.box_events
-    {
-        if !is_frame_within_event(current_frame, *event) continue;
-
-        color: = DARKGRAY;
-        if event.layer ==
-        {
-            case 0; color = GREEN;
-            case 1; color = RED;
-        }
-
-        draw_outlined_rect(position + event.rect, color);
     }
 }
