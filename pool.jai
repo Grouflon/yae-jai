@@ -121,7 +121,7 @@ get :: (id: PoolID($T)) -> *T
 {
     if id.pool == null return null;
 
-    item: = id.pool.items[id.index];
+    item: = *id.pool.items[id.index];
     return ifx id.generation == item.generation then *item.data else null;
 }
 
@@ -145,14 +145,14 @@ for_expansion :: (pool: Pool, body: Code, flags: For_Flags) #expand
         else
             `it: = item.data;
 
-        #insert body;       // The user's code goes here.
-
+        // Preparation for next iteration should be done before inserting body, otherwise continue will break the loop
         #if flags & .REVERSE
             index = item.previous;
         else
             index = item.next;
-
         i += 1;
+
+        #insert body;       // The user's code goes here.
     }
 }
 
