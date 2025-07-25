@@ -49,9 +49,9 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     {
         console_handle: = get_console_window_handle();
 
-        if YAE.app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), YAE.app_window_rect); }
-        if YAE.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), YAE.console_window_rect); }
         if YAE.debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, YAE.debugger_window_rect); }
+        if YAE.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), YAE.console_window_rect); }
+        if YAE.app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), YAE.app_window_rect); }
     }
 
     // Init stuff
@@ -131,9 +131,9 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
 
         // Settings cache & update
         prev_yae_state: = YAE;
-        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success YAE.app_window_rect = rect; }
-        { success, rect: = get_window_rect(get_console_window_handle());    if success YAE.console_window_rect = rect; }
         { success, rect: = get_window_rect(debugger_handle);                if success YAE.debugger_window_rect = rect; }
+        { success, rect: = get_window_rect(get_console_window_handle());    if success YAE.console_window_rect = rect; }
+        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success YAE.app_window_rect = rect; }
         
         // Update
         {

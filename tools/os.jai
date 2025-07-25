@@ -1,14 +1,28 @@
 
 get_console_window_handle :: () -> *void
 {
-#if OS == .WINDOWS
-{
-    return GetConsoleWindow();
+    #if OS == .WINDOWS
+    {
+        return GetConsoleWindow();
+    }
+    else
+    {
+        return null;
+    }
 }
-else
+
+get_window_title :: (handle: *void) -> string
 {
-    return null;
-}
+    #if OS == .WINDOWS
+    {
+        c_title: [512]u8;
+        length: = GetWindowTextA(handle, c_title.data, size_of(type_of(c_title)));
+        return copy_temporary_string(to_string(c_title.data, length));
+    }
+    else
+    {
+        return "";
+    }
 }
 
 find_window_by_title_containing :: (substring: string) -> *void
@@ -27,9 +41,7 @@ find_window_by_title_containing :: (substring: string) -> *void
             push_context ctx
             {
                 closure: *Closure = data;
-                c_title: [512]u8;
-                length: = GetWindowTextA(window, c_title.data, size_of(type_of(c_title)));
-                title: = to_string(c_title.data, length);
+                title: = get_window_title(window);
                 if contains_nocase(title, closure.substring)
                 {
                     closure.window = window;
