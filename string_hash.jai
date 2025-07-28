@@ -45,5 +45,4 @@ get_hash :: (string_hash: StringHash) -> u32
 
 Hash :: #import "Hash";
 
-#poke_name (#import "Hash_Table") operator ==;
 #poke_name Hash get_hash;

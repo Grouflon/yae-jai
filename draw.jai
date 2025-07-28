@@ -45,12 +45,12 @@ draw_outlined_rect :: (rect: Rect, color: Color = RED)
     bg_color: = color;
     bg_color.a = bg_color.a / 2;
 
-    min_x, min_y, max_x, max_y:= get_rect_bounds(rect);
-    w: = max_x - min_x;
-    h: = max_y - min_y;
+    bounds: = get_rect_bounds(rect);
+    w: = width(bounds);
+    h: = height(bounds);
 
-    DrawRectangle(xx min_x, xx min_y, xx w, xx h, bg_color);
-    DrawRectangleLinesEx(.{min_x, min_y, w, h}, 1.0, color);
+    DrawRectangleV(bounds.min, .{w, h}, bg_color);
+    DrawRectangleLinesEx(.{bounds.min.x, bounds.min.y, w, h}, 1.0, color);
 }
 
 draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)

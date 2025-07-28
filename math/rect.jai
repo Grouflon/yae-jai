@@ -21,7 +21,7 @@ operator + :: (a: Vector2, b: RectBase($T)) -> RectBase(T)
     return b + a;
 }
 
-get_rect_bounds :: (rect: RectBase($T)) -> min_x: T, min_y: T, max_x: T, max_y: T
+get_rect_bounds :: (rect: RectBase($T)) -> Bounds
 {
-    return min(rect.x, rect.x + rect.w), min(rect.y, rect.y + rect.h), max(rect.x, rect.x + rect.w), max(rect.y, rect.y + rect.h);
+    return make_bounds(Vector2.{rect.x, rect.y}, Vector2.{rect.x + rect.w, rect.y + rect.h});
 }

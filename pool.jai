@@ -24,6 +24,11 @@ PoolID :: struct($T: Type)
     generation: u32;
 }
 
+operator == :: (a: PoolID, b: PoolID) -> bool
+{
+    return a.pool == b.pool && a.index == b.index && a.generation == b.generation;
+}
+
 pool_init :: (pool: *Pool, base_size: s32 = 8, auto_expand: bool = true)
 {
     assert(pool != null);
@@ -45,7 +50,7 @@ pool_shutdown :: (using pool: *Pool)
     array_reset(*items);
 }
 
-pool_add :: (using pool: *Pool($T)) -> PoolID(T), *T
+pool_add :: (using pool: *Pool($T), $initialize:=true) -> PoolID(T), *T
 {
     assert(pool != null);
 
@@ -78,11 +83,14 @@ pool_add :: (using pool: *Pool($T)) -> PoolID(T), *T
         last_used = new_item_index;
     }
 
-    ini :: initializer_of(T);
-    #if ini {
-        ini(*item.data);
-    } else {
-        memset(*item.data, 0, size_of(T));
+    #if initialize
+    {
+        ini :: initializer_of(T);
+        #if ini {
+            ini(*item.data);
+        } else {
+            memset(*item.data, 0, size_of(T));
+        }
     }
 
     return id, *item.data;
@@ -117,12 +125,18 @@ pool_remove :: (using pool: *Pool($T), id: PoolID(T))
     first_unused = id.index;
 }
 
-get :: (id: PoolID($T)) -> *T
+get :: (id: PoolID($T), $do_checks: = true) -> *T
 {
-    if id.pool == null return null;
-
-    item: = *id.pool.items[id.index];
-    return ifx id.generation == item.generation then *item.data else null;
+    #if do_checks
+    {
+        if id.pool == null return null;
+        item: = *id.pool.items[id.index];
+        return ifx id.generation == item.generation then *item.data else null;
+    }
+    else
+    {
+        return *id.pool.items[id.index].data;
+    }
 }
 
 for_expansion :: (pool: Pool, body: Code, flags: For_Flags) #expand
@@ -175,3 +189,4 @@ pool_grow :: (using pool: *Pool($T), new_size: s64)
     }
     items[items.count-1].next = -1;
 }
+

@@ -213,6 +213,27 @@ positive_mod :: inline (v: float, divisor: float) -> float
     return fmod_cycling(v, divisor);
 }
 
+barycentric_coordinates :: (p: Vector2, a: Vector2, b: Vector2, c: Vector2) -> Vector3
+{
+    v0: = b - a;
+    v1: = c - a;
+    v2: = p - a;
+    d00: = dot(v0, v0);
+    d01: = dot(v0, v1);
+    d11: = dot(v1, v1);
+    d20: = dot(v2, v0);
+    d21: = dot(v2, v1);
+
+    denom: = d00*d11 - d01*d01;
+
+    result: Vector3 = ---;
+    result.y = (d11*d20 - d01*d21)/denom;
+    result.z = (d00*d21 - d01*d20)/denom;
+    result.x = 1 - (result.z + result.y);
+
+    return result;
+}
+
 #scope_file
 
 #import "Math";

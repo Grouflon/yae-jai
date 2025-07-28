@@ -41,6 +41,11 @@ bottom :: inline (using bounds: $T/BoundsBase) -> float
     return min.y;
 }
 
+center :: inline (using bounds: $T/BoundsBase) -> T.vector_type
+{
+    return (min + max) * 0.5;
+}
+
 width :: inline (using bounds: $T/BoundsBase) -> float
 {
     return max.x - min.x;

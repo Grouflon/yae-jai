@@ -19,6 +19,7 @@
 #load "imgui/imgui_canvas.jai";
 
 #load "math/bounds.jai";
+#load "math/collision.jai";
 #load "math/curve.jai";
 #load "math/math.jai";
 #load "math/rect.jai";
@@ -52,3 +53,6 @@
 
 #import,dir "./modules/jaison";
 ImGui :: #import,dir "./modules/ImGui";
+
+#poke_name (#import "Hash_Table") operator ==;
+#poke_name (#import "Basic") operator ==;
