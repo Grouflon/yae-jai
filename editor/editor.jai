@@ -3,6 +3,7 @@ Editor :: struct
     resources_open: bool; @serialize
     imgui_demo_open: bool; @serialize
     imgui_font_open: bool; @serialize
+    display_colliders: bool; @serialize
 
     edited_resources: [..]ResourceEditor; @serialize
 
@@ -61,6 +62,13 @@ editor_update :: (dt: float)
 
             ImGui.EndMenu();
         }
+
+        if ImGui.BeginMenu("Debug")
+        {
+            ImGui.MenuItem("Display Colliders", "", *display_colliders);
+
+            ImGui.EndMenu();
+        }
     }
     ImGui.EndMainMenuBar();
 
@@ -87,6 +95,16 @@ editor_update :: (dt: float)
         {
             resource_save_to_disk(resource_editor.resource);
         }
+    }
+}
+
+editor_draw :: ()
+{
+    using YAE.editor;
+
+    if display_colliders
+    {
+        physics_draw_colliders();
     }
 }
 

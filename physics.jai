@@ -54,7 +54,7 @@ physics_update :: (dt: float)
     }
 }
 
-physics_draw :: ()
+physics_draw_colliders :: ()
 {
     using physics;
 
@@ -70,8 +70,6 @@ physics_draw :: ()
             case 2; color = RED;
         }
         position: = ifx collider.parent != null then collider.parent.position else Vector3.{};
-
-        
 
         draw_outlined_rect(position.xy + collider.rect, color);
     }
