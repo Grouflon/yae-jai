@@ -7,15 +7,15 @@ CurveExtrapolation :: enum
 
 Curve :: struct
 {
-    points: [..]CurvePoint; // points must be kept ordered by increasing values of x
-    extrapolation: CurveExtrapolation = .CLAMP;
+    points: [..]CurvePoint; @serialize // points must be kept ordered by increasing values of x
+    extrapolation: CurveExtrapolation = .CLAMP; @serialize
 }
 
 CurvePoint :: struct
 {
-    position: Vector2;
-    back_tangent: float;
-    front_tangent: float;
+    position: Vector2; @serialize
+    back_tangent: float; @serialize
+    front_tangent: float; @serialize
 }
 
 curve_segment_bounds :: (p0: Vector2, d0: float, d1: float, p1: Vector2) -> Bounds
@@ -136,6 +136,12 @@ curve_remove_point :: (using curve: *Curve, index: int)
     assert(index >= 0 && index < points.count);
 
     array_ordered_remove_by_index(*points, index);
+}
+
+curve_reset :: (using curve: *Curve)
+{
+    array_reset(*points);
+    <<curve = .{};
 }
 
 CurveEditor :: struct
@@ -377,6 +383,14 @@ EditValue :: (label: string, value: *Curve) -> bool
                     curve_set_point_position(edited_curve, context_menu_point, .{x, y});
                     edited = true;
                 }
+                if ImGui.InputFloat("front tangent", *edited_curve.points[context_menu_point].front_tangent)
+                {
+                    edited = true;
+                }
+                if ImGui.InputFloat("back tangent", *edited_curve.points[context_menu_point].back_tangent)
+                {
+                    edited = true;
+                }
 
                 if ImGui.Selectable("Remove point")
                 {
@@ -402,6 +416,11 @@ EditValue :: (label: string, value: *Curve) -> bool
             }
 
             // Common options
+            zoom: = canvas.zoom;
+            if ImGui.DragFloat2("Zoom", xx *zoom.x, 0.1, 0.00000001)
+            {
+                canvas_zoom(*canvas, context_menu_position, zoom);
+            }
             if ImGui.Selectable("Fit canvas to curve")
             {
                 fit_canvas_to_curve(*canvas, value);
@@ -459,7 +478,8 @@ tangent_screen_position :: (using canvas: *ImGuiCanvas, point: CurvePoint, sign:
     TANGENT_RADIUS :: 75.0;
 
     point_screen: = canvas_to_screen(canvas, point.position);
-    tangent: = point.position + rotate(Vector2.{sign,0}, atan(ifx sign > 0 then point.front_tangent else point.back_tangent));
+    tangent_direction: = rotate(Vector2.{sign,0}, atan(ifx sign > 0 then point.front_tangent else point.back_tangent));
+    tangent: = point.position + tangent_direction;
     tangent_screen_direction: = normalize(canvas_to_screen(canvas, tangent) - point_screen);
     return point_screen + tangent_screen_direction * TANGENT_RADIUS;
 }

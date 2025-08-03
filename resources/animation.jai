@@ -10,6 +10,7 @@ Animation :: struct
 
     sprite_events: [..]SpriteAnimationEvent; @serialize
     box_events: [..]BoxAnimationEvent; @serialize
+    movement_events: [..]MovementAnimationEvent; @serialize
 }
 
 AnimationEvent :: struct
@@ -22,16 +23,23 @@ SpriteAnimationEvent :: struct
 {
     #as using _event: AnimationEvent;
     sprite: *Sprite; @serialize
-    offset: Vector2; @serialize;
-    flip_x: bool; @serialize;
-    flip_y: bool; @serialize;
+    offset: Vector2; @serialize
+    flip_x: bool; @serialize
+    flip_y: bool; @serialize
 }
 
 BoxAnimationEvent :: struct
 {
     #as using _event: AnimationEvent;
     rect: Rect; @serialize
-    layer: u8; @serialize
+    physics_layer: u8; @serialize
+}
+
+MovementAnimationEvent :: struct
+{
+    #as using _event: AnimationEvent;
+    x_movement: Curve; @serialize
+    y_movement: Curve; @serialize
 }
 
 is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool
@@ -99,4 +107,11 @@ animation_unload :: (resource: *Resource)
 
     array_reset(*sprite_events);
     array_reset(*box_events);
+
+    for m: movement_events
+    {
+        curve_reset(*m.x_movement);
+        curve_reset(*m.y_movement);
+    }
+    array_reset(*movement_events);
 }

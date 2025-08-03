@@ -1,6 +1,7 @@
 AnimationPlayer :: struct
 {
     current_animation: *Animation;
+    current_movement: Vector2;
     current_time_s: float = 0.0;
     current_frame: s32 = -1;
     current_repeat_count: s32;
@@ -17,6 +18,7 @@ animation_player_set_animation :: (using player: *AnimationPlayer, animation: *A
     animation_player_stop(player);
 
     current_animation = animation;
+    current_movement = .{};
     current_time_s = 0.0;
     current_frame = 0;
     current_repeat_count = 0;
@@ -76,6 +78,7 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     if !is_playing { return; }
     if current_animation == null { return; }
 
+    previous_time_s: = current_time_s;
     current_time_s += dt;
 
     // Update loops
@@ -88,7 +91,47 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     }
 
     // Update frame
-    current_frame = floor_to_s32(current_time_s / frame_time);
+    previous_frame_float: = previous_time_s / frame_time;
+    current_frame_float: = current_time_s / frame_time;
+    current_frame = floor_to_s32(current_frame_float);
+
+    // Accumulate movement
+    current_movement = .{};
+    if dt != 0
+    {
+        for event: current_animation.movement_events
+        {
+            if !(is_frame_within_event(current_frame, *event) || is_frame_within_event(floor_to_s32(previous_frame_float), *event)) continue;
+
+            begin_float: float = xx event.begin;
+            end_float: float = xx event.end;
+            range: = (end_float - begin_float) + 1;
+
+            begin: float = 0;
+            end: float = 1;
+            movememt_begin_frame: = max(previous_frame_float, begin_float);
+            movememt_end_frame: = min(current_frame_float, end_float + 1.0);
+            begin = (movememt_begin_frame - begin_float) / range;
+            end = (movememt_end_frame - begin_float) / range;
+
+            x_movement: = 0.0;
+            y_movement: = 0.0;
+            if end < begin
+            {
+                x_movement += curve_evaluate(event.x_movement, 1) - curve_evaluate(event.x_movement, begin);
+                y_movement += curve_evaluate(event.y_movement, 1) - curve_evaluate(event.y_movement, begin);
+                x_movement += curve_evaluate(event.x_movement, end) - curve_evaluate(event.x_movement, 0);
+                y_movement += curve_evaluate(event.y_movement, end) - curve_evaluate(event.y_movement, 0);
+            }
+            else
+            {
+                x_movement += curve_evaluate(event.x_movement, end) - curve_evaluate(event.x_movement, begin);
+                y_movement += curve_evaluate(event.y_movement, end) - curve_evaluate(event.y_movement, begin);
+            }
+
+            current_movement += .{x_movement, y_movement};
+        }
+    }
 }
 
 animation_player_get_current_box_events :: (using player: *AnimationPlayer) -> []BoxAnimationEvent

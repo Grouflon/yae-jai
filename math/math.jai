@@ -126,6 +126,8 @@ parametric_curve_bounds :: inline (tangent0: float, tangent1: float) -> Bounds
     b: = -4*tangent0 - 2*tangent1 + 6;
     c: = tangent0;
 
+    if a == 0 return bounds;
+
     determinant: = sqrt(b*b - 4*a*c);
     x0: = (-b + determinant) / (2*a);
     x1: = (-b - determinant) / (2*a);

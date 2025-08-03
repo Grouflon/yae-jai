@@ -5,6 +5,8 @@
 # Todo
 - regenerate raylib bindings to allow log callback override. (check removing generator_options.strip_flags & .FUNCTIONS_WITH_VALIST)
 - Merge ViewportBase, PixelPerfectViewport and ImGuiViewport
+- Fix Curve editor tangent having non ergonomic directions when x/y != 1
+- Animation Player: play rate + reverse play
 
 # Pending topics
 - resource loads: who's responsible for this?

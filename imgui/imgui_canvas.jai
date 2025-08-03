@@ -195,6 +195,13 @@ canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
     return screen_position;
 }
 
+canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: Vector2)
+{
+    o: = anchor_position - draw_origin + .{0, -draw_size.y};
+    scrolling = ((new_zoom / zoom) * (scrolling - o)) + o;
+    zoom = new_zoom;
+}
+
 #scope_file
 
 imgui_canvas_fit_to_points :: (using canvas: *ImGuiCanvas, screen_p0: Vector2, canvas_p0: Vector2, screen_p1: Vector2, canvas_p1: Vector2)
@@ -208,13 +215,6 @@ imgui_canvas_fit_to_points :: (using canvas: *ImGuiCanvas, screen_p0: Vector2, c
 
     o: = draw_origin + .{0, draw_size.y};
     scrolling = screen_p0 - o - (zoom * canvas_p0 * f);
-}
-
-canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: Vector2)
-{
-    o: = anchor_position - draw_origin + .{0, -draw_size.y};
-    scrolling = ((new_zoom / zoom) * (scrolling - o)) + o;
-    zoom = new_zoom;
 }
 
 rl:: #import "raylib";
