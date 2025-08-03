@@ -3,7 +3,7 @@
 - also log for serializers
 
 # Todo
-- regenerate raylib bindings to allow log callback override. (check removing generator_options.strip_flags & .FUNCTIONS_WITH_VALIST)
+- Move Raylib to yae instead of using a submodule
 - Merge ViewportBase, PixelPerfectViewport and ImGuiViewport
 - Fix Curve editor tangent having non ergonomic directions when x/y != 1
 - Animation Player: play rate + reverse play

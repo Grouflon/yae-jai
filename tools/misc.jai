@@ -128,6 +128,14 @@ cprint :: (format_string: string, args: .. Any) -> *u8
     return temp_c_string(tprint(format_string, ..args));
 }
 
+c_format_string :: (fmt: *u8, args: *void) -> string
+{
+    BUFFER_SIZE :: 1024;
+    buffer: [BUFFER_SIZE]u8;
+    result: = vsnprintf(buffer.data, BUFFER_SIZE, fmt, args);
+    return copy_temporary_string(to_string(buffer.data, result));
+}
+
 mem_swap :: (a: *void, b: *void, size: s64)
 {
     tmp: = talloc(size);
@@ -135,3 +143,6 @@ mem_swap :: (a: *void, b: *void, size: s64)
     memcpy(b, a, size);
     memcpy(a, tmp, size);
 }
+
+#scope_file
+vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s64 #foreign;
