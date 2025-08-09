@@ -261,8 +261,8 @@ resource_manager_update :: ()
     {
         if resource.load_count == 0 { continue; }
         log_verbose("Reloading \"%\"...", resource.name, section= *RESOURCE_LOG_SECTION);
-        if resource.unload_function != null { resource.unload_function(resource); }
-        if resource.load_function != null { resource.load_function(resource); }
+        resource_unload(resource);
+        resource_load(resource);
         log("Reloaded \"%\"", resource.name, section= *RESOURCE_LOG_SECTION);
     }
     array_clear(*resources_to_reload);
