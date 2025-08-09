@@ -104,8 +104,8 @@ table_clear :: (table: *Table)
 
 table_reset_and_free :: (table: *Table)
 {
-    table_reset(table);
     table_free(table);
+    <<table = .{};
 }
 
 table_free :: (table: *Table)
