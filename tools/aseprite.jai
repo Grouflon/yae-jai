@@ -94,7 +94,6 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
     {
         json_frames: = json_get(json_data, "frames");
         
-
         if json_frames.type == .ARRAY
         {
             array_resize(*aseprite.frames, json_frames.array.count);
@@ -265,7 +264,7 @@ parse_frame :: (_value: JSON_Value) -> AsepriteFrame
     frame.trimmed = json_get(_value, "trimmed", .BOOLEAN).boolean;
     frame.sprite_source_size = parse_box(json_get(_value, "spriteSourceSize"));
     frame.source_size = parse_box(json_get(_value, "sourceSize"));
-    frame.duration_in_ms = cast(s32)json_get(_value, "duration", .NUMBER).number;
+    frame.duration_in_ms = xx json_get(_value, "duration", .NUMBER).number;
     return frame;
 }
 
