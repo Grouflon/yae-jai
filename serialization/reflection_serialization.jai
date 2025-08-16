@@ -115,8 +115,8 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 case type_info(StringHash);
                 {
                     string_hash_ptr: = cast(*StringHash)data;
-                    str : =  string_hash_ptr.str;
-                    if !serialize(serializer, *str, key) return false;
+                    str: =  string_hash_ptr.str;
+                    if !serialize(serializer, *str, key, *temporary_allocator) return false;
                     <<string_hash_ptr = string_hash(str);
                     return true;
                 }
