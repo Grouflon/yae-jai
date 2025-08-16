@@ -128,9 +128,8 @@ cprint :: (format_string: string, args: .. Any) -> *u8
     return temp_c_string(tprint(format_string, ..args));
 }
 
-c_format_string :: (fmt: *u8, args: *void) -> string
+c_format_string :: (fmt: *u8, args: *void, $BUFFER_SIZE: = 1024) -> string
 {
-    BUFFER_SIZE :: 1024;
     buffer: [BUFFER_SIZE]u8;
     result: = vsnprintf(buffer.data, BUFFER_SIZE, fmt, args);
     return copy_temporary_string(to_string(buffer.data, result));

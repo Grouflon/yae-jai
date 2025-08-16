@@ -1,4 +1,5 @@
 YAE_DEBUG_MEMORY :: (OS != .WASM);
+RAYLIB_LOG_SECTION :: Log_Section.{ "Raylib" };
 
 YAE : struct
 {
@@ -29,7 +30,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     log_verbose("working directory: %", get_working_directory());
 
     // Init core stuff
-    object_registry_init(compile_time_info.object_types);
+    // object_registry_init(compile_time_info.object_types);
     resource_manager_init(compile_time_info.resource_types);
     serialization_manager_init(compile_time_info.custom_serialize_types);
     physics_init();
@@ -43,7 +44,7 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     rl.SetExitKey(.KEY_NULL);
 
     // Gather resources
-    resource_manager_gather_and_watch_resources("data");
+    // resource_manager_gather_and_watch_resources("data");
 
     // Read settings
     if read_json_file(YAE_SETTINGS_PATH, *YAE)
@@ -82,8 +83,8 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     };
     raylib_imgui_init(imgui_config);
 
-    log_unindent();
     log_verbose("yae initialized.");
+    log_unindent();
 }
 
 yae_shutdown :: ()
@@ -102,7 +103,7 @@ yae_shutdown :: ()
     physics_shutdown();
     serialization_manager_shutdown();
     resource_manager_shutdown();
-    object_registry_shutdown();
+    // object_registry_shutdown();
     free_string_hash_repository();
 
     // Memory leak check
@@ -117,8 +118,8 @@ yae_shutdown :: ()
         }
     }
 
-    log_unindent();
     log_verbose("yae shut down.");
+    log_unindent();
 }
 
 yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
@@ -186,7 +187,7 @@ tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
             case .RL_LOG_TRACE; #through;
             case .RL_LOG_DEBUG;
             {
-                log_verbose(t);
+                log_verbose(t, section = *RAYLIB_LOG_SECTION);
             }
             case;
             {
@@ -194,12 +195,12 @@ tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
             }
             case .RL_LOG_WARNING;
             {
-                log_warning(t);
+                log_warning(t, section = *RAYLIB_LOG_SECTION);
             }
             case .RL_LOG_ERROR;
             case .RL_LOG_FATAL;
             {
-                log_error(t);
+                log_error(t, section = *RAYLIB_LOG_SECTION);
             }
         }
     }

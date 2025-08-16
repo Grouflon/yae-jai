@@ -27,22 +27,33 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
     {
         size_available: = ImGui.GetContentRegionAvail();
 
-        THUMBNAIL_SIZE: = Vector2.{64, 64};
         SPACING: = 10.0;
+        line_width: = 0.0;
 
-        sprites_per_line: s32 = max(cast(s32)floor(size_available.x / (THUMBNAIL_SIZE.x + SPACING)), 1);
-
-        ratio: = size_available.x / cast(float)texture_file.texture.width;
-
-        for sprite_res, i: texture_file.sprites
+        for sprite, i: texture_file.sprites
         {
-            if (i % sprites_per_line != 0) ImGui.SameLine(spacing=SPACING);
+            sprite_size: = size(sprite.bounds);
 
-            texture_size: = Vector2.{ xx sprite_res.texture.texture.width, xx sprite_res.texture.texture.height };
-            uv0: = sprite_res.bounds.min / texture_size;
-            uv1: = sprite_res.bounds.max / texture_size;
+            if line_width != 0
+            {
+                line_width += SPACING;
+                if line_width + sprite_size.x <= size_available.x
+                {
+                    ImGui.SameLine(spacing=SPACING);
+                }
+                else
+                {
+                    line_width = 0;
+                }
+            }
+            line_width += sprite_size.x;
 
-            ImGui.Image(sprite_res.texture.texture.id, THUMBNAIL_SIZE, uv0, uv1);
+            texture_size: = Vector2.{ xx texture_file.texture.width, xx texture_file.texture.height };
+            uv0: = sprite.bounds.min / texture_size;
+            uv1: = sprite.bounds.max / texture_size;
+
+            ImGui.Image(texture_file.texture.id, sprite_size, uv0, uv1);
+            ImGui.SetItemTooltip("%", sprite.name.str);
         }
     }
 

@@ -48,7 +48,7 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
         return false;
     }
 
-    dockspace_id: = ImGui.GetID(tprint("% animation_dockspace", resource_editor.resource.id));
+    dockspace_id: = ImGui.GetID(tprint("% animation_dockspace", resource_editor.resource.name));
     animation_editor_window_class: = ImGui.WindowClass.{ ClassId = dockspace_id };
     dockspace_size: = max(ImGui.GetContentRegionAvail(), xy(16));
     animation_changed: = false;
@@ -115,9 +115,9 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
 #scope_file
 
-properties_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf03a Properties##%", editor.resource.id)); }
-timeline_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf008 Timeline##%", editor.resource.id)); }
-viewport_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("Viewport##%", editor.resource.id)); }
+properties_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf03a Properties##%", editor.resource)); }
+timeline_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf008 Timeline##%", editor.resource)); }
+viewport_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("Viewport##%", editor.resource)); }
 
 ZOOM_STEP :: 0.5;
 
@@ -128,34 +128,34 @@ animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
     animation_changed: = false;
     animation: = editor.player.current_animation;
     assert(animation != null);
-    sprites: = get_objects_by_type(Sprite);
-    event_ptr: = animation.events.data + selected_event_index;
+    // sprites: = get_objects_by_type(Sprite);
+    // event_ptr: = animation.events.data + selected_event_index;
 
-    animation_changed = ImGui.EditValue("type", *event_ptr.type) || animation_changed;
-    animation_changed = ImGui.EditValue("event_condition", *event_ptr.event_condition) || animation_changed;
-    animation_changed = ImGui.EditValue("dummy_string", *event_ptr.dummy_string) || animation_changed;
-    animation_changed = ImGui.EditValue("begin", *event_ptr.begin) || animation_changed;
-    animation_changed = ImGui.EditValue("end", *event_ptr.end) || animation_changed;
+    // animation_changed = ImGui.EditValue("type", *event_ptr.type) || animation_changed;
+    // animation_changed = ImGui.EditValue("event_condition", *event_ptr.event_condition) || animation_changed;
+    // animation_changed = ImGui.EditValue("dummy_string", *event_ptr.dummy_string) || animation_changed;
+    // animation_changed = ImGui.EditValue("begin", *event_ptr.begin) || animation_changed;
+    // animation_changed = ImGui.EditValue("end", *event_ptr.end) || animation_changed;
 
-    if event_ptr.type ==
-    {
-        case .SPRITE;
-        {
-            if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
-            {
-                if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
-                for sprite: sprites
-                {
-                    if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
-                }
-                ImGui.EndCombo();
-            }
-        }
-        case .FLIP;
-        {
-            animation_changed = ImGui.EditValue("flip_type", *event_ptr.flip.flip_type) || animation_changed;
-        }
-    }
+    // if event_ptr.type ==
+    // {
+    //     case .SPRITE;
+    //     {
+    //         if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
+    //         {
+    //             if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
+    //             for sprite: sprites
+    //             {
+    //                 if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
+    //             }
+    //             ImGui.EndCombo();
+    //         }
+    //     }
+    //     case .FLIP;
+    //     {
+    //         animation_changed = ImGui.EditValue("flip_type", *event_ptr.flip.flip_type) || animation_changed;
+    //     }
+    // }
 
     return animation_changed;
 }
@@ -211,214 +211,214 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             ImGui.TableHeader(name);
         }
 
-        layer_to_delete: s32 = -1;
-        for layer, i: animation.layers
-        {
-            ImGui.PushID(cast(s32) i);
-            defer ImGui.PopID();
+        // layer_to_delete: s32 = -1;
+        // for layer, i: animation.layers
+        // {
+        //     ImGui.PushID(cast(s32) i);
+        //     defer ImGui.PopID();
 
-            ImGui.TableNextRow();
-            ImGui.TableSetColumnIndex(0);
+        //     ImGui.TableNextRow();
+        //     ImGui.TableSetColumnIndex(0);
 
-            // Layer Name
-            if edited_layer_name_index == i
-            {
-                if focus_requested
-                {
-                    focus_requested = false;
-                    ImGui.SetKeyboardFocusHere(0);
-                }
+        //     // Layer Name
+        //     if edited_layer_name_index == i
+        //     {
+        //         if focus_requested
+        //         {
+        //             focus_requested = false;
+        //             ImGui.SetKeyboardFocusHere(0);
+        //         }
 
-                ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().x);
-                if ImGui.InputText("", *layer.name, .AutoSelectAll)
-                {
-                    animation_changed = true;
-                }
+        //         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().x);
+        //         if ImGui.InputText("", *layer.name, .AutoSelectAll)
+        //         {
+        //             animation_changed = true;
+        //         }
 
-                // Edit exit
-                if (!ImGui.IsItemHovered() && ImGui.IsMouseClicked(.Left)) ||
-                    ImGui.IsKeyPressed(.Escape) ||
-                    ImGui.IsKeyPressed(.Enter)
-                {
-                    edited_layer_name_index = -1;
-                }
-            }
-            else
-            {
-                ImGui.Selectable(temp_c_string(layer.name));
+        //         // Edit exit
+        //         if (!ImGui.IsItemHovered() && ImGui.IsMouseClicked(.Left)) ||
+        //             ImGui.IsKeyPressed(.Escape) ||
+        //             ImGui.IsKeyPressed(.Enter)
+        //         {
+        //             edited_layer_name_index = -1;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         ImGui.Selectable(temp_c_string(layer.name));
 
-                // Edit enter
-                if ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(.Left)
-                {
-                    edited_layer_name_index = xx i;
-                    focus_requested = true;
-                }
-            }
+        //         // Edit enter
+        //         if ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(.Left)
+        //         {
+        //             edited_layer_name_index = xx i;
+        //             focus_requested = true;
+        //         }
+        //     }
 
-            // Layer Context menu
-            if ImGui.BeginPopupContextItem()
-            {
-                if ImGui.MenuItem("Delete layer")
-                {
-                    layer_to_delete = xx i;
-                    if edited_layer_name_index == i
-                    {
-                        edited_layer_name_index = -1;
-                    }
-                    else if edited_layer_name_index > i
-                    {
-                        edited_layer_name_index -= 1;
-                    }
-                }
+        //     // Layer Context menu
+        //     if ImGui.BeginPopupContextItem()
+        //     {
+        //         if ImGui.MenuItem("Delete layer")
+        //         {
+        //             layer_to_delete = xx i;
+        //             if edited_layer_name_index == i
+        //             {
+        //                 edited_layer_name_index = -1;
+        //             }
+        //             else if edited_layer_name_index > i
+        //             {
+        //                 edited_layer_name_index -= 1;
+        //             }
+        //         }
 
-                ImGui.EndPopup();
-            }
+        //         ImGui.EndPopup();
+        //     }
 
-            if i == 0
-            {
-                ImGui.TableSetColumnIndex(1);
-                timeline_frame_origin = ImGui.GetCursorScreenPos() + .{-4, -1};
-            }
-        }
-        if layer_to_delete >= 0
-        {
-            animation_remove_layer(animation, layer_to_delete);
-            animation_changed = true;
-        }
+        //     if i == 0
+        //     {
+        //         ImGui.TableSetColumnIndex(1);
+        //         timeline_frame_origin = ImGui.GetCursorScreenPos() + .{-4, -1};
+        //     }
+        // }
+        // if layer_to_delete >= 0
+        // {
+        //     animation_remove_layer(animation, layer_to_delete);
+        //     animation_changed = true;
+        // }
 
-        ImGui.TableNextRow();
-        ImGui.TableSetColumnIndex(0);
-        if ImGui.Button("New Layer", .{ImGui.GetContentRegionAvail().x, 0})
-        {
-            animation_add_layer(animation, tprint("layer %", animation.layers.count));
-            animation_changed = true;
-        }
+        // ImGui.TableNextRow();
+        // ImGui.TableSetColumnIndex(0);
+        // if ImGui.Button("New Layer", .{ImGui.GetContentRegionAvail().x, 0})
+        // {
+        //     animation_add_layer(animation, tprint("layer %", animation.layers.count));
+        //     animation_changed = true;
+        // }
 
-        // Frames section
-        if ImGui.GetScrollMaxX() > 0 timeline_frame_end.y -= 12;
-        if ImGui.GetScrollMaxY() > 0 timeline_frame_end.x -= 12;
-        draw_list: = ImGui.GetWindowDrawList();
+        // // Frames section
+        // if ImGui.GetScrollMaxX() > 0 timeline_frame_end.y -= 12;
+        // if ImGui.GetScrollMaxY() > 0 timeline_frame_end.x -= 12;
+        // draw_list: = ImGui.GetWindowDrawList();
 
-        // Draw frame line
-        draw_list.PushClipRect(draw_list, timeline_frame_begin, timeline_frame_end);
-        if editor.player.current_frame >= 0
-        {
-            line_x: = (editor.player.current_frame + 1) * CELL_WIDTH - 1;
-            draw_list.AddLine(draw_list, .{timeline_frame_origin.x + line_x, timeline_frame_origin.y - (CELL_HEIGHT+1)}, .{timeline_frame_origin.x + line_x, timeline_frame_end.y}, 0xff00ffff);
-        }
+        // // Draw frame line
+        // draw_list.PushClipRect(draw_list, timeline_frame_begin, timeline_frame_end);
+        // if editor.player.current_frame >= 0
+        // {
+        //     line_x: = (editor.player.current_frame + 1) * CELL_WIDTH - 1;
+        //     draw_list.AddLine(draw_list, .{timeline_frame_origin.x + line_x, timeline_frame_origin.y - (CELL_HEIGHT+1)}, .{timeline_frame_origin.x + line_x, timeline_frame_end.y}, 0xff00ffff);
+        // }
 
-        // Draw events
-        draw_list.PushClipRect(draw_list, timeline_frame_begin + .{0, CELL_HEIGHT}, timeline_frame_end);
-        // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF); // debug: see clipping rect
-        clicked_on_something: = false;
-        for event, event_i: animation.events
-        {
-            DIAMOND_RADIUS :: 5;
-            center: Vector2 = timeline_frame_origin + Vector2.{ cast(float)(event.begin+1) * CELL_WIDTH, (CELL_HEIGHT * 0.5) + cast(float)event.layer_index * CELL_HEIGHT };
-            color: u32 = 0xffe0873d;
+        // // Draw events
+        // draw_list.PushClipRect(draw_list, timeline_frame_begin + .{0, CELL_HEIGHT}, timeline_frame_end);
+        // // draw_list.AddRect(draw_list, timeline_frame_begin, timeline_frame_end, 0xFF0000FF); // debug: see clipping rect
+        // clicked_on_something: = false;
+        // for event, event_i: animation.events
+        // {
+        //     DIAMOND_RADIUS :: 5;
+        //     center: Vector2 = timeline_frame_origin + Vector2.{ cast(float)(event.begin+1) * CELL_WIDTH, (CELL_HEIGHT * 0.5) + cast(float)event.layer_index * CELL_HEIGHT };
+        //     color: u32 = 0xffe0873d;
 
-            if ImGui.IsWindowHovered() && length(ImGui.GetMousePos() - center) <= DIAMOND_RADIUS
-            {
-                color = 0xffffb679;
+        //     if ImGui.IsWindowHovered() && length(ImGui.GetMousePos() - center) <= DIAMOND_RADIUS
+        //     {
+        //         color = 0xffffb679;
 
-                if ImGui.IsMouseClicked(.Left)
-                {
-                    selected_event_index = xx event_i;
-                    clicked_on_something = true;
-                }
-            }
+        //         if ImGui.IsMouseClicked(.Left)
+        //         {
+        //             selected_event_index = xx event_i;
+        //             clicked_on_something = true;
+        //         }
+        //     }
 
-            draw_list.AddNgonFilled(draw_list, center, DIAMOND_RADIUS, color, 4);
-            if selected_event_index == event_i
-            {
-                draw_list.AddNgon(draw_list, center, DIAMOND_RADIUS+1, 0xffffb679, 4);
-            }
-        }
+        //     draw_list.AddNgonFilled(draw_list, center, DIAMOND_RADIUS, color, 4);
+        //     if selected_event_index == event_i
+        //     {
+        //         draw_list.AddNgon(draw_list, center, DIAMOND_RADIUS+1, 0xffffb679, 4);
+        //     }
+        // }
 
-        // Clicks on timeline
-        // @NOTE(remi): Should probably move above events drawing, so that we dont mix up logic and drawing like now
-        previous_is_drag_zone_hovered: = is_drag_zone_hovered;
-        is_drag_zone_hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false);
-        if is_drag_zone_hovered
-        {
-            relative_mouse_pos: = ImGui.GetMousePos() - timeline_frame_origin;
-            hovered_frame: = cast(s32) round(relative_mouse_pos.x / CELL_WIDTH) - 1;
-            hovered_layer: = cast(s32) floor(relative_mouse_pos.y / CELL_HEIGHT);
-            is_valid_cell: = hovered_frame >= 0 && hovered_frame < xx animation.frame_count && hovered_layer >= 0 && hovered_layer < animation.layers.count;
+        // // Clicks on timeline
+        // // @NOTE(remi): Should probably move above events drawing, so that we dont mix up logic and drawing like now
+        // previous_is_drag_zone_hovered: = is_drag_zone_hovered;
+        // is_drag_zone_hovered = ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(timeline_frame_begin, timeline_frame_end, false);
+        // if is_drag_zone_hovered
+        // {
+        //     relative_mouse_pos: = ImGui.GetMousePos() - timeline_frame_origin;
+        //     hovered_frame: = cast(s32) round(relative_mouse_pos.x / CELL_WIDTH) - 1;
+        //     hovered_layer: = cast(s32) floor(relative_mouse_pos.y / CELL_HEIGHT);
+        //     is_valid_cell: = hovered_frame >= 0 && hovered_frame < xx animation.frame_count && hovered_layer >= 0 && hovered_layer < animation.layers.count;
 
-            ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+        //     ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
 
-            // Clear event
-            if ImGui.IsMouseClicked(.Left) && !clicked_on_something
-            {
-                selected_event_index = -1;
-            }
+        //     // Clear event
+        //     if ImGui.IsMouseClicked(.Left) && !clicked_on_something
+        //     {
+        //         selected_event_index = -1;
+        //     }
 
-            // Hover events
-            EVENT_POPUP_NAME :: "frame event";
-            if is_valid_cell && ImGui.IsMouseClicked(.Right)
-            {
-                event_popup_frame = hovered_frame;
-                event_popup_layer = hovered_layer;
-                ImGui.OpenPopup(EVENT_POPUP_NAME);
-            }
+        //     // Hover events
+        //     EVENT_POPUP_NAME :: "frame event";
+        //     if is_valid_cell && ImGui.IsMouseClicked(.Right)
+        //     {
+        //         event_popup_frame = hovered_frame;
+        //         event_popup_layer = hovered_layer;
+        //         ImGui.OpenPopup(EVENT_POPUP_NAME);
+        //     }
 
-            // Drag event
-            if is_valid_cell && selected_event_index >= 0 && ImGui.IsMouseDragging(.Left)
-            {
-                animation.events[selected_event_index].layer_index = hovered_layer;
-                animation.events[selected_event_index].begin = hovered_frame;
-            }
+        //     // Drag event
+        //     if is_valid_cell && selected_event_index >= 0 && ImGui.IsMouseDragging(.Left)
+        //     {
+        //         animation.events[selected_event_index].layer_index = hovered_layer;
+        //         animation.events[selected_event_index].begin = hovered_frame;
+        //     }
 
-            // Pick Frame
-            if selected_event_index < 0 && ImGui.IsMouseDown(.Left)
-            {
-                frame: = clamp(hovered_frame, 0, animation.frame_count-1);
-                animation_player_stop(*editor.player);
-                animation_player_set_frame(*editor.player, frame);
-            }
-        }
+        //     // Pick Frame
+        //     if selected_event_index < 0 && ImGui.IsMouseDown(.Left)
+        //     {
+        //         frame: = clamp(hovered_frame, 0, animation.frame_count-1);
+        //         animation_player_stop(*editor.player);
+        //         animation_player_set_frame(*editor.player, frame);
+        //     }
+        // }
 
-        // Disable window drag
-        if !previous_is_drag_zone_hovered && is_drag_zone_hovered
-        {
-            editor_push_window_drag_disabled();
-        }
-        else if previous_is_drag_zone_hovered && !is_drag_zone_hovered
-        {
-            editor_pop_window_drag_disabled();
-        }
+        // // Disable window drag
+        // if !previous_is_drag_zone_hovered && is_drag_zone_hovered
+        // {
+        //     editor_push_window_drag_disabled();
+        // }
+        // else if previous_is_drag_zone_hovered && !is_drag_zone_hovered
+        // {
+        //     editor_pop_window_drag_disabled();
+        // }
 
-        // Event popup
-        if ImGui.BeginPopup("frame event")
-        {
-            if ImGui.BeginMenu("Add Event")
-            {
-                enum_info: = cast(*Type_Info_Enum) type_info(AnimationEventType);
+        // // Event popup
+        // if ImGui.BeginPopup("frame event")
+        // {
+        //     if ImGui.BeginMenu("Add Event")
+        //     {
+        //         enum_info: = cast(*Type_Info_Enum) type_info(AnimationEventType);
 
-                for value: enum_info.values
-                {
-                    if value == xx AnimationEventType.NONE continue;
+        //         for value: enum_info.values
+        //         {
+        //             if value == xx AnimationEventType.NONE continue;
 
-                    if ImGui.MenuItem(temp_c_string(enum_value_to_name(cast(AnimationEventType) value)))
-                    {
-                        animation_add_event(animation, .{ type = .SPRITE, layer_index = xx event_popup_layer, begin = xx event_popup_frame });
-                        animation_changed = true;
-                    }
-                }
-                ImGui.EndMenu();
-            }
+        //             if ImGui.MenuItem(temp_c_string(enum_value_to_name(cast(AnimationEventType) value)))
+        //             {
+        //                 animation_add_event(animation, .{ type = .SPRITE, layer_index = xx event_popup_layer, begin = xx event_popup_frame });
+        //                 animation_changed = true;
+        //             }
+        //         }
+        //         ImGui.EndMenu();
+        //     }
 
-            ImGui.EndPopup();
-        }
+        //     ImGui.EndPopup();
+        // }
 
-        // Keyboard shortcuts
-        if selected_event_index >= 0 && ImGui.IsWindowFocused() && ImGui.IsKeyPressed(.Delete)
-        {
-            animation_remove_event(animation, selected_event_index);
-            selected_event_index = -1;
-            animation_changed = true;
-        }
+        // // Keyboard shortcuts
+        // if selected_event_index >= 0 && ImGui.IsWindowFocused() && ImGui.IsKeyPressed(.Delete)
+        // {
+        //     animation_remove_event(animation, selected_event_index);
+        //     selected_event_index = -1;
+        //     animation_changed = true;
+        // }
     }
 
     return animation_changed;

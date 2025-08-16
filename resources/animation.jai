@@ -1,7 +1,7 @@
 Animation :: struct
 {
     #as using _resource: Resource;
-
+    type = type_info(Animation);
     load_function = animation_load;
     unload_function = animation_unload;
 
@@ -22,7 +22,7 @@ AnimationEvent :: struct
 SpriteAnimationEvent :: struct
 {
     #as using _event: AnimationEvent;
-    sprite: *Sprite; @serialize
+    sprite: SpriteHandle; @serialize
     offset: Vector2; @serialize
     flip_x: bool; @serialize
     flip_y: bool; @serialize
@@ -52,20 +52,19 @@ animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
 {
     bounds: Bounds;
     initialized: = false;
-    frame_events: = animation_get_events_for_frame(animation, frame);
-    for event: frame_events
+    for event: animation.sprite_events
     {
-        if event.type != .SPRITE continue;
-        if event.sprite.sprite == null continue;
+        sprite: = get_sprite(event.sprite);
+        if sprite == null continue;
 
         if !initialized
         {
-            bounds = event.sprite.sprite.bounds;
+            bounds = sprite.bounds;
             initialized = true;
         }
         else
         {
-            bounds = combine(bounds, event.sprite.sprite.bounds);
+            bounds = combine(bounds, sprite.bounds);
         }
     }
 

@@ -5,13 +5,12 @@ resource_browser_update :: ()
     table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg | .Sortable | .Hideable;
 
     COLUMNS :: ImGui_ColumnDefinition.[
-        .{"ID", 0, 0},
         .{"Name", .NoHide, 0},
         .{"Type", 0, 0},
         .{"Load count", 0, 0},
     ];
 
-    resources: = get_objects_by_type(Resource);
+    resources: = get_resources_by_type(Resource);
 
     if ImGui.BeginTable("resource_browser", COLUMNS.count, table_flags, .{0, 0})
     {
@@ -37,10 +36,9 @@ resource_browser_update :: ()
                 delta: s64 = 0;
                 if sort_spec.ColumnIndex ==
                 {
-                    case 0; delta = cast(s64)a.id - cast(s64)b.id;
-                    case 1; delta = compare_strings(a.name, b.name);
-                    case 2; delta = compare_strings(a.type.name, b.type.name);
-                    case 3; delta = cast(s64)a.load_count - cast(s64)b.load_count;
+                    case 0; delta = compare_strings(a.name, b.name);
+                    case 1; delta = compare_strings(a.type.name, b.type.name);
+                    case 2; delta = cast(s64)a.load_count - cast(s64)b.load_count;
                 }
 
                 if sort_spec.SortDirection_ == .Descending { delta *= -1; }
@@ -51,9 +49,6 @@ resource_browser_update :: ()
         for resource : resources
         {
             ImGui.TableNextRow();
-
-            ImGui.TableNextColumn();
-            ImGui.Text("%", resource.id);
 
             ImGui.TableNextColumn();
             ImGui.Selectable(temp_c_string(resource.name), false, .SpanAllColumns | .AllowOverlap);

@@ -1,7 +1,6 @@
 // a YAE_COMPILE_TIME_INFO constant is generated at compile time. see `yae_notify_compiler_message` TYPECHECKED_ALL_WE_CAN notify
 YaeCompileTimeInfo :: struct
 {
-    object_types: []*Type_Info_Struct;
     resource_types: []*Type_Info_Struct;
     custom_serialize_types: []CustomSerializeType;
 }
@@ -16,11 +15,6 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
             for st: mt.structs
             {
                 struct_type_info: = st.expression.defined_type;
-
-                if is_subclass_of(struct_type_info, Object, false)
-                {
-                    array_add(*object_types, struct_type_info);
-                }
 
                 if is_subclass_of(struct_type_info, Resource, false)
                 {
@@ -48,17 +42,6 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                         sb: String_Builder;
                         init_string_builder(*sb);
                         append(*sb, "YAE_COMPILE_TIME_INFO : YaeCompileTimeInfo : .{\n");
-
-                        // Object Types
-                        {
-                            append(*sb, "object_types= .[\n");
-                            for struct_type_info, i: object_types
-                            {
-                                if i > 0 append(*sb, ",\n");
-                                append(*sb, tprint("type_info(%)", struct_type_info.name));
-                            }
-                            append(*sb, "],\n");
-                        }
 
                         // Resource Types
                         {

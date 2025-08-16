@@ -107,40 +107,31 @@ ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> boo
     return modified;
 }
 
-ImGui_EditObjectPointer :: (label: string, object_ptr: **Object, info_struct: *Type_Info_Struct, notes: []string = .[]) -> bool
+ImGui_EditResourcePointer :: (label: string, resource_ptr: **$T/Resource) -> bool
 {
-    assert(object_ptr != null);
+    return ImGui_EditResourcePointer(label, xx resource_ptr, cast(*Type_Info_Struct) type_info(T));
+}
+
+ImGui_EditResourcePointer :: (label: string, resource_ptr: **Resource, info_struct: *Type_Info_Struct, notes: []string = .[]) -> bool
+{
+    assert(resource_ptr != null);
     assert(info_struct != null);
-    assert(is_subclass_of(info_struct, Object));
+    assert(is_subclass_of(info_struct, Resource));
 
-    object: = <<object_ptr;
+    resource: = <<resource_ptr;
 
-    if has_note(notes, "embed")
+    resources: = get_resources_by_type_info(info_struct);
+    modified: = false;
+    if ImGui.BeginCombo(temp_c_string(unique_label(label, resource_ptr)), ifx resource != null then temp_c_string(resource.name) else "null")
     {
-        if object == null
+        if ImGui.Selectable("null", resource == null) { <<resource_ptr = null; modified = true; }
+        for o: resources
         {
-            // I don't know what to do about null objects yet
-            ImGui.Text("%: null embedded Object", label);
-            return false;
+            if ImGui.Selectable(temp_c_string(o.name), resource == o) { <<resource_ptr = o; modified = true; }
         }
-
-        return ImGui_EditValue(label, object, info_struct, notes);
+        ImGui.EndCombo();
     }
-    else
-    {
-        objects: = get_objects_by_type_info(info_struct);
-        modified: = false;
-        if ImGui.BeginCombo(temp_c_string(unique_label(label, object_ptr)), ifx object != null then temp_c_string(object.name) else "null")
-        {
-            if ImGui.Selectable("null", object == null) { <<object_ptr = null; modified = true; }
-            for o: objects
-            {
-                if ImGui.Selectable(temp_c_string(o.name), object == o) { <<object_ptr = o; modified = true; }
-            }
-            ImGui.EndCombo();
-        }
-        return modified;
-    }
+    return modified;
 }
 
 ImGui_EditValue :: (label: string, value: *$T, notes: []string = .[]) -> bool
@@ -154,27 +145,14 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
     u_label: = unique_label(label, value);
     c_label: = temp_c_string(u_label);
 
-    // Catch Object pointers
-    // ID(Object)
-    if info.type == .STRUCT && (cast(*Type_Info_Struct)info).name == "ID"
-    {
-        id_ptr: = cast(*ObjectIDBase) value;
-        object: = get(<<id_ptr);
-
-        info_struct: = cast(*Type_Info_Struct) info;
-        object_type: = get_polymorphic_argument(*Type_Info_Struct, info_struct, 0);
-
-        modified: = ImGui_EditObjectPointer(label, *object, object_type, notes);
-        <<id_ptr = ifx object != null then object.id else 0;
-        return modified;
-    }
+    // Catch Resource pointers
     // *Object
-    if info.type == .POINTER && is_subclass_of((cast(*Type_Info_Pointer)info).pointer_to, Object)
+    if info.type == .POINTER && is_subclass_of((cast(*Type_Info_Pointer)info).pointer_to, Resource)
     {
-        object_type: = cast(*Type_Info_Struct) (cast(*Type_Info_Pointer)info).pointer_to;
-        object_ptr: **Object = value;
+        resource_type: = cast(*Type_Info_Struct) (cast(*Type_Info_Pointer)info).pointer_to;
+        resource_ptr: **Resource = value;
 
-        return ImGui_EditObjectPointer(label, object_ptr, object_type, notes);
+        return ImGui_EditResourcePointer(label, resource_ptr, resource_type, notes);
     }
 
     // Parse metadata

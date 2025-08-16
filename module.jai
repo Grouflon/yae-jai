@@ -3,12 +3,13 @@
 #load "draw.jai";
 #load "entity.jai";
 #load "log.jai";
-#load "object.jai";
+// #load "object.jai";
 #load "pixel_perfect_viewport.jai";
 #load "physics.jai";
 #load "pool.jai";
 #load "raylib_imgui.jai";
 #load "resource.jai";
+#load "resource_manager.jai";
 #load "statemachine.jai";
 #load "string_hash.jai";
 #load "tilemap.jai";
@@ -27,7 +28,7 @@
 
 #load "resources/texture_file.jai";
 #load "resources/aseprite_file.jai";
-#load "resources/sprite.jai";
+// #load "resources/sprite.jai";
 #load "resources/animation.jai";
 
 #load "serialization/serialization_manager.jai";

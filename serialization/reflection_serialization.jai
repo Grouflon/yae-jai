@@ -39,46 +39,18 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
 
-    // Object ID, override
-    if is_subclass_of(info, ObjectIDBase)
-    {
-        // If embed, serialize data directyly
-        if has_note(ctx.member, "embed")
-        {
-            id_ptr: = cast(*ObjectIDBase) data;
-            object: = get(<<id_ptr);
-            if !object_serialize(serializer, *object, key) return false;
-            <<id_ptr = ifx object != null then object.id else 0;
-
-            return true;
-        }
-        else // else serialize id
-        {
-            return serialize(serializer, cast(*ObjectIDBase) data, key);
-        }
-    }
-
-    // Object pointer, override
+    // Resource pointer, override
     if info.type == .POINTER
     {
         ti: = (cast(*Type_Info_Pointer) info).pointer_to;
-        if is_subclass_of(ti, Object)
+        if is_subclass_of(ti, Resource)
         {
-            object_ptr: = cast(**Object) data;
+            resource_ptr: = cast(**Resource) data;
 
-            // If embed, serialize data directyly
-            success: = false;
-            if has_note(ctx.member, "embed")
-            {
-                success = object_serialize(serializer, object_ptr, key);
-            }
-            else // else serialize id
-            {
-                object: = <<object_ptr;
-                id: ObjectIDBase = ifx object != null then object.id else 0;
-                success = serialize(serializer, *id, key);
-                <<object_ptr = get(id);
-            }
+            resource: = <<resource_ptr;
+            name: = ifx resource != null then resource.name else "";
+            success: = serialize(serializer, *name, key, *temporary_allocator);
+            <<resource_ptr = get_resource_by_name(name);
 
             return success;
         }

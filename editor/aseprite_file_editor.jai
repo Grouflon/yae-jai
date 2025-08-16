@@ -14,96 +14,91 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
     assert(resource_editor.resource != null);
 
     aseprite_file: = cast(*AsepriteFile)resource_editor.resource;
-
-    COLUMNS :: ImGui_ColumnDefinition.[
-        .{"Name", 0, 0},
-        .{"Linked Resource", 0, 0},
-    ];
-
-    table_flags: ImGui.TableFlags = .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg | .Sortable | .Hideable;
+    modified: = false;
 
     ImGui.SeparatorText("Texture");
     {
-        if ImGui.BeginTable("animations", COLUMNS.count, table_flags, .{0, 0})
+        modified = ImGui_EditResourcePointer("texture", *aseprite_file.texture) || modified;
+        if modified
         {
-            defer ImGui.EndTable();
+            aseprite_file_build_index_table(aseprite_file);
+        }
 
-            ImGui_TableSetupColumns(COLUMNS);
-            ImGui.TableHeadersRow();
-
-            if aseprite_file.texture != null
+        if aseprite_file.texture != null
+        {
+            if ImGui.Button("Sync")
             {
-                ImGui.TableNextRow();
-                ImGui.TableNextColumn();
-                ImGui.Selectable(temp_c_string(aseprite_file.texture.name), false, .SpanAllColumns | .AllowOverlap);
-                if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
-                {
-                    editor_open_resource(aseprite_file.texture);
-                }
-
-                ImGui.TableNextColumn();
+                aseprite_file_sync_sprites(aseprite_file);
             }
+            ImGui.SameLine();
+
+            index_table: = aseprite_file_build_index_table(aseprite_file);
+
+            aseprite_sprite_count: = aseprite_file.bounds_to_frame_index.count;
+            texture_sprite_count: = index_table.count;
+            ImGui.TextColored(
+                ifx texture_sprite_count == aseprite_sprite_count then Vector4.{0,1,0,1} else Vector4.{1,0,0,1},
+                "% / % sprites synced",
+                texture_sprite_count, aseprite_sprite_count
+            );
         }
     }
 
     ImGui.SeparatorText("Animations");
     {
+        COLUMNS :: ImGui_ColumnDefinition.[
+            .{"Name", .WidthFixed, 100},
+            .{"Resource", 0, 0},
+            .{"Status", 0, 0},
+        ];
+
+        table_flags: ImGui.TableFlags = .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg;
+
         if ImGui.BeginTable("animations", COLUMNS.count, table_flags, .{0, 0})
         {
             defer ImGui.EndTable();
-
             ImGui_TableSetupColumns(COLUMNS);
             ImGui.TableHeadersRow();
 
-            for animation, hash : aseprite_file.animations
+            for *animation_ptr, hash : aseprite_file.animations
             {
                 ImGui.PushID(hash.str);
                 defer ImGui.PopID();
-                
+
                 ImGui.TableNextRow();
+                ImGui.TableNextColumn();
+                ImGui.Text("%", hash.str);
+
+                ImGui.TableNextColumn();
+                modified = ImGui_EditResourcePointer("animation", animation_ptr) || modified;
 
                 ImGui.TableNextColumn();
 
-                if animation == null
+                animation: = <<animation_ptr;
+                if animation != null
                 {
-                    ImGui.Text("%", hash.str);
-                }
-                else
-                {
-                    ImGui.Selectable(temp_c_string(hash.str), false, .AllowOverlap);
-                    if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
+                    if ImGui.Button("Sync")
                     {
-                        editor_open_resource(animation);
-                    }
-                }
 
-                ImGui.TableNextColumn();
-                if animation == null
-                {
-                    if ImGui.Button("Create Animation")
-                    {
-                        success, path: = save_file_dialog("./data", RESOURCE_EXTENSION, "Resource File");
-                        if success
-                        {
-                            path.count -= 4;
-                            animation = resource_get_or_create(Animation, path);
-                            resource_load(animation);
-                            animation_import_from_aseprite_file(animation, aseprite_file, hash.str);
-                            table_set(*aseprite_file.animations, hash, animation);
-                            resource_save_to_disk(aseprite_file);
-                        }
                     }
-                }
-                else
-                {
-                    if ImGui.Button("Reimport")
-                    {
-                        animation_import_from_aseprite_file(animation, aseprite_file, hash.str);
-                    }
+                    ImGui.SameLine();
+                    
+                    success, index: = table_find_new(*aseprite_file.data.name_to_tag, hash.str);
+                    assert(success);
+                    tag: = *aseprite_file.data.frame_tags[index];
+
+                    aseprite_frames: = tag.end_frame - tag.start_frame + 1;
+                    animation_frames: = animation.frame_count;
+
+                    ImGui.TextColored(
+                        ifx aseprite_frames == animation_frames then Vector4.{0,1,0,1} else Vector4.{1,0,0,1},
+                        "% / % frames synced",
+                        animation_frames, aseprite_frames
+                    );
                 }
             }
         }
     }
 
-    return false;
+    return modified;
 }

@@ -197,6 +197,8 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
 aseprite_release_data :: (_data: *AsepriteData)
 {
+    assert(_data != null);
+    
     for frame : _data.frames
     {
         free(frame.name);
@@ -224,6 +226,14 @@ aseprite_release_data :: (_data: *AsepriteData)
     deinit(*_data.name_to_layer);
 
     <<_data = .{};
+}
+
+get_bounds :: inline (aseprite_box: AsepriteBox) -> Bounds
+{
+    return Bounds.{ 
+        Vector2.{xx aseprite_box.x, xx aseprite_box.y },
+        Vector2.{xx (aseprite_box.x + aseprite_box.w), xx (aseprite_box.y + aseprite_box.h) }
+    };
 }
 
 #scope_file
