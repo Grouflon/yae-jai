@@ -7,7 +7,7 @@ ResourceManager :: struct
 
     watcher: File_Watcher;
     file_dependencies: Table(StringHash, [..]*Resource);
-    resources_to_reload: [..]*Resource;
+    resources_to_reload: Table(*Resource, u8); // just a hashset
 }
 resource_manager: ResourceManager;
 
@@ -26,13 +26,7 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct)
 
         for resource: <<resources
         {
-            if resource.skip_next_reload
-            {
-                resource.skip_next_reload = false;
-                continue;
-            }
-
-            array_add(*resource_manager.resources_to_reload, resource);
+            table_set(*resource_manager.resources_to_reload, resource, 0);
         }
     }
     if !init(*watcher, on_file_modified, events_to_watch = .MODIFIED)
@@ -73,7 +67,7 @@ resource_manager_shutdown :: ()
     }
     table_reset_and_free(*file_dependencies);
 
-    array_reset(*resources_to_reload);
+    table_reset_and_free(*resources_to_reload);
 }
 
 register_resource :: (resource: *Resource)
@@ -253,15 +247,21 @@ resource_manager_update :: ()
 
     process_changes(*watcher);
 
-    for resource: resources_to_reload
+    for _, resource: resources_to_reload
     {
+        if resource.skip_next_reload
+        {
+            resource.skip_next_reload = false;
+            continue;
+        }
+
         if resource.load_count == 0 { continue; }
         log_verbose("Reloading \"%\"...", resource.name, section= *RESOURCE_LOG_SECTION);
         resource_unload(resource);
         resource_load(resource);
         log("Reloaded \"%\"", resource.name, section= *RESOURCE_LOG_SECTION);
     }
-    array_clear(*resources_to_reload);
+    table_clear(*resources_to_reload);
 }
 
 load_all_resources :: ()
