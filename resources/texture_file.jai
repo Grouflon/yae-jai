@@ -5,8 +5,6 @@ TextureFile :: struct
     load_function = texture_load;
     unload_function = texture_unload;
 
-    texture_path: string;
-
     Sprite :: struct
     {
         name: StringHash; @serialize

@@ -9,7 +9,6 @@ AsepriteFile :: struct
     animations: Table(StringHash, *Animation); @serialize
 
     data: AsepriteData;
-    bounds_to_frame_index: Table(Bounds, s64);
 }
 
 get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
@@ -70,28 +69,29 @@ animation_import_from_aseprite_file :: (animation: *Animation, aseprite_file: *A
     resource_save_to_disk(animation);
 }
 
-aseprite_file_build_index_table :: (using aseprite_file: *AsepriteFile) -> Table(s64, s64)
+aseprite_file_build_unique_frames :: (using aseprite_file: *AsepriteFile) -> Table(Bounds, s64)
 {
-    frame_index_to_sprite_index: Table(s64, s64);
-    frame_index_to_sprite_index.allocator = temporary_allocator;
-
-    if texture == null return frame_index_to_sprite_index;
-
-    for sprite, i: texture.sprites
+    bounds_to_frame_index: Table(Bounds, s64);
+    bounds_to_frame_index.allocator = temporary_allocator;
+    for frame, i: data.frames
     {
-        found, frame_index: = table_find_new(*bounds_to_frame_index, sprite.bounds);
-        if found
+        bounds: = get_bounds(frame.frame);
+        if !table_find_new(*bounds_to_frame_index, bounds)
         {
-            table_add(*frame_index_to_sprite_index, frame_index, i);
+            table_add(*bounds_to_frame_index, bounds, i);
         }
     }
-
-    return frame_index_to_sprite_index;
+    return bounds_to_frame_index;
 }
+
 
 aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
 {
+    assert(aseprite_file != null);
+
     if texture == null return;
+
+    bounds_to_frame_index: = aseprite_file_build_unique_frames(aseprite_file);
 
     // @NOTE: we keep obsolete sprites, but maybe that's for the better as there's no risk it breaks any animation that way
     for frame, i: data.frames
@@ -102,14 +102,82 @@ aseprite_file_sync_sprites :: (using aseprite_file: *AsepriteFile)
         if i != frame_index continue;
         texture_add_or_set_sprite(texture, frame.name, bounds);
     }
-    aseprite_file_build_index_table(aseprite_file);
 
     resource_save_to_disk(texture);
 }
 
+aseprite_file_sync_animation :: (using aseprite_file: *AsepriteFile, animation_name: StringHash)
+{
+    assert(aseprite_file != null);
+
+    found, animation: = table_find_new(*animations, animation_name);
+    if !found || animation == null return;
+
+    found=, tag_index: = table_find_new(*data.name_to_tag, animation_name.str);
+    assert(found);
+    tag: = *data.frame_tags[tag_index];
+
+    animation.frame_count = tag.end_frame-tag.start_frame+1;
+
+    previous_sprite_index: = -1;
+    index_table: = aseprite_file_build_index_table(aseprite_file);
+    array_clear(*animation.sprite_events);
+    for i: tag.start_frame..tag.end_frame
+    {
+        current_frame: = i - tag.start_frame;
+        found=, sprite_index: = table_find_new(*index_table, i);
+        if !found continue;
+
+        if sprite_index != previous_sprite_index 
+        {
+            event: = SpriteAnimationEvent.{
+                begin = current_frame,
+                end = current_frame,
+                sprite = .{aseprite_file.texture, aseprite_file.texture.sprites[sprite_index].name},
+            };
+            array_add(*animation.sprite_events, event);
+            previous_sprite_index = sprite_index;
+        }
+        else
+        {
+            array_back(animation.sprite_events).end = current_frame;
+        }
+    }
+
+    resource_save_to_disk(animation);
+}
+
 #scope_file
 
+aseprite_file_build_index_table :: (using aseprite_file: *AsepriteFile) -> Table(s64, s64)
+{
+    assert(aseprite_file != null);
 
+    frame_index_to_sprite_index: Table(s64, s64);
+    frame_index_to_sprite_index.allocator = temporary_allocator;
+
+    if texture == null return frame_index_to_sprite_index;
+
+    sprite_bounds_to_index: Table(Bounds, s64);
+    sprite_bounds_to_index.allocator = temporary_allocator;
+
+    for sprite, i: texture.sprites
+    {
+        table_set(*sprite_bounds_to_index, sprite.bounds, i);
+    }
+
+    for frame, i: data.frames
+    {
+        bounds: = get_bounds(frame.frame);
+        found, sprite_index: = table_find_new(*sprite_bounds_to_index, bounds);
+        if found
+        {
+            table_add(*frame_index_to_sprite_index, i, sprite_index);
+        }
+    }
+
+    return frame_index_to_sprite_index;
+}
 
 aseprite_file_load :: (resource: *Resource) -> bool
 {
@@ -124,32 +192,6 @@ aseprite_file_load :: (resource: *Resource) -> bool
         log_error("failed to load aseprite data file \"%\"", path);
         return false;
     }
-
-    for frame, i: data.frames
-    {
-        bounds: = get_bounds(frame.frame);
-        if !table_find_new(*bounds_to_frame_index, bounds)
-        {
-            table_add(*bounds_to_frame_index, bounds, i);
-        }
-    }
-
-    aseprite_file_build_index_table(t);
-
-    // // Texture
-    // if texture
-    // {
-
-    // }
-    // success: = resource_load(texture);
-    // if !success
-    // {
-    //     aseprite_release_data(*data);
-    //     log_error("failed to load texture \"%\"", texture.name);
-    //     return false;
-    // }
-
-    // aseprite_file_sync_sprites(t);
 
     // Add unknown animations
     existing_tags: Table(StringHash, bool);
@@ -186,14 +228,8 @@ aseprite_file_unload :: (resource: *Resource)
 {
     using t: = cast(*AsepriteFile) resource;
 
-    // for animation, name: animations
-    // {
-    //     resource_unload(animation);
-    // }
     table_reset_and_free(*animations);
-    table_reset_and_free(*bounds_to_frame_index);
 
-    // resource_unload(texture);
     texture = null;
 
     aseprite_release_data(*data);

@@ -19,10 +19,6 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
     ImGui.SeparatorText("Texture");
     {
         modified = ImGui_EditResourcePointer("texture", *aseprite_file.texture) || modified;
-        if modified
-        {
-            aseprite_file_build_index_table(aseprite_file);
-        }
 
         if aseprite_file.texture != null
         {
@@ -32,10 +28,10 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
             }
             ImGui.SameLine();
 
-            index_table: = aseprite_file_build_index_table(aseprite_file);
+            bounds_to_frame_index: = aseprite_file_build_unique_frames(aseprite_file);
 
-            aseprite_sprite_count: = aseprite_file.bounds_to_frame_index.count;
-            texture_sprite_count: = index_table.count;
+            aseprite_sprite_count: = bounds_to_frame_index.count;
+            texture_sprite_count: = aseprite_file.texture.sprites.count;
             ImGui.TextColored(
                 ifx texture_sprite_count == aseprite_sprite_count then Vector4.{0,1,0,1} else Vector4.{1,0,0,1},
                 "% / % sprites synced",
@@ -79,7 +75,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                 {
                     if ImGui.Button("Sync")
                     {
-
+                        aseprite_file_sync_animation(aseprite_file, hash);
                     }
                     ImGui.SameLine();
                     
