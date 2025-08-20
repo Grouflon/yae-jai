@@ -63,7 +63,19 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
 
                 ImGui.TableNextRow();
                 ImGui.TableNextColumn();
-                ImGui.Text("%", hash.str);
+
+                if <<animation_ptr != null
+                {
+                    ImGui.Selectable(temp_c_string(hash.str), false, .SpanAllColumns | .AllowOverlap, size=.{0,19});
+                    if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
+                    {
+                        editor_open_resource(<<animation_ptr);
+                    }
+                }
+                else
+                {
+                    ImGui.Text("%", hash.str);
+                }
 
                 ImGui.TableNextColumn();
                 modified = ImGui_EditResourcePointer("animation", animation_ptr) || modified;

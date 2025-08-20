@@ -11,12 +11,20 @@ Animation :: struct
     sprite_events: [..]SpriteAnimationEvent; @serialize
     box_events: [..]BoxAnimationEvent; @serialize
     movement_events: [..]MovementAnimationEvent; @serialize
+
+    layers: [..]AnimationLayer; @serialize
 }
 
 AnimationEvent :: struct
 {
     begin: s32; @serialize
     end: s32 = -1; @serialize // included
+    layer: u32 = 0; @serialize
+}
+
+AnimationLayer :: struct
+{
+    name: string; @serialize
 }
 
 SpriteAnimationEvent :: struct
@@ -113,4 +121,10 @@ animation_unload :: (resource: *Resource)
         curve_reset(*m.y_movement);
     }
     array_reset(*movement_events);
+
+    for layer: layers
+    {
+        free(layer.name);
+    }
+    array_reset(*layers);
 }

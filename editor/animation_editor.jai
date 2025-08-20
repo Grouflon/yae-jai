@@ -4,11 +4,12 @@ AnimationEditor :: struct
     viewport: ViewportBase;
     is_dragging: = false;
     is_drag_zone_hovered: = false;
-    edited_layer_name_index: s32 = -1;
+    edited_layer_name_index: s64 = -1;
+    layer_popup_index: s64 = -1;
     selected_event_index: s32 = -1;
-    focus_requested: bool = false;
     event_popup_frame: s32 = -1;
     event_popup_layer: s32 = -1;
+    default_resource_editor: bool = false;
 }
 
 animation_editor_init :: (resource_editor: *ResourceEditor)
@@ -40,6 +41,22 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     assert(resource_editor != null);
     using editor: = cast(*AnimationEditor) resource_editor.payload;
     assert(editor != null);
+
+    if ImGui.BeginMenuBar()
+    {
+        if ImGui.BeginMenu("Debug")
+        {
+            defer ImGui.EndMenu();
+
+            ImGui.MenuItem("Default Resource Editor", "", *default_resource_editor);
+        }
+    }
+    ImGui.EndMenuBar();
+
+    if default_resource_editor
+    {
+        return default_resource_editor_update(resource_editor, dt);
+    }
 
     animation: = player.current_animation;
     if animation == null
@@ -165,51 +182,193 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     animation_changed: = false;
     animation: = editor.player.current_animation;
     assert(animation != null);
-    frame_count: s32 = cast(s32) animation.frame_count;
-    CELL_WIDTH :: 24;
-    CELL_HEIGHT :: 17;
-    COLUMN_WIDTH :: CELL_WIDTH - 9;
+    // CELL_WIDTH :: 24;
+    // CELL_HEIGHT :: 17;
+    // COLUMN_WIDTH :: CELL_WIDTH - 9;
+    TOP_BAR_HEIGHT :: 17;
+    LAYER_HEIGHT :: 18;
+    LAYER_WIDTH :: 150;
+    FRAME_WIDTH :: 30;
+    EDIT_LAYER_POPUP_NAME :: "edit_layer";
 
-    timeline_frame_origin: Vector2;
-    timeline_frame_begin: Vector2;
-    timeline_frame_end: Vector2 = ImGui.GetCursorScreenPos() + ImGui.GetContentRegionAvail() + .{-1,-1};
+    color_text: u32 = 0xffaaaaaa;
+    color_text_hovered: u32 = 0xffffffff;
+    color_strong: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderStrong]);
+    color_light: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderLight]);
 
-    table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg;
-    column_count: s32 = frame_count + 3;
-    if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
+    if ImGui.BeginChild("timeline", .{}, .Borders, .AlwaysHorizontalScrollbar | .AlwaysVerticalScrollbar)
     {
-        defer ImGui.EndTable();
+        available_size: = ImGui.GetContentRegionAvail();
+        content_size: Vector2 = .{
+            max(available_size.x, xx (LAYER_WIDTH + 1 + (FRAME_WIDTH + 1) * animation.frame_count)),
+            max(available_size.y, xx (TOP_BAR_HEIGHT + 1 + (LAYER_HEIGHT + 1) * animation.layers.count))
+        };
 
-        ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
+        // ImGui.PushStyleColor(.ChildBg, .{1,0,0,1});
+        // defer ImGui.PopStyleColor();
 
-        column_flags: ImGui.TableColumnFlags = .WidthFixed | .NoResize | .NoReorder | .NoHide;
-        for i: 0..frame_count-1
+        if ImGui.BeginChild("timeline_content", content_size, 0, .NoScrollbar)
         {
-            ImGui.TableSetupColumn(temp_c_string(tprint("%", i)), column_flags, COLUMN_WIDTH);
-        }
-        ImGui.TableSetupColumn("E", column_flags, COLUMN_WIDTH);
-        ImGui.TableSetupColumn("", column_flags, COLUMN_WIDTH);
+            cursor: = ImGui.GetCursorScreenPos();
 
-        ImGui.TableSetupScrollFreeze(1, 1);
+            hovered_layer: = -1;
+            just_edited_layer: = false;
 
-        ImGui.TableNextRow(.Headers);
-        for i: 0..(column_count-1)
-        {
-            name: = ImGui.TableGetColumnName(xx i);
-            ImGui.TableSetColumnIndex(xx i);
-
-            if i == 0
+            // Mouse Input
+            if ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(cursor + .{0, TOP_BAR_HEIGHT}, cursor + .{LAYER_WIDTH, content_size.y})
             {
-                timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, -1};
+                for i: 0..animation.layers.count-1
+                {
+                    y: float = xx (TOP_BAR_HEIGHT+1 + i * (LAYER_HEIGHT+1));
+                    if ImGui.IsMouseHoveringRect(cursor + .{0, y}, cursor + .{LAYER_WIDTH, y + LAYER_HEIGHT+1})
+                    {
+                        hovered_layer = i;
+                        break;
+                    }
+                }
+
+                if hovered_layer >= 0
+                {
+                    if ImGui.IsMouseDoubleClicked(.Left)
+                    {
+                        edited_layer_name_index = hovered_layer;
+                        just_edited_layer = true;
+                    }
+                }
+
+                if hovered_layer != edited_layer_name_index && ImGui.IsMouseClicked(.Left)
+                {
+                    edited_layer_name_index = -1;
+                }
+
+                if ImGui.IsMouseClicked(.Right)
+                {
+                    layer_popup_index = hovered_layer;
+                    ImGui.OpenPopup(EDIT_LAYER_POPUP_NAME);
+                }
+            }
+
+            if ImGui.BeginPopup(EDIT_LAYER_POPUP_NAME)
+            {
+                defer ImGui.EndPopup();
+
+                if layer_popup_index >= 0
+                {
+                    if ImGui.MenuItem("Delete Layer")
+                    {
+                        array_ordered_remove_by_index(*animation.layers, layer_popup_index);
+                        animation_changed = true;
+                    }
+                }
+
+                if ImGui.MenuItem("Add Layer")
+                {
+                    array_add(*animation.layers, .{});
+                    edited_layer_name_index = animation.layers.count-1;
+                    just_edited_layer = true;
+                    animation_changed = true;
+                }
             }
             else
             {
-                size: = ImGui.CalcTextSize(name);
-                ImGui.SameLine(COLUMN_WIDTH - size.x);
+                layer_popup_index = -1;
             }
-            
-            ImGui.TableHeader(name);
+
+            // Draw
+            draw_list: = ImGui.GetWindowDrawList();
+
+            draw_list.AddLine(draw_list, cursor + .{LAYER_WIDTH, 0}, cursor + .{LAYER_WIDTH, content_size.y}, color_strong);
+            draw_list.AddLine(draw_list, cursor + .{0, LAYER_HEIGHT}, cursor + .{content_size.x, LAYER_HEIGHT}, color_strong);
+
+            frame_start: = cursor + .{LAYER_WIDTH, 0};
+            for i: 0..animation.frame_count-1
+            {
+                frame_pos: = Vector2.{
+                    frame_start.x + (FRAME_WIDTH + 1) * i,
+                    cursor.y
+                };
+                draw_list.AddText(draw_list, frame_pos + .{2,2}, color_text, tprint("%", i));
+                draw_list.AddLine(draw_list, frame_pos + .{FRAME_WIDTH, 0}, frame_pos + .{FRAME_WIDTH, content_size.y}, color_light);
+            }
+
+            for *layer, i: animation.layers
+            {
+                y: float = xx (TOP_BAR_HEIGHT + 1 + LAYER_HEIGHT * i);
+
+                if edited_layer_name_index == i
+                {
+                    ImGui.PushID("layer_name_edit");
+                    defer ImGui.PopID();
+
+                    if just_edited_layer
+                    {
+                        ImGui.SetKeyboardFocusHere(0);
+                    }
+
+                    ImGui.SetCursorScreenPos(cursor + .{0,y});
+                    ImGui.SetNextItemWidth(LAYER_WIDTH);
+                    animation_changed = ImGui_InputText("", *layer.name, .AutoSelectAll) || animation_changed;
+
+                    if (!ImGui.IsItemHovered() && ImGui.IsMouseClicked(.Left)) ||
+                        ImGui.IsKeyPressed(.Escape) ||
+                        ImGui.IsKeyPressed(.Enter)
+                    {
+                        edited_layer_name_index = -1;
+                    }
+                }
+                else
+                {
+                    c: = ifx hovered_layer == i then color_text_hovered else color_text;
+                    draw_list.AddText(draw_list, cursor + .{0, y + 3}, c, tprint("%", layer.name));
+                }
+                draw_list.AddLine(draw_list, cursor + .{0, y + LAYER_HEIGHT}, cursor + .{content_size.x, y + LAYER_HEIGHT}, color_light);
+            }
         }
+        ImGui.EndChild();
+    }
+    ImGui.EndChild();
+
+    timeline_frame_origin: Vector2;
+    timeline_frame_begin: Vector2;
+    // timeline_frame_end: Vector2 = ImGui.GetCursorScreenPos() + ImGui.GetContentRegionAvail() + .{-1,-1};
+    timeline_frame_end: Vector2 = ImGui.GetCursorScreenPos() + ImGui.GetContentRegionAvail();
+
+    // table_flags: ImGui.TableFlags = .ScrollX | .ScrollY | .BordersV | .BordersOuterV | .BordersH | .Resizable | .RowBg;
+    // column_count: s32 = frame_count + 3;
+    // if ImGui.BeginTable("timeline", xx column_count, table_flags, .{0, 0})
+    {
+        // defer ImGui.EndTable();
+
+        // ImGui.TableSetupColumn("Tracks", .NoHide | .NoReorder | .WidthFixed, 100.0);
+
+        // column_flags: ImGui.TableColumnFlags = .WidthFixed | .NoResize | .NoReorder | .NoHide;
+        // for i: 0..frame_count-1
+        // {
+        //     ImGui.TableSetupColumn(temp_c_string(tprint("%", i)), column_flags, COLUMN_WIDTH);
+        // }
+        // ImGui.TableSetupColumn("E", column_flags, COLUMN_WIDTH);
+        // ImGui.TableSetupColumn("", column_flags, COLUMN_WIDTH);
+
+        // ImGui.TableSetupScrollFreeze(1, 1);
+
+        // ImGui.TableNextRow(.Headers);
+        // for i: 0..(column_count-1)
+        // {
+        //     name: = ImGui.TableGetColumnName(xx i);
+        //     ImGui.TableSetColumnIndex(xx i);
+
+        //     if i == 0
+        //     {
+        //         timeline_frame_begin = ImGui.GetCursorScreenPos() + .{ImGui.GetContentRegionAvail().x + 5, -1};
+        //     }
+        //     else
+        //     {
+        //         size: = ImGui.CalcTextSize(name);
+        //         ImGui.SameLine(COLUMN_WIDTH - size.x);
+        //     }
+            
+        //     ImGui.TableHeader(name);
+        // }
 
         // layer_to_delete: s32 = -1;
         // for layer, i: animation.layers

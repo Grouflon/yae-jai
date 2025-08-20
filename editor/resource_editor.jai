@@ -43,7 +43,7 @@ resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
     modified: = false;
     ImGui.SetNextWindowSize(.{700, 500}, .FirstUseEver);
-    if ImGui.Begin(temp_c_string(get_editor_window_name(resource_editor)), *resource_editor.is_open)
+    if ImGui.Begin(temp_c_string(get_editor_window_name(resource_editor)), *resource_editor.is_open, .MenuBar)
     {
         ImGui.PushID(resource_editor.resource);
         defer ImGui.PopID();
