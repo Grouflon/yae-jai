@@ -1,3 +1,5 @@
+default_allocator :: Context_Base.default_allocator;
+
 /*
  * Simple checksum function stolen from wikipedia:
  *
@@ -141,6 +143,37 @@ mem_swap :: (a: *void, b: *void, size: s64)
     memcpy(tmp, b, size);
     memcpy(b, a, size);
     memcpy(a, tmp, size);
+}
+
+default_init :: (data: *void, info: *Type_Info)
+{
+    if info.type == .STRUCT
+    {
+        info_struct: = cast(*Type_Info_Struct)info;
+        if info_struct.initializer != null
+        {
+            info_struct.initializer(data);
+            return;
+        }
+    }
+    memset(data, 0, info.runtime_size);
+}
+
+default_init_range :: (data: *void, begin: s64, end: s64, info: *Type_Info)
+{
+    if info.type == .STRUCT
+    {
+        info_struct: = cast(*Type_Info_Struct)info;
+        if info_struct.initializer != null
+        {
+            for begin..end-1  info_struct.initializer(data + it * info.runtime_size);
+            return;
+        }
+    }
+
+    count := end - begin;
+    if count <= 0  return;
+    memset(data + begin, 0, count * info.runtime_size);
 }
 
 #scope_file
