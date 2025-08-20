@@ -23,12 +23,12 @@ ImGui_TableSetupColumns :: (columns: []ImGui_ColumnDefinition)
     }
 }
 
-// str modifications will always be allocated with the temporary allocator
-ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null) -> bool
+ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .None, callback: ImGui.InputTextCallback = null, user_data: *void = null, allocator: *Allocator = null) -> bool
 {
     InputTextCallback_UserData :: struct
     {
         str: *string;
+        allocator: *Allocator;
         chain_callback: ImGui.InputTextCallback;
         chain_callback_userdata: *void;
     };
@@ -48,7 +48,10 @@ ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .
             }
             else if data.EventFlag == .CallbackEdit
             {
-                <<(user_data.str) = copy_temporary_string(to_string(data.Buf));
+                push_allocator(user_data.allocator);
+                user_data.str.data = realloc(user_data.str.data, data.BufTextLen, user_data.str.count);
+                user_data.str.count = data.BufTextLen;
+                memcpy(user_data.str.data, data.Buf, data.BufTextLen);
             }
             else if (user_data.chain_callback != null)
             {
@@ -67,10 +70,10 @@ ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .
 
     cb_user_data: InputTextCallback_UserData;
     cb_user_data.str = str;
+    cb_user_data.allocator = ifx allocator != null then allocator else *default_allocator;
     cb_user_data.chain_callback = callback;
     cb_user_data.chain_callback_userdata = user_data;
 
-    
     buffer: *u8 = talloc(str.count+1);
     memcpy(buffer, str.data, str.count);
     buffer[str.count] = 0;
@@ -244,7 +247,7 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                 {
                     hash_ptr: = cast(*StringHash)value;
                     temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
-                    if ImGui_InputText(u_label, *temp_str)
+                    if ImGui_InputText(u_label, *temp_str, allocator=*temporary_allocator)
                     {
                         <<hash_ptr = string_hash(temp_str);
                         modified = true;
@@ -379,10 +382,8 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
         {
             str_ptr: = cast(*string)value;
             temp_str: = copy_temporary_string(<<str_ptr);
-            if ImGui_InputText(u_label, *temp_str)
+            if ImGui_InputText(u_label, str_ptr)
             {
-                free(str_ptr.data);
-                <<str_ptr = copy_string(temp_str);
                 modified = true;
             }
         }
