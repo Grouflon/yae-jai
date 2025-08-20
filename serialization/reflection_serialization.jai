@@ -379,15 +379,21 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 }
             }
 
+            if serializer.mode == .READ
+            {
+                default_init_range(array_data, 0, size, info_array.element_type);
+            }
+
+            success: = true;
             for i : 0..(size-1)
             {
                 element_data: = array_data + i * info_array.element_type.runtime_size;
 
                 // What to do if only one element of the array fails?
-                verify(serialize(serializer, element_data, info_array.element_type, "", params, ctx));
+                success = serialize(serializer, element_data, info_array.element_type, "", params, ctx) && success;
             }
             verify(serializer_end_array(serializer));
-            return true;
+            return success;
         }
     }
     return false;
