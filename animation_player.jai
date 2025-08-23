@@ -99,8 +99,9 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     current_movement = .{};
     if dt != 0
     {
-        for event: current_animation.movement_events
+        for event: current_animation.events
         {
+            if event.type != .MOVEMENT continue;
             if !(is_frame_within_event(current_frame, *event) || is_frame_within_event(floor_to_s32(previous_frame_float), *event)) continue;
 
             begin_float: float = xx event.begin;
@@ -118,15 +119,15 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
             y_movement: = 0.0;
             if end < begin
             {
-                x_movement += curve_evaluate(event.x_movement, 1) - curve_evaluate(event.x_movement, begin);
-                y_movement += curve_evaluate(event.y_movement, 1) - curve_evaluate(event.y_movement, begin);
-                x_movement += curve_evaluate(event.x_movement, end) - curve_evaluate(event.x_movement, 0);
-                y_movement += curve_evaluate(event.y_movement, end) - curve_evaluate(event.y_movement, 0);
+                x_movement += curve_evaluate(event.movement.x_movement, 1) - curve_evaluate(event.movement.x_movement, begin);
+                y_movement += curve_evaluate(event.movement.y_movement, 1) - curve_evaluate(event.movement.y_movement, begin);
+                x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, 0);
+                y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, 0);
             }
             else
             {
-                x_movement += curve_evaluate(event.x_movement, end) - curve_evaluate(event.x_movement, begin);
-                y_movement += curve_evaluate(event.y_movement, end) - curve_evaluate(event.y_movement, begin);
+                x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, begin);
+                y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, begin);
             }
 
             current_movement += .{x_movement, y_movement};
@@ -139,10 +140,11 @@ animation_player_get_current_box_events :: (using player: *AnimationPlayer) -> [
     result: [..]BoxAnimationEvent;
     result.allocator = temporary_allocator;
 
-    for event: current_animation.box_events
+    for event: current_animation.events
     {
+        if event.type != .BOX continue;
         if !is_frame_within_event(current_frame, *event) continue;
-        array_add(*result, event);
+        array_add(*result, event.box);
     }
     return result;
 }
@@ -154,10 +156,11 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
     if current_animation == null { return; }
     if (current_frame < 0 || current_frame >= current_animation.frame_count) { return; }
 
-    for event: current_animation.sprite_events
+    for event: current_animation.events
     {
+        if event.type != .SPRITE continue;
         if !is_frame_within_event(current_frame, *event) continue;
 
-        draw_sprite(position + event.offset, event.sprite, event.flip_x ^ flip_x, event.flip_y ^ flip_y, tint);
+        draw_sprite(position + event.sprite.offset, event.sprite.sprite, event.sprite.flip_x ^ flip_x, event.sprite.flip_y ^ flip_y, tint);
     }
 }

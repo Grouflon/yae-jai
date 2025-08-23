@@ -116,12 +116,12 @@ aseprite_file_sync_animation :: (using aseprite_file: *AsepriteFile, animation_n
     found=, tag_index: = table_find_new(*data.name_to_tag, animation_name.str);
     assert(found);
     tag: = *data.frame_tags[tag_index];
+    index_table: = aseprite_file_build_index_table(aseprite_file);
 
     animation.frame_count = tag.end_frame-tag.start_frame+1;
+    layer_index: = animation_add_layer(animation, "aseprite_sync", 0);
 
     previous_sprite_index: = -1;
-    index_table: = aseprite_file_build_index_table(aseprite_file);
-    array_clear(*animation.sprite_events);
     for i: tag.start_frame..tag.end_frame
     {
         current_frame: = i - tag.start_frame;
@@ -130,17 +130,21 @@ aseprite_file_sync_animation :: (using aseprite_file: *AsepriteFile, animation_n
 
         if sprite_index != previous_sprite_index 
         {
-            event: = SpriteAnimationEvent.{
+            event: = AnimationEvent.{
+                type = .SPRITE,
                 begin = current_frame,
                 end = current_frame,
-                sprite = .{aseprite_file.texture, aseprite_file.texture.sprites[sprite_index].name},
+                layer = xx layer_index,
+                sprite = .{
+                    sprite = .{aseprite_file.texture, aseprite_file.texture.sprites[sprite_index].name},
+                },
             };
-            array_add(*animation.sprite_events, event);
+            array_add(*animation.events, event);
             previous_sprite_index = sprite_index;
         }
         else
         {
-            array_back(animation.sprite_events).end = current_frame;
+            array_back(animation.events).end = current_frame;
         }
     }
 

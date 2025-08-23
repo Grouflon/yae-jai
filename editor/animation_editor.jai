@@ -2,13 +2,17 @@ AnimationEditor :: struct
 {
     player: AnimationPlayer;
     viewport: ViewportBase;
+
     is_dragging: = false;
     is_drag_zone_hovered: = false;
+
     edited_layer_name_index: s64 = -1;
     layer_popup_index: s64 = -1;
+
     selected_event_index: s32 = -1;
-    event_popup_frame: s32 = -1;
     event_popup_layer: s32 = -1;
+    event_popup_frame: s32 = -1;
+
     default_resource_editor: bool = false;
 }
 
@@ -140,41 +144,21 @@ ZOOM_STEP :: 0.5;
 
 animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
 {
-    if selected_event_index < 0 return false;
-
-    animation_changed: = false;
+    animation_modified: = false;
     animation: = editor.player.current_animation;
     assert(animation != null);
-    // sprites: = get_objects_by_type(Sprite);
-    // event_ptr: = animation.events.data + selected_event_index;
 
-    // animation_changed = ImGui.EditValue("type", *event_ptr.type) || animation_changed;
-    // animation_changed = ImGui.EditValue("event_condition", *event_ptr.event_condition) || animation_changed;
-    // animation_changed = ImGui.EditValue("dummy_string", *event_ptr.dummy_string) || animation_changed;
-    // animation_changed = ImGui.EditValue("begin", *event_ptr.begin) || animation_changed;
-    // animation_changed = ImGui.EditValue("end", *event_ptr.end) || animation_changed;
+    if selected_event_index >= 0
+    {
+        ImGui_EditValue("", *animation.events[selected_event_index]);
+    }
+    else
+    {
+        ImGui.SetNextItemWidth(100.0);
+        animation_modified = ImGui_EditValue("frames per second", *animation.frames_per_second);
+    }
 
-    // if event_ptr.type ==
-    // {
-    //     case .SPRITE;
-    //     {
-    //         if ImGui.BeginCombo("sprite", ifx event_ptr.sprite.sprite != null then temp_c_string(event_ptr.sprite.sprite.name) else "null")
-    //         {
-    //             if ImGui.Selectable("null", event_ptr.sprite.sprite == null) { event_ptr.sprite.sprite = null; animation_changed = true; }
-    //             for sprite: sprites
-    //             {
-    //                 if ImGui.Selectable(temp_c_string(sprite.name), event_ptr.sprite.sprite == sprite) { event_ptr.sprite.sprite = sprite; animation_changed = true; }
-    //             }
-    //             ImGui.EndCombo();
-    //         }
-    //     }
-    //     case .FLIP;
-    //     {
-    //         animation_changed = ImGui.EditValue("flip_type", *event_ptr.flip.flip_type) || animation_changed;
-    //     }
-    // }
-
-    return animation_changed;
+    return animation_modified;
 }
 
 animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
@@ -191,10 +175,31 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     FRAME_WIDTH :: 30;
     EDIT_LAYER_POPUP_NAME :: "edit_layer";
 
-    color_text: u32 = 0xffaaaaaa;
-    color_text_hovered: u32 = 0xffffffff;
+    WHITE_IDLE : u32 : 0xffaaaaaa;
+    WHITE_HOVERED : u32 : 0xffffffff;
+
+    TEAL_IDLE : u32 : 0xffb0c445;
+    TEAL_SELECTED : u32 : 0xffa3eb9a;
+    TEAL_HOVERED : u32 : 0xffbafdda;
+
     color_strong: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderStrong]);
     color_light: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderLight]);
+
+    previous_is_drag_zone_hovered: = is_drag_zone_hovered;
+
+    get_event_local_bounds :: (animation: *Animation, event_index: s64) -> Bounds
+    {
+        event: = *animation.events[event_index];
+        begin: Vector2 = .{
+            xx (LAYER_WIDTH + 1 + event.begin * (FRAME_WIDTH+1)),
+            xx (TOP_BAR_HEIGHT + 1 + event.layer * (LAYER_HEIGHT+1))
+        };
+        end: Vector2 = .{
+            begin.x + xx ((event.end-event.begin+1) * (FRAME_WIDTH+1) - 1),
+            begin.y + LAYER_HEIGHT
+        };
+        return .{ begin, end };
+    }
 
     if ImGui.BeginChild("timeline", .{}, .Borders, .AlwaysHorizontalScrollbar | .AlwaysVerticalScrollbar)
     {
@@ -210,12 +215,18 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         if ImGui.BeginChild("timeline_content", content_size, 0, .NoScrollbar)
         {
             cursor: = ImGui.GetCursorScreenPos();
+            mouse_position: = ImGui.GetMousePos();
 
             hovered_layer: = -1;
             just_edited_layer: = false;
+            hovered_event: = -1;
+            hovered_frame: = -1;
+
+            is_drag_zone_hovered = ImGui.IsWindowHovered(); // @NOTE(remi): maybe reduce zone to layer & frames
 
             // Mouse Input
-            if ImGui.IsWindowHovered() && ImGui.IsMouseHoveringRect(cursor + .{0, TOP_BAR_HEIGHT}, cursor + .{LAYER_WIDTH, content_size.y})
+            // Layers
+            if is_drag_zone_hovered && ImGui.IsMouseHoveringRect(cursor + .{0, TOP_BAR_HEIGHT}, cursor + .{LAYER_WIDTH, content_size.y})
             {
                 for i: 0..animation.layers.count-1
                 {
@@ -245,6 +256,39 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 {
                     layer_popup_index = hovered_layer;
                     ImGui.OpenPopup(EDIT_LAYER_POPUP_NAME);
+                }
+            }
+            // Events
+            for i: 0..animation.events.count-1
+            {
+                bounds: = cursor + get_event_local_bounds(animation, i);
+                if ImGui.IsMouseHoveringRect(bounds.min, bounds.max)
+                {
+                    hovered_event = i;
+                    if ImGui.IsMouseClicked(.Left)
+                    {
+                        selected_event_index = xx i;
+                    }
+                }
+            }
+            if hovered_event < 0 && ImGui.IsMouseHoveringRect(cursor + .{LAYER_WIDTH+1, TOP_BAR_HEIGHT+1}, cursor + available_size) && ImGui.IsMouseClicked(.Left)
+            {
+                selected_event_index = -1;
+            }
+            // Frames
+            if is_drag_zone_hovered
+            {
+                local_mouse_pos: = mouse_position - cursor;
+                if local_mouse_pos.x > LAYER_WIDTH
+                {
+                    hovered_frame = min(floor_to_s32((local_mouse_pos.x - LAYER_WIDTH) / (FRAME_WIDTH + 1)), animation.frame_count-1);
+                }
+            }
+            if ImGui.IsMouseHoveringRect(cursor + Vector2.{LAYER_WIDTH+1, 0}, cursor + Vector2.{xx (LAYER_WIDTH+1 + (animation.frame_count) * (FRAME_WIDTH+1)), TOP_BAR_HEIGHT})
+            {
+                if ImGui.IsMouseDown(.Left)
+                {
+                    animation_player_set_frame(*editor.player, xx hovered_frame);
                 }
             }
 
@@ -280,14 +324,14 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             draw_list.AddLine(draw_list, cursor + .{LAYER_WIDTH, 0}, cursor + .{LAYER_WIDTH, content_size.y}, color_strong);
             draw_list.AddLine(draw_list, cursor + .{0, LAYER_HEIGHT}, cursor + .{content_size.x, LAYER_HEIGHT}, color_strong);
 
-            frame_start: = cursor + .{LAYER_WIDTH, 0};
+            frame_start: = cursor + .{LAYER_WIDTH+1, 0};
             for i: 0..animation.frame_count-1
             {
                 frame_pos: = Vector2.{
                     frame_start.x + (FRAME_WIDTH + 1) * i,
                     cursor.y
                 };
-                draw_list.AddText(draw_list, frame_pos + .{2,2}, color_text, tprint("%", i));
+                draw_list.AddText(draw_list, frame_pos + .{2,2}, WHITE_IDLE, tprint("%", i));
                 draw_list.AddLine(draw_list, frame_pos + .{FRAME_WIDTH, 0}, frame_pos + .{FRAME_WIDTH, content_size.y}, color_light);
             }
 
@@ -318,15 +362,53 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 }
                 else
                 {
-                    c: = ifx hovered_layer == i then color_text_hovered else color_text;
+                    c: = ifx hovered_layer == i then WHITE_HOVERED else WHITE_IDLE;
                     draw_list.AddText(draw_list, cursor + .{0, y + 3}, c, tprint("%", layer.name));
                 }
                 draw_list.AddLine(draw_list, cursor + .{0, y + LAYER_HEIGHT}, cursor + .{content_size.x, y + LAYER_HEIGHT}, color_light);
+            }
+
+            for *event, i: animation.events
+            {
+                c: = TEAL_IDLE;
+                if i == hovered_event
+                {
+                    if ImGui.IsMouseDown(.Left)
+                    {
+                        c = TEAL_SELECTED;
+                    }
+                    else
+                    {
+                        c = TEAL_HOVERED;
+                    }
+                }
+                else if i == selected_event_index
+                {
+                    c = TEAL_SELECTED;
+                }
+                bounds: = cursor + get_event_local_bounds(animation, i);
+                draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, c, 2.0, .RoundCornersAll);
+            }
+
+            // Frame cursor
+            {
+                x: float = xx (LAYER_WIDTH + editor.player.current_frame * (FRAME_WIDTH+1));
+                draw_list.AddLine(draw_list, cursor + .{x , 0}, cursor + .{x, content_size.y}, IM_COL32(255,255,0,255));
             }
         }
         ImGui.EndChild();
     }
     ImGui.EndChild();
+
+    // Disable window drag
+    if !previous_is_drag_zone_hovered && is_drag_zone_hovered
+    {
+        editor_push_window_drag_disabled();
+    }
+    else if previous_is_drag_zone_hovered && !is_drag_zone_hovered
+    {
+        editor_pop_window_drag_disabled();
+    }
 
     timeline_frame_origin: Vector2;
     timeline_frame_begin: Vector2;
