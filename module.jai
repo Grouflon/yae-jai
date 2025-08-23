@@ -3,7 +3,6 @@
 #load "draw.jai";
 #load "entity.jai";
 #load "log.jai";
-// #load "object.jai";
 #load "pixel_perfect_viewport.jai";
 #load "physics.jai";
 #load "pool.jai";
@@ -28,10 +27,8 @@
 
 #load "resources/texture_file.jai";
 #load "resources/aseprite_file.jai";
-// #load "resources/sprite.jai";
 #load "resources/animation.jai";
 
-#load "serialization/serialization_manager.jai";
 #load "serialization/json_serializer.jai";
 #load "serialization/reflection_serialization.jai";
 #load "serialization/serializer.jai";

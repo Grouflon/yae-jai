@@ -1,5 +1,3 @@
-CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> (default_serialize: bool, success: bool);
-
 SerializationFilter :: struct
 {
     type: enum
@@ -17,15 +15,15 @@ SerializationParams :: struct
     custom_serialization_function: CustomSerializationFunction;
 }
 
-ReflectionContext :: struct
+ReflectionContext :: struct // @NOTE(remi): may be useful to know the notes of your parent or member, I don't know
 {
     parent: *Type_Info_Struct;
     member: *Type_Info_Struct_Member;
 }
 
-serialize :: (serializer: *Serializer, value: *$T, key: string = "", params: SerializationParams = .{}) -> bool
+serialize :: (serializer: *Serializer, value: *$T, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool
 {
-    return serialize(serializer, value, type_info(T), key, params);
+    return serialize(serializer, value, type_info(T), key, params, ctx);
 }
 
 serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool

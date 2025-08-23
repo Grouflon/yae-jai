@@ -12,7 +12,7 @@ YAE : struct
     editor: Editor; @serialize
 };
 
-yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, title: string)
+yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, title: string)
 {
     using YAE;
     context.logger = yae_logger;
@@ -30,9 +30,9 @@ yae_init :: (compile_time_info: YaeCompileTimeInfo, width: s32, height: s32, tit
     log_verbose("working directory: %", get_working_directory());
 
     // Init core stuff
-    // object_registry_init(compile_time_info.object_types);
+    custom_function_registry_init(compile_time_info);
+
     resource_manager_init(compile_time_info.resource_types);
-    serialization_manager_init(compile_time_info.custom_serialize_types);
     physics_init();
 
     // Init Window
