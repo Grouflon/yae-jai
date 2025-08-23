@@ -28,6 +28,7 @@ ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .
     InputTextCallback_UserData :: struct
     {
         str: *string;
+        ctx: #Context;
         allocator: *Allocator;
         chain_callback: ImGui.InputTextCallback;
         chain_callback_userdata: *void;
@@ -35,10 +36,10 @@ ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .
 
     InputText_Callback :: (data: *ImGui.InputTextCallbackData) -> s32 #c_call
     {
-        ctx: #Context;
-        push_context ctx {
+        user_data: = cast(*InputTextCallback_UserData) data.UserData;
 
-            user_data: = cast(*InputTextCallback_UserData) data.UserData;
+        push_context user_data.ctx {
+
             if data.EventFlag == .ImGuiInputTextFlags_CallbackResize
             {
                 new_buffer: *u8 = talloc(data.BufSize);
@@ -70,6 +71,7 @@ ImGui_InputText :: (label: string, str: *string, flags: ImGui.InputTextFlags = .
 
     cb_user_data: InputTextCallback_UserData;
     cb_user_data.str = str;
+    cb_user_data.ctx = context;
     cb_user_data.allocator = ifx allocator != null then allocator else *default_allocator;
     cb_user_data.chain_callback = callback;
     cb_user_data.chain_callback_userdata = user_data;
