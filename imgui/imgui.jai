@@ -94,6 +94,14 @@ ImGui_EditStructMembers :: (value: *$T) -> bool
 
 ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> bool
 {
+    custom_editor_function: = get_custom_editor_function(info_struct);
+    if custom_editor_function != null
+    {
+        // @NOTE(remi): We may want a way to be able to call the default editor even when a custom editor is set.
+        // Let's wait for an actual use case to do it though
+        return custom_editor_function(value, info_struct);
+    }
+
     modified: = false;
     for member_type_info: info_struct.members
     {
