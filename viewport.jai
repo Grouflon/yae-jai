@@ -17,9 +17,9 @@
 
 ViewportBase :: struct
 {
-    size: Vector2;
-    target: Vector2;
-    zoom: Vector2 = .{1,1};
+    size: Vector2; @serialize
+    target: Vector2; @serialize
+    zoom: Vector2 = .{1,1}; @serialize
 
     render_target: rl.RenderTexture2D;
 }
