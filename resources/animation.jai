@@ -174,8 +174,11 @@ animation_unload :: (resource: *Resource)
 
     for event: events
     {
-        curve_reset(*event.movement.x_movement);
-        curve_reset(*event.movement.y_movement);
+        if event.type == .MOVEMENT
+        {
+            curve_reset(*event.movement.x_movement);
+            curve_reset(*event.movement.y_movement);
+        }
     }
     array_reset(*events);
 
