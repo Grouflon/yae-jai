@@ -69,6 +69,15 @@ editor_update :: (dt: float)
 
             ImGui.EndMenu();
         }
+
+        // FPS Counter
+        {
+            window_size: = ImGui.GetWindowSize();
+            fps_text: = tprint("% FPS", round_to_s32(1 / dt));
+            fps_text_size: = ImGui.CalcTextSize(fps_text);
+            ImGui.SetCursorScreenPos(.{window_size.x - fps_text_size.x - 5, 0});
+            ImGui.TextColored(.{1,1,1,0.6}, fps_text);
+        }
     }
     ImGui.EndMainMenuBar();
 

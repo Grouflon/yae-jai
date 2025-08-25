@@ -49,6 +49,11 @@ round :: inline (value: float) -> float
         return floor(value + 0.5);
 }
 
+round_to_s32 :: inline (value: float) -> s32
+{
+    return xx round(value);
+}
+
 sign :: inline (value: $T) -> T
 {
     if value >= 0

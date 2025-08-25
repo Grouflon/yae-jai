@@ -157,7 +157,6 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
             if draw_function != null { draw_function(); }
 
             raylib_imgui_render();
-            rl.DrawFPS(rl.GetScreenWidth() - 90, 25);
         }
 
         // Settings compare & save
