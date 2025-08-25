@@ -3,7 +3,9 @@ AnimationEditor :: struct
     player: AnimationPlayer;
     viewport: ViewportBase;
 
-    is_dragging: = false;
+    is_dragging_viewport: = false;
+    is_dragging_frame: = false;
+
     is_drag_zone_hovered: = false;
 
     edited_layer_name_index: s64 = -1;
@@ -276,20 +278,26 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 selected_event_index = -1;
             }
             // Frames
-            if is_drag_zone_hovered
-            {
-                local_mouse_pos: = mouse_position - cursor;
-                if local_mouse_pos.x > LAYER_WIDTH
-                {
-                    hovered_frame = min(floor_to_s32((local_mouse_pos.x - LAYER_WIDTH) / (FRAME_WIDTH + 1)), animation.frame_count-1);
-                }
-            }
             if ImGui.IsMouseHoveringRect(cursor + Vector2.{LAYER_WIDTH+1, 0}, cursor + Vector2.{xx (LAYER_WIDTH+1 + (animation.frame_count) * (FRAME_WIDTH+1)), TOP_BAR_HEIGHT})
             {
-                if ImGui.IsMouseDown(.Left)
+                if ImGui.IsMouseClicked(.Left)
                 {
-                    animation_player_set_frame(*editor.player, xx hovered_frame);
+                    is_dragging_frame = true;
                 }
+            }
+            {
+                local_mouse_pos: = mouse_position - cursor;
+                hovered_frame = floor_to_s32((local_mouse_pos.x - LAYER_WIDTH) / (FRAME_WIDTH + 1));
+            }
+            if !ImGui.IsMouseDown(.Left)
+            {
+                is_dragging_frame = false;
+            }
+
+            if is_dragging_frame
+            {
+                clamped_frame: = clamp(hovered_frame, 0, animation.frame_count-1);
+                animation_player_set_frame(*editor.player, xx clamped_frame);
             }
 
             if ImGui.BeginPopup(EDIT_LAYER_POPUP_NAME)
@@ -696,15 +704,15 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     {
         wanted_zoom: = clamp(editor.viewport.zoom + xy(ZOOM_STEP * ImGui.GetIO().MouseWheel), 0.5, 50.0);
         viewport_set_zoom_focused(*editor.viewport, mouse_viewport_position, wanted_zoom);
-        if drag_button_pressed { editor.is_dragging = true; }
+        if drag_button_pressed { editor.is_dragging_viewport = true; }
     }
 
     if !drag_button_down
     {
-        editor.is_dragging = false;
+        editor.is_dragging_viewport = false;
     }
 
-    if editor.is_dragging
+    if editor.is_dragging_viewport
     {
         d: = ImGui.GetMouseDragDelta(DRAG_BUTTON, 0);
         ImGui.ResetMouseDragDelta(DRAG_BUTTON);
