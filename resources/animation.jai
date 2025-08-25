@@ -153,6 +153,8 @@ animation_event_editor :: (data: *void, info: *Type_Info) -> bool
     if event.type ==
     {
         case .SPRITE; modified = ImGui_EditStructMembers(*event.sprite) || modified;
+        case .BOX; modified = ImGui_EditStructMembers(*event.box) || modified;
+        case .MOVEMENT; modified = ImGui_EditStructMembers(*event.movement) || modified;
     }
 
     return modified;
