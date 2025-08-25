@@ -1,6 +1,6 @@
 TextureFileEditor :: struct
 {
-    selected_sprite: = -1;
+    selected_sprite_index: = -1;
 }
 
 texture_file_editor_init :: (resource_editor: *ResourceEditor)
@@ -28,23 +28,34 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
     assert(resource_editor.resource != null);
     texture_file: = cast(*TextureFile)resource_editor.resource;
 
-    hovered_sprite: = -1;
-    ImGui.BeginChild("sprites", .{180, ImGui.GetContentRegionAvail().y}, window_flags = .AlwaysVerticalScrollbar);
-    ImGui.SeparatorText("Sprites");
-    for sprite, i: texture_file.sprites
+    hovered_sprite_index: = -1;
+    modified: = false;
+
+    size_available: = ImGui.GetContentRegionAvail();
+
+    LEFT_COLUMN_SIZE :: 180;
+    RIGHT_COLUMN_SIZE :: 250;
+
+    if ImGui.BeginChild("sprites", .{LEFT_COLUMN_SIZE, size_available.y}, window_flags = .AlwaysVerticalScrollbar)
     {
-        if ImGui.Selectable(temp_c_string(sprite.name.str), i == selected_sprite)
+        ImGui.SeparatorText("Sprites");
+        for sprite, i: texture_file.sprites
         {
-            selected_sprite = i;
-        }
-        if ImGui.IsItemHovered()
-        {
-            hovered_sprite = i;
+            if ImGui.Selectable(temp_c_string(sprite.name.str), i == selected_sprite_index)
+            {
+                selected_sprite_index = i;
+            }
+            if ImGui.IsItemHovered()
+            {
+                hovered_sprite_index = i;
+            }
         }
     }
     ImGui.EndChild();
 
     ImGui.SameLine();
+
+    if ImGui.BeginChild("texture", .{size_available.x - LEFT_COLUMN_SIZE - RIGHT_COLUMN_SIZE - 10, size_available.y})
     {
         size_available: = ImGui.GetContentRegionAvail();
         cursor: = ImGui.GetCursorScreenPos();
@@ -63,30 +74,66 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
 
             if is_image_hovered && ImGui.IsMouseHoveringRect(min, max)
             {
-                hovered_sprite = i;
+                hovered_sprite_index = i;
                 if ImGui.IsMouseClicked(.Left)
                 {
-                    selected_sprite = i;
+                    selected_sprite_index = i;
                 }
             }
 
             color: = IM_COL32(255,255,255,60);
-            if i == hovered_sprite && !ImGui.IsMouseDown(.Left)
+            if i == hovered_sprite_index && !ImGui.IsMouseDown(.Left)
             {
                 color = IM_COL32(255,255,255,255);
             }
-            else if i == selected_sprite
+            else if i == selected_sprite_index
             {
                 color = IM_COL32(255,255,255,170);
             }
 
             draw_list.AddRect(draw_list, min, max, color);
+
+            ORIGIN_SIZE :: 5;
+            origin: = floor(.{
+                min.x + sprite.origin.x * ratio,
+                max.y - sprite.origin.y * ratio
+            });
+            draw_list.AddLine(draw_list, origin - .{ORIGIN_SIZE, 0}, origin + .{ORIGIN_SIZE+1, 0}, IM_COL32(255,0,0,255));
+            draw_list.AddLine(draw_list, origin - .{0, ORIGIN_SIZE}, origin + .{0, ORIGIN_SIZE}, IM_COL32(255,0,0,255));
         }
 
-        if is_image_hovered && hovered_sprite < 0 && ImGui.IsMouseClicked(.Left)
+        if is_image_hovered && hovered_sprite_index < 0 && ImGui.IsMouseClicked(.Left)
         {
-            selected_sprite = -1;
+            selected_sprite_index = -1;
         }
+    }
+    ImGui.EndChild();
+
+    ImGui.SameLine();
+
+    if selected_sprite_index >= 0
+    {
+        selected_sprite: = *texture_file.sprites[selected_sprite_index];
+        if ImGui.BeginChild("properties", .{RIGHT_COLUMN_SIZE, size_available.y}, child_flags = 0,  window_flags = .AlwaysVerticalScrollbar)
+        {
+            ImGui.SeparatorText("Sprite Properties");
+            modified = ImGui_EditValue("", selected_sprite) || modified;
+
+            if ImGui.Button("Apply origin to all sprites")
+            {
+                for *sprite: texture_file.sprites
+                {
+                    sprite.origin = selected_sprite.origin;
+                }
+                modified = true;
+            }
+        }
+        ImGui.EndChild();
+    }
+
+    if ImGui.IsWindowFocused(.RootAndChildWindows) && ImGui.IsKeyPressed(.Escape)
+    {
+        selected_sprite_index = -1;
     }
 
     // ImGui.SeparatorText("Full Texture");
@@ -129,5 +176,5 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
     //     }
     // }
 
-    return false;
+    return modified;
 }

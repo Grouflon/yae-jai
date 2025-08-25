@@ -82,17 +82,39 @@ draw_sprite :: (_position: Vector2, _sprite: SpriteHandle, _flip_x: bool = false
     sprite, texture: = get_sprite(_sprite);
     if sprite == null return;
     if texture == null return;
-    if !is_loaded(texture) return;
+    draw_sprite(_position, texture, sprite, _flip_x, _flip_y, _tint);
+}
 
-    x: = left(sprite.bounds);
-    y: = bottom(sprite.bounds);
-    w: = (ifx _flip_x then -1.0 else 1.0) * width(sprite.bounds);
-    h: = (ifx _flip_y then 1.0 else -1.0) * height(sprite.bounds);
+draw_sprite :: (_position: Vector2, _texture: *TextureFile, _sprite: TextureFile.Sprite, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
+{
+    if _texture == null return;
+    if !is_loaded(_texture) return;
+
+    x: = left(_sprite.bounds);
+    y: = bottom(_sprite.bounds);
+    w: = width(_sprite.bounds);
+    h: = height(_sprite.bounds);
+
+    origin: = Vector2.{
+        _sprite.origin.x,
+        h - _sprite.origin.y
+    };
+    if _flip_x
+    {
+        origin.x = w - _sprite.origin.x;
+        w *= -1;
+    }
+
+    if !_flip_y
+    {
+        origin.y = _sprite.origin.y;
+        h *= -1;
+    }
 
     DrawTextureRec(
-        texture.texture,
+        _texture.texture,
         .{ x, y, w, h },
-        _position,
+        _position - origin,
         _tint,
     );
 }

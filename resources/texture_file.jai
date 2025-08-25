@@ -9,6 +9,7 @@ TextureFile :: struct
     {
         name: StringHash; @serialize
         bounds: Bounds; @serialize
+        origin: Vector2; @serialize @step(1)
     }
     sprites: [..]Sprite; @serialize
 
@@ -16,13 +17,13 @@ TextureFile :: struct
     name_to_sprite_index: Table(StringHash, s64);
 }
 
-texture_add_or_set_sprite :: (using texture_file: *TextureFile, sprite_name: string, bounds: Bounds) -> *TextureFile.Sprite, s64
+texture_add_or_set_sprite :: (using texture_file: *TextureFile, sprite_name: string, bounds: Bounds, origin: Vector2 = .{}) -> *TextureFile.Sprite, s64
 {
     sprite_name_hash: = string_hash(sprite_name);
     sprite, index: = texture_get_sprite(texture_file, sprite_name_hash);
     if sprite == null
     {
-        array_add(*sprites, .{ sprite_name_hash, bounds });
+        array_add(*sprites, .{ sprite_name_hash, bounds, origin });
         sprite = array_back(sprites);
         index = sprites.count-1;
     }

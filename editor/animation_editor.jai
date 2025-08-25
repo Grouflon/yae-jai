@@ -156,12 +156,12 @@ animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
 
     if selected_event_index >= 0
     {
-        ImGui_EditValue("", *animation.events[selected_event_index]);
+        animation_modified = ImGui_EditValue("", *animation.events[selected_event_index]) || animation_modified;
     }
     else
     {
         ImGui.SetNextItemWidth(100.0);
-        animation_modified = ImGui_EditValue("frames per second", *animation.frames_per_second);
+        animation_modified = ImGui_EditValue("frames per second", *animation.frames_per_second) || animation_modified;
     }
 
     return animation_modified;
