@@ -183,16 +183,28 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
     has_max_override: bool;
     max_override: float = 0.0;
 
-    for note_string: notes
+    if has_note(notes, "drag") { widget_type = .DRAG; }
+    else if has_note(notes, "slider") { widget_type = .SLIDER; }
+
+    found, args: = has_note_with_args(notes, "step");
+    if found && args.count > 0
     {
-        note: = parse_note(note_string);
-        if note.name == {
-            case "drag"; { widget_type = .DRAG; }
-            case "slider"; { widget_type = .SLIDER; }
-            case "step"; { has_step_override = true; step_override = note.value.decimal; }
-            case "min"; { has_min_override = true; min_override = note.value.decimal; }
-            case "max"; { has_max_override = true; max_override = note.value.decimal; }
-        }
+        has_step_override = true;
+        step_override = args[0].decimal;
+    }
+
+    found, args = has_note_with_args(notes, "min");
+    if found && args.count > 0
+    {
+        has_min_override = true;
+        min_override = args[0].decimal;
+    }
+
+    found, args = has_note_with_args(notes, "max");
+    if found && args.count > 0
+    {
+        has_max_override = true;
+        max_override = args[0].decimal;
     }
 
     // Common Float settings
@@ -604,41 +616,6 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
 }
 
 #scope_file
-
-Note :: struct
-{
-    Value :: struct
-    {
-        boolean: bool;
-        integer: int;
-        decimal: float;
-        text: string;
-    }
-
-    name: string;
-    value: Value;
-}
-
-parse_note :: (note_string: string) -> Note
-{
-    note: Note;
-    index: = find_index_from_left(note_string, #char "=");
-    if index < 0
-    {
-        note.name = trim(note_string);
-    }
-    else
-    {
-        note.name = trim(slice(note_string, 0, index));
-        value_string: = trim(slice(note_string, index+1, note_string.count - index + 1));
-        if value_string == "true" { note.value.boolean = true; }
-        note.value.integer = string_to_int(value_string);
-        note.value.decimal = string_to_float(value_string);
-        note.value.text = value_string;
-    }
-    return note;
-    // find = sign, trim both sides, convert right side to all possible types
-}
 
 unique_label :: (label: string, value: *void) -> string
 {

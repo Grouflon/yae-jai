@@ -1,3 +1,11 @@
+NoteArgument :: struct
+{
+    boolean: bool;
+    integer: int;
+    decimal: float;
+    text: string;
+}
+
 has_note :: (ti: *Type_Info_Struct, note: string) -> bool
 {
     if ti == null return false;
@@ -19,21 +27,21 @@ has_note :: (notes: []string, note: string) -> bool
     return false;
 }
 
-has_note_with_args :: (ti: *Type_Info_Struct_Member, note: string) -> bool, []string
+has_note_with_args :: (ti: *Type_Info_Struct_Member, note: string) -> bool, []NoteArgument
 {
     if ti == null return false, .[];
     found, args: = has_note_with_args(ti.notes, note);
     return found, args;
 }
 
-has_note_with_args :: (ti: *Type_Info_Struct, note: string) -> bool, []string
+has_note_with_args :: (ti: *Type_Info_Struct, note: string) -> bool, []NoteArgument
 {
     if ti == null return false, .[];
     found, args: = has_note_with_args(ti.notes, note);
     return found, args;
 }
 
-has_note_with_args :: (notes: []string, note: string) -> bool, []string
+has_note_with_args :: (notes: []string, note: string) -> bool, []NoteArgument
 {
     for n: notes
     {
@@ -44,12 +52,20 @@ has_note_with_args :: (notes: []string, note: string) -> bool, []string
         args_string: = string.{ data = note_name.data + offset, count = n.count - offset };
         args_string = stop_at_any(args_string, ")");
         push_allocator(temporary_allocator);
+
+        result: [..]NoteArgument;
         args: = split(args_string, ",");
-        for * arg: args
+        for arg, i: args
         {
-            <<arg = trim(<<arg);
+            trimmed_arg: = trim(arg);
+            array_add(*result, .{
+                boolean = ifx trimmed_arg == "true" then true else false,
+                integer =  string_to_int(trimmed_arg),
+                decimal =  string_to_float(trimmed_arg),
+                text =  trimmed_arg,
+            });
         }
-        return true, args;
+        return true, result;
     }
     return false, .[];
 }

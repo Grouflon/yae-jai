@@ -88,7 +88,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     found, args: = has_note_with_args(struct_type_info, "custom_serialize");
                     if found && args.count > 0
                     {
-                        table_add(*custom_serialize_table, struct_type_info, args[0]);
+                        table_add(*custom_serialize_table, struct_type_info, args[0].text);
                     }
                 }
 
@@ -97,7 +97,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     found, args: = has_note_with_args(struct_type_info, "custom_editor");
                     if found && args.count > 0
                     {
-                        table_add(*custom_editor_table, struct_type_info, args[0]);
+                        table_add(*custom_editor_table, struct_type_info, args[0].text);
                     }
                 }
             }
