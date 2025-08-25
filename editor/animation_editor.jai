@@ -16,6 +16,8 @@ AnimationEditor :: struct
     event_popup_frame: s32 = -1;
 
     default_resource_editor: bool = false;
+
+    frame_count: = -1;
 }
 
 animation_editor_init :: (resource_editor: *ResourceEditor)
@@ -47,6 +49,8 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     assert(resource_editor != null);
     using editor: = cast(*AnimationEditor) resource_editor.payload;
     assert(editor != null);
+
+    frame_count += 1;
 
     if ImGui.BeginMenuBar()
     {
@@ -686,6 +690,11 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     viewport_update(*viewport, viewport_size);
     ImGui.Image(viewport.render_target.texture.id, viewport_size);
 
+    if frame_count == 2 // @NOTE(remi): Viewport is all over the place for between 1 and 2 frames when the window first appears
+    {
+        animation_editor_frame_sprite(editor);
+    }
+
     if ImGui.BeginPopupContextItem("viewport")
     {
         if ImGui.MenuItem("Frame sprite")
@@ -695,6 +704,7 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
 
         ImGui.EndPopup();
     }
+
 
     DRAG_BUTTON :: ImGui.MouseButton.Middle;
     drag_button_pressed: = ImGui.IsMouseClicked(DRAG_BUTTON);
