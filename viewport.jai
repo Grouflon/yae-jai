@@ -26,6 +26,9 @@ ViewportBase :: struct
 
 viewport_align_points :: (viewport: *ViewportBase, viewport_p0: Vector2, world_p0: Vector2, viewport_p1: Vector2, world_p1: Vector2, uniform_zoom: bool = true)
 {
+    if viewport_p0 == viewport_p1 return;
+    if world_p0 == world_p1 return;
+
     viewport.zoom = (viewport_p0 - viewport_p1) / (world_p0 - world_p1);
     // zoom: float = max(viewport.zoom.x, viewport.zoom.y);
     // viewport.zoom = .{zoom, zoom};
