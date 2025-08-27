@@ -19,20 +19,33 @@ AnimationLayer :: struct
 }
 
 AnimationEvent :: struct
-    @custom_serialize(animation_event_serialize) // @NOTE(remi): custom serialize handles union
-    @custom_editor(animation_event_editor)
+    @serialize_filter(animation_event_serialize_filter) // deals with union. Fuck those commies
 {
-    type: AnimationEventType;
-    begin: s32;
-    end: s32 = -1; // included
-    layer: u32 = 0;
+    type: AnimationEventType; @serialize
+    begin: s32;  @serialize
+    end: s32 = -1; @serialize // included
+    layer: u32 = 0; @serialize
 
     union
     {
-        sprite: SpriteAnimationEvent;
-        box: BoxAnimationEvent;
-        movement: MovementAnimationEvent;
+        sprite: SpriteAnimationEvent; @serialize
+        box: BoxAnimationEvent; @serialize
+        movement: MovementAnimationEvent; @serialize
     }
+}
+
+animation_event_serialize_filter :: (parent_data: *void, parent_info: *Type_Info_Struct, member_info: *Type_Info_Struct_Member) -> bool
+{
+    assert(parent_info == type_info(AnimationEvent));
+    event: *AnimationEvent = xx parent_data;
+
+    if member_info.name ==
+    {
+        case "sprite"; return event.type == .SPRITE;
+        case "box"; return event.type == .BOX;
+        case "movement"; return event.type == .MOVEMENT;
+    }
+    return true;
 }
 
 AnimationEventType :: enum
@@ -114,50 +127,6 @@ animation_add_layer :: (using animation: *Animation, layer_name: string, index: 
         array_insert_at(*layers, layer, index);
         return index;
     }
-}
-
-animation_event_serialize :: (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> (default_serialize: bool, success: bool)
-{
-    event: *AnimationEvent = xx data;
-
-    if !serializer_begin_object(serializer, null, key) return false, false;
-    defer serializer_end_object(serializer);
-
-    success: = true;
-
-    success = serialize(serializer, *event.type, "type", params, ctx) && success;
-    success = serialize(serializer, *event.begin, "begin", params, ctx) && success;
-    success = serialize(serializer, *event.end, "end", params, ctx) && success;
-    success = serialize(serializer, *event.layer, "layer", params, ctx) && success;
-
-    if event.type ==
-    {
-        case .SPRITE; { success = serialize(serializer, *event.sprite, "sprite", params, ctx) && success; }
-        case .BOX; { success = serialize(serializer, *event.box, "box", params, ctx) && success; }
-        case .MOVEMENT; { success = serialize(serializer, *event.movement, "movement", params, ctx) && success; }
-    }
-    return false, success;
-}
-
-animation_event_editor :: (data: *void, info: *Type_Info) -> bool
-{
-    assert(info == type_info(AnimationEvent));
-    event: *AnimationEvent = xx data;
-
-    modified: = false;
-    modified = ImGui_EditValue("type", *event.type) || modified;
-    modified = ImGui_EditValue("begin", *event.begin) || modified;
-    modified = ImGui_EditValue("end", *event.end) || modified;
-    modified = ImGui_EditValue("layer", *event.layer) || modified;
-
-    if event.type ==
-    {
-        case .SPRITE; modified = ImGui_EditStructMembers(*event.sprite) || modified;
-        case .BOX; modified = ImGui_EditStructMembers(*event.box) || modified;
-        case .MOVEMENT; modified = ImGui_EditStructMembers(*event.movement) || modified;
-    }
-
-    return modified;
 }
 
 #scope_file
