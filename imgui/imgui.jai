@@ -102,20 +102,19 @@ ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> boo
         return custom_editor_function(value, info_struct);
     }
 
+    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct);
+    serialize_filter_function: = get_serialize_filter_function(info_struct);
+
     modified: = false;
-    for member_type_info: info_struct.members
+    for key: keys
     {
-        member_value: = value + member_type_info.offset_in_bytes;
+        success, member_info: = table_find_new(*key_to_member_info, key);
+        if !success { continue; }
 
-        if member_type_info.flags & .AS && member_type_info.type.type == .STRUCT
-        {
-            ImGui_EditStructMembers(member_value, cast(*Type_Info_Struct)member_type_info.type);
-            continue;
-        }
+        if serialize_filter_function != null && !serialize_filter_function(value, info_struct, member_info.tis_member) { continue; }
 
-        if !has_note(*member_type_info, "serialize") continue;
-
-        modified = ImGui_EditValue(member_type_info.name, value + member_type_info.offset_in_bytes, member_type_info.type, member_type_info.notes) || modified;
+        member_value: = value + member_info.offset;
+        modified = ImGui_EditValue(key, member_value, member_info.tis_member.type, member_info.tis_member.notes) || modified;
     }
     return modified;
 }

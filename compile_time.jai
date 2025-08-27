@@ -5,10 +5,13 @@ YaeCompileTimeInfo :: struct
     resource_types: []*Type_Info_Struct;
     custom_serialize_types: []TypeFunction(CustomSerializationFunction);
     custom_editor_types: []TypeFunction(CustomEditorFunction);
+    serialize_filter_types: []TypeFunction(SerializeFilterFunction);
 }
 
 CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> (default_serialize: bool, success: bool);
 CustomEditorFunction :: #type (data: *void, info: *Type_Info) -> bool;
+// @NOTE(remi): in the case of #as or unions, Type_Info_Struct_Member might come from a different Type_Info than the parent_info. Maybe it is not a good idea to give it as is
+SerializeFilterFunction :: #type (parent_data: *void, parent_info: *Type_Info_Struct, member_info: *Type_Info_Struct_Member) -> bool;
 
 TypeFunction :: struct(function_type: Type)
 {
@@ -20,6 +23,7 @@ custom_function_registry : struct
 {
     custom_serialize_registry: Table(*Type_Info, CustomSerializationFunction);
     custom_editor_registry: Table(*Type_Info, CustomEditorFunction);
+    serialize_filter_registry: Table(*Type_Info, SerializeFilterFunction);
 };
 
 custom_function_registry_init :: (compile_time_info: *YaeCompileTimeInfo)
@@ -37,6 +41,12 @@ custom_function_registry_init :: (compile_time_info: *YaeCompileTimeInfo)
         if type.ti == null || type.function == null { continue; }
         table_add(*custom_editor_registry, type.ti, type.function);
     }
+
+    for type: compile_time_info.serialize_filter_types
+    {
+        if type.ti == null || type.function == null { continue; }
+        table_add(*serialize_filter_registry, type.ti, type.function);
+    }
 }
 
 serialization_manager_shutdown :: ()
@@ -45,6 +55,16 @@ serialization_manager_shutdown :: ()
 
     deinit(*custom_serialize_registry);
     deinit(*custom_editor_registry);
+    deinit(*serialize_filter_registry);
+}
+
+get_serialize_filter_function :: (ti: *Type_Info) -> SerializeFilterFunction
+{
+    using custom_function_registry;
+
+    found, f: = table_find_new(*serialize_filter_registry, ti);
+    if found return f;
+    return null;
 }
 
 get_custom_serialize_function :: (ti: *Type_Info) -> CustomSerializationFunction
@@ -98,6 +118,15 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     if found && args.count > 0
                     {
                         table_add(*custom_editor_table, struct_type_info, args[0].text);
+                    }
+                }
+
+                // Serialize Filter
+                {
+                    found, args: = has_note_with_args(struct_type_info, "serialize_filter");
+                    if found && args.count > 0
+                    {
+                        table_add(*serialize_filter_table, struct_type_info, args[0].text);
                     }
                 }
             }
@@ -154,6 +183,19 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             append(*sb, "],\n");
                         }
 
+                        // Serialize Filter
+                        {
+                            append(*sb, "serialize_filter_types= .[\n");
+                            i: = 0;
+                            for function_name, ti: serialize_filter_table
+                            {
+                                if i > 0 append(*sb, ",\n");
+                                append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
+                                i+=1;
+                            }
+                            append(*sb, "],\n");
+                        }
+
                         append(*sb, "};\n");
 
                         add_build_string(builder_to_string(*sb), w);
@@ -172,6 +214,8 @@ object_types: [..]*Type_Info_Struct;
 resource_types: [..]*Type_Info_Struct;
 custom_serialize_table: Table(*Type_Info_Struct, string);
 custom_editor_table: Table(*Type_Info_Struct, string);
+serialize_filter_table: Table(*Type_Info_Struct, string);
+
 generated_compile_time_info: = false;
 
 #import "Compiler";

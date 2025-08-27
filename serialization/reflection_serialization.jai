@@ -189,38 +189,50 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     }
 
                     // We do not serialize unions
-                    if info_struct.textual_flags & .UNION return true;
+                    if info_struct.textual_flags & .UNION
+                    {
+                        return true;
+                    }
 
                     next_context: ReflectionContext;
                     next_context.parent = info_struct;
 
                     // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
-                    keys, key_to_type_info, notes: = gather_members_flat(info_struct);
+                    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct);
+                    serialize_filter_function: = get_serialize_filter_function(info_struct);
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
 
                     for key : keys
                     {
-                        success, member_type_info: = table_find_new(*key_to_type_info, key);
+                        success, member_info: = table_find_new(*key_to_member_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
 
+                        // @NOTE(remi): We probably want to remove this parameterized filter thing. I don't think we'll ever need something different than static filter
                         // params filters
                         skip: = false;
                         for filter: params.filters
                         {
                             if filter.subclass != null && !is_subclass_of(info_struct, filter.subclass) { continue; }
 
-                            match: = has_note(member_type_info, filter.note);
+                            match: = has_note(member_info.tis_member, filter.note);
                             if filter.type == .IN && !match { skip = true; break; }
                             else if filter.type == .OUT && match { skip = true; break; }
                         }
                         if skip { continue; }
 
-                        next_context.member = member_type_info;
-                        member_data: = data + member_type_info.offset_in_bytes;
+                        // serialize filter
+                        if serialize_filter_function != null
+                        {
+                            skip = !serialize_filter_function(data, info_struct, member_info.tis_member);
+                        }
+                        if skip { continue; }
+
+                        next_context.member = member_info.tis_member;
+                        member_data: = data + member_info.offset;
 
                         // NOTE: for now we don't do anything if one of the members fails. We'll probably need a flag to define behavior but let's wait for use cases
-                        serialize(serializer, member_data, member_type_info.type, key, params, next_context);
+                        serialize(serializer, member_data, member_info.tis_member.type, key, params, next_context);
                     }
                     verify(serializer_end_object(serializer));
 
@@ -397,24 +409,28 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
     return false;
 }
 
-#scope_file
+MemberInfo :: struct
+{
+    tis_member: *Type_Info_Struct_Member;
+    offset: s64;
+}
 
-gather_members_flat :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, *Type_Info_Struct_Member), notes: []string
+get_flattened_struct_members :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, MemberInfo), notes: []string
 {
     keys: [..]string;
     keys.allocator = temporary_allocator;
 
-    key_to_type_info: Table(string, *Type_Info_Struct_Member);
-    key_to_type_info.allocator = temporary_allocator;
+    key_to_member_info: Table(string, MemberInfo);
+    key_to_member_info.allocator = temporary_allocator;
 
     notes: [..]string;
     notes.allocator = temporary_allocator;
 
-    gather_members_flat(info, *keys, *key_to_type_info, *notes);
-    return keys, key_to_type_info, notes;
+    get_flattened_struct_members(info, 0, *keys, *key_to_member_info, *notes);
+    return keys, key_to_member_info, notes;
 }
 
-gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type: *Table(string, *Type_Info_Struct_Member), notes: *[..]string)
+get_flattened_struct_members :: (info: *Type_Info_Struct, base_offset: s64, keys: *[..]string, key_to_type: *Table(string, MemberInfo), notes: *[..]string)
 {
     assert(info != null);
     assert(keys != null);
@@ -425,20 +441,33 @@ gather_members_flat :: (info: *Type_Info_Struct, keys: *[..]string, key_to_type:
 
     for member_type_info, i : info.members
     {
-        if member_type_info.flags & .AS
+        offset: = base_offset + member_type_info.offset_in_bytes;
+
+        if member_type_info.type.type == .STRUCT
         {
-            assert(i == 0, "#as members are only supported in first position for now");
-            if member_type_info.type.type == .STRUCT
+            member_tis: *Type_Info_Struct = xx member_type_info.type;
+
+            // Flatten special structs
+            // #as
+            if member_type_info.flags & .AS
             {
-                gather_members_flat(xx member_type_info.type, keys, key_to_type, notes);
+                get_flattened_struct_members(member_tis, offset, keys, key_to_type, notes);
+                continue;
+            }
+
+            // union
+            if member_tis.textual_flags & .UNION
+            {
+                get_flattened_struct_members(member_tis, offset, keys, key_to_type, notes);
+                continue;
             }
         }
-        else
-        {
-            if !has_note(*member_type_info, "serialize") { continue; }
+        
+        if !has_note(*member_type_info, "serialize") { continue; }
 
-            array_add(keys, member_type_info.name);
-            table_add(key_to_type, member_type_info.name, info.members.data + i);
-        }
+        array_add(keys, member_type_info.name);
+        table_add(key_to_type, member_type_info.name, .{*info.members[i], offset});
     }
 }
+
+#scope_file
