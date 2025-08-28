@@ -196,12 +196,13 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     get_event_local_bounds :: (animation: *Animation, event_index: s64) -> Bounds
     {
         event: = *animation.events[event_index];
+        end_frame: = ifx event.end < event.begin then event.begin else event.end;
         begin: Vector2 = .{
             xx (LAYER_WIDTH + 1 + event.begin * (FRAME_WIDTH+1)),
             xx (TOP_BAR_HEIGHT + 1 + event.layer * (LAYER_HEIGHT+1))
         };
         end: Vector2 = .{
-            begin.x + xx ((event.end-event.begin+1) * (FRAME_WIDTH+1) - 1),
+            begin.x + xx ((end_frame-event.begin+1) * (FRAME_WIDTH+1) - 1),
             begin.y + LAYER_HEIGHT
         };
         return .{ begin, end };

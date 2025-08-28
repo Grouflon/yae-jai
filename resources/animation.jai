@@ -23,8 +23,8 @@ AnimationEvent :: struct
 {
     type: AnimationEventType; @serialize
     begin: s32;  @serialize
-    end: s32 = -1; @serialize // included
-    layer: u32 = 0; @serialize
+    end: s32; @serialize // inclusive
+    layer: u32; @serialize
 
     union
     {
@@ -79,7 +79,11 @@ MovementAnimationEvent :: struct
 is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool
 {
     assert(event != null);
-    return frame == event.begin || (frame > event.begin && frame <= event.end);
+    if event.end >= event.begin
+    {
+        return frame >= event.begin && frame <= event.end;
+    }
+    return frame == event.begin;
 }
 
 animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
