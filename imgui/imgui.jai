@@ -3,6 +3,11 @@ IM_COL32 :: (r: u8, g: u8, b: u8, a: u8) -> u32 #expand
     return ((cast(u32)r) << IM_COL32_R_SHIFT) | ((cast(u32)g) << IM_COL32_G_SHIFT) | ((cast(u32)b) << IM_COL32_B_SHIFT) | ((cast(u32)a) << IM_COL32_A_SHIFT);
 }
 
+IM_COL32 :: (c: Color) -> u32 #expand
+{
+    return IM_COL32(c.r, c.g, c.b, c.a);
+}
+
 IM_COL32_R_SHIFT :: 0;
 IM_COL32_G_SHIFT :: 8;
 IM_COL32_B_SHIFT :: 16;

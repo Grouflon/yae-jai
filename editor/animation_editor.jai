@@ -184,10 +184,6 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     WHITE_IDLE : u32 : 0xffaaaaaa;
     WHITE_HOVERED : u32 : 0xffffffff;
 
-    TEAL_IDLE : u32 : 0xffb0c445;
-    TEAL_SELECTED : u32 : 0xffa3eb9a;
-    TEAL_HOVERED : u32 : 0xffbafdda;
-
     color_strong: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderStrong]);
     color_light: = ImGui.GetColorU32(ImGui.GetStyle().Colors[ImGui.Col.TableBorderLight]);
 
@@ -383,24 +379,25 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
             for *event, i: animation.events
             {
-                c: = TEAL_IDLE;
+                color_set: = get_event_color_set(event);
+                c: = color_set.idle;
                 if i == hovered_event
                 {
                     if ImGui.IsMouseDown(.Left)
                     {
-                        c = TEAL_SELECTED;
+                        c = color_set.selected;
                     }
                     else
                     {
-                        c = TEAL_HOVERED;
+                        c = color_set.hovered;
                     }
                 }
                 else if i == selected_event_index
                 {
-                    c = TEAL_SELECTED;
+                    c = color_set.selected;
                 }
                 bounds: = cursor + get_event_local_bounds(animation, i);
-                draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, c, 2.0, .RoundCornersAll);
+                draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, IM_COL32(c), 2.0, .RoundCornersAll);
             }
 
             // Frame cursor
@@ -843,6 +840,15 @@ animation_editor_frame_sprite :: (using editor: *AnimationEditor)
     viewport_align_points(*editor.viewport, FRAME_MARGIN, .{bounds.min.x, bounds.max.y}, editor.viewport.size - FRAME_MARGIN, .{bounds.max.x, bounds.min.y}, true);
     zoom: float = min(editor.viewport.zoom.x, editor.viewport.zoom.y);
     editor.viewport.zoom = xy(zoom - fmod_cycling(zoom, ZOOM_STEP));
+}
+
+get_event_color_set :: (event: *AnimationEvent) -> ButtonColorSet
+{
+    if event == null return .{};
+
+    tie: = cast(*Type_Info_Enum) type_info(AnimationEventType);
+    name: = enum_value_to_name(event.type);
+    return make_button_color_set(string_to_color(name, value_range = .[0.6, 0.7]));
 }
 
 rl :: #import "raylib";

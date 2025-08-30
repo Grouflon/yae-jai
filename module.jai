@@ -1,5 +1,6 @@
 #load "animation_player.jai";
 #load "compile_time.jai";
+#load "color.jai";
 #load "draw.jai";
 #load "entity.jai";
 #load "log.jai";
