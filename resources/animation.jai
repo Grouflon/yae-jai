@@ -98,14 +98,16 @@ animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
         sprite: = get_sprite(event.sprite.sprite);
         if sprite == null continue;
 
+        sprite_bounds: = sprite.bounds - sprite.bounds.min - sprite.origin + event.sprite.offset;
+
         if !initialized
         {
-            bounds = sprite.bounds;
+            bounds = sprite_bounds;
             initialized = true;
         }
         else
         {
-            bounds = combine(bounds, sprite.bounds);
+            bounds = combine(bounds, sprite_bounds);
         }
     }
 

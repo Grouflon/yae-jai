@@ -840,7 +840,7 @@ animation_editor_frame_sprite :: (using editor: *AnimationEditor)
 
     if length_squared(sprite_size) < 0.0001 return;
 
-    viewport_align_points(*editor.viewport, FRAME_MARGIN, .{0, sprite_size.y}, editor.viewport.size - FRAME_MARGIN, .{sprite_size.x, 0}, true);
+    viewport_align_points(*editor.viewport, FRAME_MARGIN, .{bounds.min.x, bounds.max.y}, editor.viewport.size - FRAME_MARGIN, .{bounds.max.x, bounds.min.y}, true);
     zoom: float = min(editor.viewport.zoom.x, editor.viewport.zoom.y);
     editor.viewport.zoom = xy(zoom - fmod_cycling(zoom, ZOOM_STEP));
 }
