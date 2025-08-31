@@ -116,6 +116,7 @@ animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
 
 animation_add_layer :: (using animation: *Animation, layer_name: string, index: s64 = -1) -> s64
 {
+    assert(animation != null);
     if !is_loaded_without_errors
     {
         log_warning("%: Can't add layer to unloaded Animation", name);
@@ -152,13 +153,46 @@ animation_remove_layer :: (using animation: *Animation, index: s64)
         }
         else if event.layer == index
         {
-            deinit(event);
-            array_ordered_remove_by_index(*animation.events, i);
+            animation_remove_event(animation, i);
         }
     }
 
     deinit(*animation.layers[index]);
     array_ordered_remove_by_index(*animation.layers, index);
+}
+
+animation_add_event :: (using animation: *Animation, event: AnimationEvent, index: s64 = -1) -> s64
+{
+    assert(animation != null);
+    if !is_loaded_without_errors
+    {
+        log_warning("%: Can't add event to unloaded Animation", name);
+        return -1;
+    }
+
+    if index < 0
+    {
+        array_add(*events, event);
+        return events.count-1;
+    }
+    else
+    {
+        array_insert_at(*events, event, index);
+        return index;
+    }
+}
+
+animation_remove_event :: (using animation: *Animation, index: s64)
+{
+    assert(animation != null);
+    if index < 0 || index >= animation.events.count
+    {
+        log_warning("%: Trying to remove out of range event %", animation.name, index);
+        return;
+    }
+
+    deinit(*animation.events[index]);
+    array_ordered_remove_by_index(*animation.events, index);
 }
 
 #scope_file

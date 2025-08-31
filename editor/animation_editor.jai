@@ -11,8 +11,9 @@ AnimationEditor :: struct
     edited_layer_name_index: s64 = -1;
     selected_event_index: s64 = -1;
 
-    layer_popup_index: s64 = -1;
-    event_popup_index: s64 = -1;
+    popup_layer_index: s64 = -1;
+    popup_event_index: s64 = -1;
+    popup_frame_index: s64 = -1;
 
 
     default_resource_editor: bool = false;
@@ -296,13 +297,16 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
                 if ImGui.IsMouseClicked(.Right)
                 {
-                    if is_event_zone_hovered
+                    if is_event_zone_hovered && hovered_frame >= 0 && hovered_layer >= 0
                     {
-
+                        popup_layer_index = hovered_layer;
+                        popup_frame_index = hovered_frame;
+                        popup_event_index = hovered_event;
+                        ImGui.OpenPopup(EDIT_EVENT_POPUP_NAME);
                     }
                     else if is_layer_bar_hovered
                     {
-                        layer_popup_index = hovered_layer;
+                        popup_layer_index = hovered_layer;
                         ImGui.OpenPopup(EDIT_LAYER_POPUP_NAME);
                     }
                     else if is_top_bar_hovered
@@ -315,9 +319,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 {
                     if is_event_zone_hovered
                     {
-                        if hovered_frame < 0
+                        if hovered_event < 0 && hovered_layer >= 0 && hovered_frame >= 0
                         {
-
+                            selected_event_index = animation_add_event(animation, .{ begin=xx hovered_frame, end=xx hovered_frame, layer=xx hovered_layer });
+                            animation_changed = true;
                         }
                     }
                     else if is_layer_bar_hovered
@@ -357,13 +362,12 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             {
                 if ImGui.IsKeyPressed(.Delete)
                 {
-                    // TODO: do proper animation_remove_event function
-                    // if selected_event_index >= 0
-                    // {
-                    //     array_ordered_remove_by_index(*animation.events, selected_event_index);
-                    //     selected_event_index = -1;
-                    //     animation_changed = true;
-                    // }
+                    if selected_event_index >= 0
+                    {
+                        animation_remove_event(animation, selected_event_index);
+                        selected_event_index = -1;
+                        animation_changed = true;
+                    }
                 }
             }
 
@@ -371,11 +375,15 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             {
                 defer ImGui.EndPopup();
 
-                if layer_popup_index >= 0
+                if popup_layer_index >= 0
                 {
                     if ImGui.MenuItem("Delete Layer")
                     {
-                        animation_remove_layer(animation, layer_popup_index);
+                        if selected_event_index >= 0 && animation.events[selected_event_index].layer == popup_layer_index
+                        {
+                            selected_event_index = -1;
+                        }
+                        animation_remove_layer(animation, popup_layer_index);
                         animation_changed = true;
                     }
                 }
@@ -387,9 +395,39 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     animation_changed = true;
                 }
             }
+            else if ImGui.BeginPopup(EDIT_EVENT_POPUP_NAME)
+            {
+                defer ImGui.EndPopup();
+
+                if popup_event_index >= 0
+                {
+                    if ImGui.MenuItem("Delete Event")
+                    {
+                        animation_remove_event(animation, popup_event_index);
+                        if selected_event_index > popup_event_index
+                        {
+                            selected_event_index -= 1;
+                        }
+                        else
+                        {
+                            selected_event_index = -1;
+                        }
+                        animation_changed = true;
+                    }
+                }
+                
+                if popup_event_index < 0 && popup_layer_index >= 0 && popup_frame_index >= 0
+                {
+                    if ImGui.MenuItem("Add Event")
+                    {
+                        selected_event_index = animation_add_event(animation, .{ begin=xx popup_frame_index, end=xx popup_frame_index, layer=xx popup_layer_index });
+                        animation_changed = true;
+                    }
+                }
+            }
             else
             {
-                layer_popup_index = -1;
+                popup_layer_index = -1;
             }
 
             // Draw
