@@ -135,6 +135,32 @@ animation_add_layer :: (using animation: *Animation, layer_name: string, index: 
     }
 }
 
+animation_remove_layer :: (using animation: *Animation, index: s64)
+{
+    assert(animation != null);
+    if index < 0 || index >= animation.layers.count
+    {
+        log_warning("%: Trying to remove out of range layer %", animation.name, index);
+        return;
+    }
+
+    for < *event, i: animation.events
+    {
+        if event.layer > index
+        {
+            event.layer -= 1;
+        }
+        else if event.layer == index
+        {
+            deinit(event);
+            array_ordered_remove_by_index(*animation.events, i);
+        }
+    }
+
+    deinit(*animation.layers[index]);
+    array_ordered_remove_by_index(*animation.layers, index);
+}
+
 #scope_file
 
 animation_load :: (resource: *Resource) -> bool
@@ -147,20 +173,31 @@ animation_unload :: (resource: *Resource)
 {
     using t: = cast(*Animation) resource;
 
-    for event: events
+    for *event: events
     {
-        if event.type == .MOVEMENT
-        {
-            curve_reset(*event.movement.x_movement);
-            curve_reset(*event.movement.y_movement);
-        }
+        deinit(event);
     }
     array_reset(*events);
 
-    for layer: layers
+    for *layer: layers
     {
-        free(layer.name);
+        deinit(layer);
     }
     array_reset(*layers);
 }
 
+deinit :: (event: *AnimationEvent)
+{
+    assert(event != null);
+    if event.type == .MOVEMENT
+    {
+        curve_reset(*event.movement.x_movement);
+        curve_reset(*event.movement.y_movement);
+    }
+}
+
+deinit :: (layer: *AnimationLayer)
+{
+    assert(layer != null);
+    free(layer.name);
+}

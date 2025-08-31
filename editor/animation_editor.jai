@@ -9,11 +9,11 @@ AnimationEditor :: struct
     is_drag_zone_hovered: = false;
 
     edited_layer_name_index: s64 = -1;
-    layer_popup_index: s64 = -1;
+    selected_event_index: s64 = -1;
 
-    selected_event_index: s32 = -1;
-    event_popup_layer: s32 = -1;
-    event_popup_frame: s32 = -1;
+    layer_popup_index: s64 = -1;
+    event_popup_index: s64 = -1;
+
 
     default_resource_editor: bool = false;
 
@@ -180,6 +180,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
     LAYER_WIDTH :: 150;
     FRAME_WIDTH :: 30;
     EDIT_LAYER_POPUP_NAME :: "edit_layer";
+    EDIT_EVENT_POPUP_NAME :: "edit_event";
 
     WHITE_IDLE : u32 : 0xffaaaaaa;
     WHITE_HOVERED : u32 : 0xffffffff;
@@ -209,7 +210,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         available_size: = ImGui.GetContentRegionAvail();
         content_size: Vector2 = .{
             max(available_size.x, xx (LAYER_WIDTH + 1 + (FRAME_WIDTH + 1) * animation.frame_count)),
-            max(available_size.y, xx (TOP_BAR_HEIGHT + 1 + (LAYER_HEIGHT + 1) * animation.layers.count))
+            max(available_size.y, xx (TOP_BAR_HEIGHT + 1 + (LAYER_HEIGHT + 1) * (animation.layers.count+1))) // We make size for an additional layer so that it is simpler to create them with a double click
         };
 
         // ImGui.PushStyleColor(.ChildBg, .{1,0,0,1});
@@ -219,86 +220,151 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         {
             cursor: = ImGui.GetCursorScreenPos();
             mouse_position: = ImGui.GetMousePos();
-
-            hovered_layer: = -1;
-            just_edited_layer: = false;
-            hovered_event: = -1;
-            hovered_frame: = -1;
+            local_mouse_pos: = mouse_position - cursor;
 
             is_drag_zone_hovered = ImGui.IsWindowHovered(); // @NOTE(remi): maybe reduce zone to layer & frames
+            is_top_bar_hovered: = false;
+            is_layer_bar_hovered: = false;
+            is_event_zone_hovered: = false;
+            hovered_layer: = -1;
+            hovered_event: = -1;
+            hovered_frame: = -1;
+            clamped_hovered_frame: = 0;
 
-            // Mouse Input
-            // Layers
-            if is_drag_zone_hovered && ImGui.IsMouseHoveringRect(cursor + .{0, TOP_BAR_HEIGHT}, cursor + .{LAYER_WIDTH, content_size.y})
+            just_edited_layer: = false;
+
+            // Input
+            // Mouse
+            if is_drag_zone_hovered
             {
+                // Hovering
+                is_top_bar_hovered = ImGui.IsMouseHoveringRect(cursor + .{LAYER_WIDTH+1, 0}, cursor + .{content_size.x, TOP_BAR_HEIGHT+1});
+                is_layer_bar_hovered = ImGui.IsMouseHoveringRect(cursor + .{0, LAYER_HEIGHT+1}, cursor + .{LAYER_WIDTH, content_size.y});
+                is_event_zone_hovered = ImGui.IsMouseHoveringRect(cursor + .{LAYER_WIDTH+1, LAYER_HEIGHT+1}, cursor + content_size);
+
+                hovered_frame = floor_to_s32((local_mouse_pos.x - LAYER_WIDTH) / (FRAME_WIDTH + 1));
+                clamped_hovered_frame = clamp(hovered_frame, 0, animation.frame_count-1);
+                if hovered_frame != clamped_hovered_frame { hovered_frame = -1; }
+
+                // Layers
                 for i: 0..animation.layers.count-1
                 {
                     y: float = xx (TOP_BAR_HEIGHT+1 + i * (LAYER_HEIGHT+1));
-                    if ImGui.IsMouseHoveringRect(cursor + .{0, y}, cursor + .{LAYER_WIDTH, y + LAYER_HEIGHT+1})
+                    if ImGui.IsMouseHoveringRect(cursor + .{0, y}, cursor + .{content_size.x, y + LAYER_HEIGHT+1})
                     {
                         hovered_layer = i;
                         break;
                     }
                 }
 
-                if hovered_layer >= 0
+                // Events
+                for i: 0..animation.events.count-1
                 {
-                    if ImGui.IsMouseDoubleClicked(.Left)
+                    bounds: = cursor + get_event_local_bounds(animation, i);
+                    if ImGui.IsMouseHoveringRect(bounds.min, bounds.max)
                     {
-                        edited_layer_name_index = hovered_layer;
-                        just_edited_layer = true;
+                        hovered_event = i;
                     }
                 }
 
-                if hovered_layer != edited_layer_name_index && ImGui.IsMouseClicked(.Left)
+                // Clicks
+                if ImGui.IsMouseClicked(.Left)
                 {
-                    edited_layer_name_index = -1;
+                    if is_event_zone_hovered
+                    {
+                        if hovered_event >= 0
+                        {
+                            selected_event_index = hovered_event;
+                        }
+                        else
+                        {
+                            selected_event_index = -1;
+                        }
+                    }
+                    else if is_layer_bar_hovered
+                    {
+                        if hovered_layer != edited_layer_name_index
+                        {
+                            edited_layer_name_index = -1;
+                        }
+                    }
+                    else if is_top_bar_hovered
+                    {
+                        is_dragging_frame = true;
+                    }
                 }
 
                 if ImGui.IsMouseClicked(.Right)
                 {
-                    layer_popup_index = hovered_layer;
-                    ImGui.OpenPopup(EDIT_LAYER_POPUP_NAME);
-                }
-            }
-            // Events
-            for i: 0..animation.events.count-1
-            {
-                bounds: = cursor + get_event_local_bounds(animation, i);
-                if ImGui.IsMouseHoveringRect(bounds.min, bounds.max)
-                {
-                    hovered_event = i;
-                    if ImGui.IsMouseClicked(.Left)
+                    if is_event_zone_hovered
                     {
-                        selected_event_index = xx i;
+
+                    }
+                    else if is_layer_bar_hovered
+                    {
+                        layer_popup_index = hovered_layer;
+                        ImGui.OpenPopup(EDIT_LAYER_POPUP_NAME);
+                    }
+                    else if is_top_bar_hovered
+                    {
+
                     }
                 }
-            }
-            if hovered_event < 0 && ImGui.IsMouseHoveringRect(cursor + .{LAYER_WIDTH+1, TOP_BAR_HEIGHT+1}, cursor + available_size) && ImGui.IsMouseClicked(.Left)
-            {
-                selected_event_index = -1;
-            }
-            // Frames
-            if ImGui.IsMouseHoveringRect(cursor + Vector2.{LAYER_WIDTH+1, 0}, cursor + Vector2.{xx (LAYER_WIDTH+1 + (animation.frame_count) * (FRAME_WIDTH+1)), TOP_BAR_HEIGHT})
-            {
-                if ImGui.IsMouseClicked(.Left)
+
+                if ImGui.IsMouseDoubleClicked(.Left)
                 {
-                    is_dragging_frame = true;
+                    if is_event_zone_hovered
+                    {
+                        if hovered_frame < 0
+                        {
+
+                        }
+                    }
+                    else if is_layer_bar_hovered
+                    {
+                        if hovered_layer >= 0
+                        {
+                            edited_layer_name_index = hovered_layer;
+                            just_edited_layer = true;
+                        }
+                        else
+                        {
+                            array_add(*animation.layers, .{});
+                            edited_layer_name_index = animation.layers.count-1;
+                            just_edited_layer = true;
+                            animation_changed = true;
+                        }
+                    }
+                    else if is_top_bar_hovered
+                    {
+
+                    }
                 }
-            }
-            {
-                local_mouse_pos: = mouse_position - cursor;
-                hovered_frame = floor_to_s32((local_mouse_pos.x - LAYER_WIDTH) / (FRAME_WIDTH + 1));
-            }
-            if !ImGui.IsMouseDown(.Left)
-            {
-                is_dragging_frame = false;
+
+                if !ImGui.IsMouseDown(.Left)
+                {
+                    is_dragging_frame = false;
+                }
             }
 
             if is_dragging_frame
             {
-                clamped_frame: = clamp(hovered_frame, 0, animation.frame_count-1);
-                animation_player_set_frame(*editor.player, xx clamped_frame);
+                animation_player_set_frame(*editor.player, xx clamped_hovered_frame);
+            }
+
+            // Keyboard
+            if ImGui.IsWindowFocused()
+            {
+                if ImGui.IsKeyPressed(.Delete)
+                {
+                    // TODO: do proper animation_remove_event function
+                    // if selected_event_index >= 0
+                    // {
+                    //     array_ordered_remove_by_index(*animation.events, selected_event_index);
+                    //     selected_event_index = -1;
+                    //     animation_changed = true;
+                    // }
+                }
             }
 
             if ImGui.BeginPopup(EDIT_LAYER_POPUP_NAME)
@@ -309,15 +375,14 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 {
                     if ImGui.MenuItem("Delete Layer")
                     {
-                        array_ordered_remove_by_index(*animation.layers, layer_popup_index);
+                        animation_remove_layer(animation, layer_popup_index);
                         animation_changed = true;
                     }
                 }
 
                 if ImGui.MenuItem("Add Layer")
                 {
-                    array_add(*animation.layers, .{});
-                    edited_layer_name_index = animation.layers.count-1;
+                    edited_layer_name_index = animation_add_layer(animation, "");
                     just_edited_layer = true;
                     animation_changed = true;
                 }
@@ -346,7 +411,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
             for *layer, i: animation.layers
             {
-                y: float = xx (TOP_BAR_HEIGHT + 1 + LAYER_HEIGHT * i);
+                y: float = xx (TOP_BAR_HEIGHT + 1 + (LAYER_HEIGHT+1) * i);
 
                 if edited_layer_name_index == i
                 {
@@ -371,7 +436,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 }
                 else
                 {
-                    c: = ifx hovered_layer == i then WHITE_HOVERED else WHITE_IDLE;
+                    c: = ifx (is_layer_bar_hovered && hovered_layer == i) then WHITE_HOVERED else WHITE_IDLE;
                     draw_list.AddText(draw_list, cursor + .{0, y + 3}, c, tprint("%", layer.name));
                 }
                 draw_list.AddLine(draw_list, cursor + .{0, y + LAYER_HEIGHT}, cursor + .{content_size.x, y + LAYER_HEIGHT}, color_light);
@@ -846,9 +911,18 @@ get_event_color_set :: (event: *AnimationEvent) -> ButtonColorSet
 {
     if event == null return .{};
 
-    tie: = cast(*Type_Info_Enum) type_info(AnimationEventType);
-    name: = enum_value_to_name(event.type);
-    return make_button_color_set(string_to_color(name, value_range = .[0.6, 0.7]));
+    if event.type ==
+    {
+        case .NONE; return make_button_color_set(rl.GRAY);
+        case .SPRITE; return make_button_color_set(.{101, 171, 184, 255});
+        case .MOVEMENT; return make_button_color_set(.{190, 151, 196, 255});
+        case .BOX; return make_button_color_set(.{186, 212, 95, 255});
+        case;
+        {
+            name: = enum_value_to_name(event.type);
+            return make_button_color_set(string_to_color(name, value_range = .[0.6, 0.7]));
+        }
+    }
 }
 
 rl :: #import "raylib";

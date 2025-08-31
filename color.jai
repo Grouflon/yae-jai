@@ -12,8 +12,8 @@ make_button_color_set :: (idle_color: Color) -> ButtonColorSet
     return .{
         disabled=   hsv_to_color(hsv.x, hsv.y, 0.5 * hsv.z),
         idle=       idle_color,
-        hovered=    hsv_to_color(hsv.x, hsv.y, hsv.z + (1.0 - hsv.z) * 0.9),
-        selected=   hsv_to_color(hsv.x, hsv.y, hsv.z + (1.0 - hsv.z) * 0.6)
+        hovered=    hsv_to_color(hsv.x, hsv.y + (1.0 - hsv.y) * 0.2, hsv.z + (1.0 - hsv.z) * 0.9),
+        selected=   hsv_to_color(hsv.x, hsv.y + (1.0 - hsv.y) * 0.2, hsv.z + (1.0 - hsv.z) * 0.6)
     };
 }
 
