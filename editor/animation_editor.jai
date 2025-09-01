@@ -584,7 +584,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     c = color_set.selected;
                 }
                 bounds: = cursor + get_event_local_bounds(animation, i);
-                draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, IM_COL32(c), 2.0, .RoundCornersAll);
+                draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, IM_COL32(c), 4.0, .RoundCornersAll);
             }
 
             // Frame cursor
