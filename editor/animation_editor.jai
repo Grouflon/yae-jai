@@ -20,6 +20,9 @@ AnimationEditor :: struct
     default_resource_editor: bool = false;
 
     frame_count: = -1;
+
+    show_movement: bool = true;
+    show_boxes: bool = true;
 }
 
 AnimationDragEventMode :: enum
@@ -69,6 +72,13 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
             defer ImGui.EndMenu();
 
             ImGui.MenuItem("Default Resource Editor", "", *default_resource_editor);
+        }
+
+        if ImGui.BeginMenu("View")
+        {
+            defer ImGui.EndMenu();
+            ImGui.MenuItem("Show Movement", "", *show_movement);
+            ImGui.MenuItem("Show Boxes", "", *show_boxes);
         }
     }
     ImGui.EndMenuBar();
@@ -761,10 +771,24 @@ animation_editor_viewport_draw :: (using editor: *AnimationEditor)
         }
     }
 
-    time: = (player.current_loop_count % xx player.current_animation.preview_loop_count) * animation_duration(player.current_animation);
-    time += player.current_time_s;
-    movement: = animation_evaluate_movement(player.current_animation, 0, time);
-    animation_player_draw(*player, movement);
+    
+    position: Vector2;
+    if show_movement
+    {
+        time: = (player.current_loop_count % xx player.current_animation.preview_loop_count) * animation_duration(player.current_animation);
+        time += player.current_time_s;
+        position = animation_evaluate_movement(player.current_animation, 0, time);
+    }
+    animation_player_draw(*player, position);
+
+    if show_boxes
+    {
+        box_events: = animation_player_get_current_box_events(*player);
+        for event: box_events
+        {
+            draw_outlined_rect(position + event.rect, physics_layer_to_color(event.physics_layer));
+        }
+    }
 }
 
 animation_editor_frame_sprite :: (using editor: *AnimationEditor)

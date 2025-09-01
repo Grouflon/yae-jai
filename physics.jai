@@ -62,13 +62,7 @@ physics_draw_colliders :: ()
     {
         if !collider.enabled continue;
 
-        color: = DARKGRAY;
-        if collider._layer ==
-        {
-            case 0; color = BLUE;
-            case 1; color = GREEN;
-            case 2; color = RED;
-        }
+        color: = physics_layer_to_color(collider._layer);
         position: = ifx collider.parent != null then collider.parent.position else Vector3.{};
 
         draw_outlined_rect(position.xy + collider.rect, color);
@@ -141,6 +135,17 @@ collider_get_bounds :: (using collider: *Collider) -> Bounds
     pos: = ifx collider.parent != null then collider.parent.position.xy else Vector2.{};
     pos += .{collider.rect.x, collider.rect.y};
     return make_bounds(pos, pos + .{collider.rect.w, collider.rect.h});
+}
+
+physics_layer_to_color :: (layer: u32) -> Color
+{
+    if layer ==
+    {
+        case 0; return BLUE;
+        case 1; return GREEN;
+        case 2; return RED;
+    }
+    return DARKGRAY;
 }
 
 #scope_file
