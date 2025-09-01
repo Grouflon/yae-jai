@@ -74,8 +74,13 @@ BoxAnimationEvent :: struct
 
 MovementAnimationEvent :: struct
 {
-    x_movement: Curve; @serialize
-    y_movement: Curve; @serialize
+    x_movement: float; @serialize
+    x_easing: EasingType; @serialize
+    x_custom_curve: Curve; @serialize
+
+    y_movement: float; @serialize
+    y_easing: EasingType; @serialize
+    y_custom_curve: Curve; @serialize
 }
 
 is_frame_within_event :: (frame: s32, event: *AnimationEvent) -> bool
@@ -233,7 +238,9 @@ animation_evaluate_movement :: (using animation: *Animation, start_time: float, 
 
         if total_loop_count > 0
         {
-            movement += .{curve_evaluate(event.movement.x_movement, 1), curve_evaluate(event.movement.y_movement, 1)} * total_loop_count;
+            t_x: = ease(event.movement.x_easing, 1, event.movement.x_custom_curve);
+            t_y: = ease(event.movement.y_easing, 1, event.movement.y_custom_curve);
+            movement += .{t_x * event.movement.x_movement, t_y * event.movement.y_movement} * total_loop_count;
         }
 
         event_begin_time: = cast(float)(event.begin) * frame_time; 
@@ -253,22 +260,22 @@ animation_evaluate_movement :: (using animation: *Animation, start_time: float, 
         begin: = (movememt_begin_time - event_begin_time) / event_duration;
         end: = (movememt_end_time - event_begin_time) / event_duration;
 
-        x_movement: = 0.0;
-        y_movement: = 0.0;
+        t_x: = 0.0;
+        t_y: = 0.0;
         if end < begin
         {
-            x_movement += curve_evaluate(event.movement.x_movement, 1) - curve_evaluate(event.movement.x_movement, begin);
-            y_movement += curve_evaluate(event.movement.y_movement, 1) - curve_evaluate(event.movement.y_movement, begin);
-            x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, 0);
-            y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, 0);
+            t_x += ease(event.movement.x_easing, 1, event.movement.x_custom_curve) - ease(event.movement.x_easing, begin, event.movement.x_custom_curve);
+            t_y += ease(event.movement.y_easing, 1, event.movement.y_custom_curve) - ease(event.movement.y_easing, begin, event.movement.y_custom_curve);
+            t_x += ease(event.movement.x_easing, end, event.movement.x_custom_curve) - ease(event.movement.x_easing, 0, event.movement.x_custom_curve);
+            t_y += ease(event.movement.y_easing, end, event.movement.y_custom_curve) - ease(event.movement.y_easing, 0, event.movement.y_custom_curve);
         }
         else
         {
-            x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, begin);
-            y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, begin);
+            t_x += ease(event.movement.x_easing, end, event.movement.x_custom_curve) - ease(event.movement.x_easing, begin, event.movement.x_custom_curve);
+            t_y += ease(event.movement.y_easing, end, event.movement.y_custom_curve) - ease(event.movement.y_easing, begin, event.movement.y_custom_curve);
         }
 
-        movement += .{x_movement, y_movement};
+        movement += .{t_x * event.movement.x_movement, t_y * event.movement.y_movement};
     }
     return movement;
 }
@@ -303,8 +310,8 @@ deinit :: (event: *AnimationEvent)
     assert(event != null);
     if event.type == .MOVEMENT
     {
-        curve_reset(*event.movement.x_movement);
-        curve_reset(*event.movement.y_movement);
+        curve_reset(*event.movement.x_custom_curve);
+        curve_reset(*event.movement.y_custom_curve);
     }
 }
 

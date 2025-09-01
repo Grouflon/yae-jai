@@ -779,9 +779,7 @@ animation_editor_frame_sprite :: (using editor: *AnimationEditor)
     for event: player.current_animation.events
     {
         if event.type != .MOVEMENT { continue; }
-        x_bounds: = curve_bounds(event.movement.x_movement);
-        y_bounds: = curve_bounds(event.movement.y_movement);
-        movement_bounds = combine(movement_bounds, .{min=.{x_bounds.min.y, y_bounds.min.y}, max=.{x_bounds.max.y, y_bounds.max.y}});
+        movement_bounds = expand(movement_bounds, .{event.movement.x_movement, event.movement.y_movement});
     }
     total_movement: = animation_evaluate_movement(player.current_animation, 0, player.current_animation.frame_count) * cast(float)(player.current_animation.preview_loop_count);
     movement_bounds = expand(movement_bounds, total_movement);
