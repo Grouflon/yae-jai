@@ -24,7 +24,7 @@ PoolID :: struct($T: Type)
     generation: u32;
 }
 
-operator == :: (a: PoolID, b: PoolID) -> bool
+operator == :: inline (a: PoolID, b: PoolID) -> bool
 {
     return a.pool == b.pool && a.index == b.index && a.generation == b.generation;
 }

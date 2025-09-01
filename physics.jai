@@ -12,10 +12,13 @@ physics: PhysicsManager;
 
 Collider :: struct
 {
+    id: PoolID(Collider);
     parent: *Entity;
     rect: Rect;
     enabled: bool;
 
+    frame_collisions: [..]PoolID(Collider);
+    frame_overlaps: [..]PoolID(Collider);
     _layer: u8;
 }
 
@@ -48,6 +51,12 @@ physics_update :: (dt: float)
 {
     using physics;
 
+    for *collider: colliders
+    {
+        array_clear(*collider.frame_collisions);
+        array_clear(*collider.frame_overlaps);
+    }
+
     for i: 0..SOLVING_ITERATIONS-1
     {
         solve_collisions();
@@ -75,6 +84,7 @@ physics_add_collider :: (parent: *Entity, layer: u8) -> PoolID(Collider)
 
     id, collider: = pool_add(*colliders);
 
+    collider.id = id;
     collider.parent = parent;
     collider._layer = layer;
 
@@ -181,10 +191,21 @@ solve_collisions :: ()
                     if collider_a == collider_b continue;
                     b: = get(collider_b, false);
                     if !b.enabled continue;
+                    if a.parent == b.parent continue;
 
                     b_bounds: = collider_get_bounds(b);
 
                     if !collision_bounds_bounds(a_bounds, b_bounds) continue;
+
+                    add_unique :: (array: *[..]PoolID(Collider), new_id: PoolID(Collider))
+                    {
+                        found: = false;
+                        for id: <<array
+                        {
+                            if id == new_id { found = true; return; }
+                        }
+                        if !found { array_add(array, new_id); }
+                    }
 
                     if (response == .COLLIDE)
                     {
@@ -193,9 +214,14 @@ solve_collisions :: ()
 
                         a.parent.position += .{a_push.x, a_push.y, 0};
                         b.parent.position += .{b_push.x, b_push.y, 0};
+
+                        add_unique(*a.frame_collisions, b.id);
+                        add_unique(*b.frame_collisions, a.id);
                     }
                     else if (response == .OVERLAP)
                     {
+                        add_unique(*a.frame_overlaps, b.id);
+                        add_unique(*b.frame_overlaps, a.id);
                         // solve_overlap(collider_a, collider_b);
                     }
                 }   
