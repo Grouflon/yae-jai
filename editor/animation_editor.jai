@@ -170,8 +170,10 @@ animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
     }
     else
     {
-        ImGui.SetNextItemWidth(100.0);
+        ImGui.SetNextItemWidth(85.0);
         animation_modified = ImGui_EditValue("frames per second", *animation.frames_per_second) || animation_modified;
+        ImGui.SetNextItemWidth(85.0);
+        animation_modified = ImGui_EditValue("preview loop count", *animation.preview_loop_count) || animation_modified;
     }
 
     return animation_modified;
@@ -314,6 +316,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     else if is_top_bar_hovered
                     {
                         is_dragging_frame = true;
+                        animation_player_stop(*player);
                     }
                 }
 
@@ -758,13 +761,34 @@ animation_editor_viewport_draw :: (using editor: *AnimationEditor)
         }
     }
 
-    animation_player_draw(*player, .{});
+    time: = (player.current_loop_count % xx player.current_animation.preview_loop_count) * animation_duration(player.current_animation);
+    time += player.current_time_s;
+    movement: = animation_evaluate_movement(player.current_animation, 0, time);
+    animation_player_draw(*player, movement);
 }
 
 animation_editor_frame_sprite :: (using editor: *AnimationEditor)
 {
+    if player.current_animation == null return;
+
     FRAME_MARGIN :: Vector2.{50, 50};
     bounds: = animation_frame_bounds(player.current_animation, player.current_frame);
+
+    // include potential movement in frame
+    movement_bounds: Bounds;
+    for event: player.current_animation.events
+    {
+        if event.type != .MOVEMENT { continue; }
+        x_bounds: = curve_bounds(event.movement.x_movement);
+        y_bounds: = curve_bounds(event.movement.y_movement);
+        movement_bounds = combine(movement_bounds, .{min=.{x_bounds.min.y, y_bounds.min.y}, max=.{x_bounds.max.y, y_bounds.max.y}});
+    }
+    total_movement: = animation_evaluate_movement(player.current_animation, 0, player.current_animation.frame_count) * cast(float)(player.current_animation.preview_loop_count);
+    movement_bounds = expand(movement_bounds, total_movement);
+
+    bounds.min -= movement_bounds.min;
+    bounds.max += movement_bounds.max;
+
     sprite_size: = size(bounds);
 
     if length_squared(sprite_size) < 0.0001 return;

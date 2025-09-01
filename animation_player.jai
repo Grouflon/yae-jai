@@ -3,8 +3,8 @@ AnimationPlayer :: struct
     current_animation: *Animation;
     current_movement: Vector2;
     current_time_s: float = 0.0;
-    current_frame: s32 = -1;
-    current_repeat_count: s32;
+    current_frame: s32 = -1; // @NOTE(remi): this is a proxy, I should remove it
+    current_loop_count: s32;
     is_playing: bool;
 }
 
@@ -21,7 +21,7 @@ animation_player_set_animation :: (using player: *AnimationPlayer, animation: *A
     current_movement = .{};
     current_time_s = 0.0;
     current_frame = 0;
-    current_repeat_count = 0;
+    current_loop_count = 0;
 }
 
 animation_player_play :: (using player: *AnimationPlayer, animation: *Animation)
@@ -67,6 +67,7 @@ animation_player_set_frame :: (using player: *AnimationPlayer, frame: s32)
 
     current_frame = positive_mod(frame, xx current_animation.frame_count);
     current_time_s = cast(float)(current_frame) / current_animation.frames_per_second;
+    current_loop_count = 0;
 
     animation_player_update(player, 0);
 }
@@ -82,57 +83,19 @@ animation_player_update :: (using player: *AnimationPlayer, dt: float)
     current_time_s += dt;
 
     // Update loops
-    frame_time: = 1.0 / current_animation.frames_per_second;
-    animation_duration: = cast(float) current_animation.frame_count * frame_time;
+    animation_duration: = cast(float) current_animation.frame_count / current_animation.frames_per_second;
     while animation_duration > 0 && current_time_s > animation_duration
     {
         current_time_s -= animation_duration;
-        current_repeat_count += 1;
+        current_loop_count += 1;
     }
 
     // Update frame
-    previous_frame_float: = previous_time_s / frame_time;
-    current_frame_float: = current_time_s / frame_time;
+    current_frame_float: = current_time_s * current_animation.frames_per_second;
     current_frame = floor_to_s32(current_frame_float);
 
     // Accumulate movement
-    current_movement = .{};
-    if dt != 0
-    {
-        for event: current_animation.events
-        {
-            if event.type != .MOVEMENT continue;
-            if !(is_frame_within_event(current_frame, *event) || is_frame_within_event(floor_to_s32(previous_frame_float), *event)) continue;
-
-            begin_float: float = xx event.begin;
-            end_float: float = xx event.end;
-            range: = (end_float - begin_float) + 1;
-
-            begin: float = 0;
-            end: float = 1;
-            movememt_begin_frame: = max(previous_frame_float, begin_float);
-            movememt_end_frame: = min(current_frame_float, end_float + 1.0);
-            begin = (movememt_begin_frame - begin_float) / range;
-            end = (movememt_end_frame - begin_float) / range;
-
-            x_movement: = 0.0;
-            y_movement: = 0.0;
-            if end < begin
-            {
-                x_movement += curve_evaluate(event.movement.x_movement, 1) - curve_evaluate(event.movement.x_movement, begin);
-                y_movement += curve_evaluate(event.movement.y_movement, 1) - curve_evaluate(event.movement.y_movement, begin);
-                x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, 0);
-                y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, 0);
-            }
-            else
-            {
-                x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, begin);
-                y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, begin);
-            }
-
-            current_movement += .{x_movement, y_movement};
-        }
-    }
+    current_movement = animation_evaluate_movement(current_animation, previous_time_s, current_time_s);
 }
 
 animation_player_get_current_box_events :: (using player: *AnimationPlayer) -> []BoxAnimationEvent

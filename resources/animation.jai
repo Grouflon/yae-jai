@@ -9,8 +9,10 @@ Animation :: struct
     frame_count: s32 = 0; @serialize
 
     events: [..]AnimationEvent; @serialize
-
     layers: [..]AnimationLayer; @serialize
+
+    // Editor
+    preview_loop_count: u32 = 1; @serialize
 }
 
 AnimationLayer :: struct
@@ -193,6 +195,82 @@ animation_remove_event :: (using animation: *Animation, index: s64)
 
     deinit(*animation.events[index]);
     array_ordered_remove_by_index(*animation.events, index);
+}
+
+animation_duration :: (using animation: *Animation) -> float
+{
+    assert(animation != null);
+    return frame_count / frames_per_second;
+}
+
+// @NOTE(remi): This is only forward ftm, we'll probably want to add a flag for evaluating backwards
+animation_evaluate_movement :: (using animation: *Animation, frame_start: s32, frame_end_exclusive: s32) -> Vector2
+{
+    assert(animation != null);
+
+    start_time: = cast(float)(frame_start) / animation.frames_per_second;
+    end_time: = cast(float)(frame_end_exclusive) / animation.frames_per_second;
+    return animation_evaluate_movement(animation, start_time, end_time);
+}
+
+animation_evaluate_movement :: (using animation: *Animation, start_time: float, end_time: float) -> Vector2
+{
+    assert(animation != null);
+    if end_time == start_time { return .{}; }
+
+    duration: = animation_duration(animation);
+    frame_time: = 1.0 / animation.frames_per_second;
+    total_loop_count: = floor((end_time - start_time) / duration);
+
+    start_time = positive_mod(start_time, duration);
+    end_time = positive_mod(end_time, duration);
+
+    movement: Vector2 = .{};
+
+    for event: animation.events
+    {
+        if event.type != .MOVEMENT continue;
+
+        if total_loop_count > 0
+        {
+            movement += .{curve_evaluate(event.movement.x_movement, 1), curve_evaluate(event.movement.y_movement, 1)} * total_loop_count;
+        }
+
+        event_begin_time: = cast(float)(event.begin) * frame_time; 
+        event_end_time: = cast(float)(event.end+1) * frame_time; 
+        if !(
+            (event_begin_time >= start_time && event_begin_time <= end_time) ||
+            (event_end_time >= start_time && event_end_time <= end_time) ||
+            (start_time >= event_begin_time && start_time <= event_end_time) ||
+            (end_time >= event_begin_time && end_time <= event_end_time)
+        )
+        { continue; }
+
+        event_duration: = event_end_time - event_begin_time;
+
+        movememt_begin_time: = max(start_time, event_begin_time);
+        movememt_end_time: = min(end_time, event_end_time);
+        begin: = (movememt_begin_time - event_begin_time) / event_duration;
+        end: = (movememt_end_time - event_begin_time) / event_duration;
+
+        x_movement: = 0.0;
+        y_movement: = 0.0;
+        if end < begin
+        {
+            x_movement += curve_evaluate(event.movement.x_movement, 1) - curve_evaluate(event.movement.x_movement, begin);
+            y_movement += curve_evaluate(event.movement.y_movement, 1) - curve_evaluate(event.movement.y_movement, begin);
+            x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, 0);
+            y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, 0);
+        }
+        else
+        {
+            x_movement += curve_evaluate(event.movement.x_movement, end) - curve_evaluate(event.movement.x_movement, begin);
+            y_movement += curve_evaluate(event.movement.y_movement, end) - curve_evaluate(event.movement.y_movement, begin);
+        }
+
+        movement += .{x_movement, y_movement};
+    }
+    return movement;
 }
 
 #scope_file

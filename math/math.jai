@@ -132,8 +132,9 @@ parametric_curve_bounds :: inline (tangent0: float, tangent1: float) -> Bounds
     c: = tangent0;
 
     if a == 0 return bounds;
+    d: = b*b - 4*a*c;
+    determinant: = ifx d >= 0 sqrt(d) else 0; // @NOTE(remi): I'm really not sure what that means, but this case can happen and throw an error
 
-    determinant: = sqrt(b*b - 4*a*c);
     x0: = (-b + determinant) / (2*a);
     x1: = (-b - determinant) / (2*a);
 
