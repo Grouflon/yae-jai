@@ -22,6 +22,7 @@
 #load "math/bounds.jai";
 #load "math/collision.jai";
 #load "math/curve.jai";
+#load "math/ease.jai";
 #load "math/math.jai";
 #load "math/rect.jai";
 #load "math/spline.jai";
