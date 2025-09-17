@@ -111,6 +111,9 @@ physics_remove_collider :: (id: PoolID(Collider))
         }
     }
     assert(found);
+
+    array_free(collider.frame_collisions);
+    array_free(collider.frame_overlaps);
     
     // array_unordered_remove_by_value(*colliders_by_layer[collider._layer], id); // Not sure unordered can cause determinism issues. If this function is not called in parallel, I don't think so, and I don't think it ever should be
     pool_remove(*colliders, id);
