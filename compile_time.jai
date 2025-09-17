@@ -152,7 +152,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             for struct_type_info, i: resource_types
                             {
                                 if i > 0 append(*sb, ",\n");
-                                append(*sb, tprint("type_info(%)", struct_type_info.name));
+                                append(*sb, tprint("\ttype_info(%)", struct_type_info.name));
                             }
                             append(*sb, "],\n");
                         }
@@ -164,7 +164,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             for function_name, ti: custom_serialize_table
                             {
                                 if i > 0 append(*sb, ",\n");
-                                append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
+                                append(*sb, tprint("\t.{ti=type_info(%), function=%}", ti.name, function_name));
                                 i+=1;
                             }
                             append(*sb, "],\n");
@@ -177,7 +177,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             for function_name, ti: custom_editor_table
                             {
                                 if i > 0 append(*sb, ",\n");
-                                append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
+                                append(*sb, tprint("\t.{ti=type_info(%), function=%}", ti.name, function_name));
                                 i+=1;
                             }
                             append(*sb, "],\n");
@@ -190,7 +190,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             for function_name, ti: serialize_filter_table
                             {
                                 if i > 0 append(*sb, ",\n");
-                                append(*sb, tprint(".{ti=type_info(%), function=%}", ti.name, function_name));
+                                append(*sb, tprint("\t.{ti=type_info(%), function=%}", ti.name, function_name));
                                 i+=1;
                             }
                             append(*sb, "],\n");
