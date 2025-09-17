@@ -380,18 +380,19 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     array_resizable: *Resizable_Array = data;
                     size = array_resizable.count;
                     if !serializer_begin_array(serializer, *size, key) return false;
+                    array_data = array_resizable.data;
+
                     if serializer.mode == .READ
                     {
+                        previous_count: = array_resizable.count;
                         array_resizable.count = size;
+                        
                         maybe_grow(array_resizable, info_array.element_type.runtime_size);
-                    }
-                    array_data = array_resizable.data;
-                }
-            }
+                        array_data = array_resizable.data;
 
-            if serializer.mode == .READ
-            {
-                default_init_range(array_data, 0, size, info_array.element_type);
+                        default_init_range(array_data, previous_count+1, size-1, info_array.element_type);
+                    }
+                }
             }
 
             success: = true;

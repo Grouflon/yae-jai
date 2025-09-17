@@ -32,6 +32,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     // Init core stuff
     custom_function_registry_init(compile_time_info);
 
+    undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
     physics_init();
 
@@ -103,6 +104,7 @@ yae_shutdown :: ()
     physics_shutdown();
     serialization_manager_shutdown();
     resource_manager_shutdown();
+    undo_redo_manager_shutdown();
     // object_registry_shutdown();
     free_string_hash_repository();
 
@@ -120,6 +122,11 @@ yae_shutdown :: ()
 
     log_verbose("yae shut down.");
     log_unindent();
+}
+
+get_time :: () -> float64
+{
+    return rl.GetTime();
 }
 
 yae_loop :: (update_function: #type (dt: float), draw_function: #type ())

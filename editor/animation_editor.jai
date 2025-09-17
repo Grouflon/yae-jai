@@ -145,19 +145,13 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     }
     ImGui.End();
 
-    // Save resource
-    if animation_changed
-    {
-        resource_save_to_disk(animation);
-    }
-
     // Animation
     animation_player_update(*player, dt);
 
     // Draw viewport scene
     animation_editor_viewport_draw(editor);
 
-    return false; // Implement if we ever need to detect modifications
+    return animation_changed;
 }
 
 #scope_file
@@ -383,6 +377,12 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
                 if !ImGui.IsMouseDown(.Left)
                 {
+                    // @NOTE(remi): We validate event modification on release of the button
+                    if drag_event_mode != .NONE
+                    {
+                        animation_changed = true;
+                    }
+
                     is_dragging_frame = false;
                     drag_frame_offset = -1;
                     drag_event_mode = .NONE;
@@ -411,13 +411,13 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     {
                         prev_value: = event.begin;
                         event.begin = xx min(clamped_hovered_frame, event.end);
-                        animation_changed = animation_changed || prev_value != event.begin;
+                        // animation_changed = animation_changed || prev_value != event.begin;
                     }
                     case .RIGHT;
                     {
                         prev_value: = event.end;
                         event.end = xx max(clamped_hovered_frame, event.begin);
-                        animation_changed = animation_changed || prev_value != event.end;
+                        // animation_changed = animation_changed || prev_value != event.end;
                     }
                     case .CENTER;
                     {
@@ -438,7 +438,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                             selected_event_index = animation.events.count-1;
                             event = *animation.events[selected_event_index];
                         }
-                        animation_changed = animation_changed || event_moved;
+                        // animation_changed = animation_changed || event_moved;
                     }
                 }
             }

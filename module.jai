@@ -13,6 +13,7 @@
 #load "statemachine.jai";
 #load "string_hash.jai";
 #load "tilemap.jai";
+#load "undo_redo.jai";
 #load "viewport.jai";
 #load "yae.jai";
 

@@ -34,6 +34,15 @@ editor_update :: (dt: float)
 {
     using YAE.editor;
 
+    if ImGui.IsKeyChordPressed(xx(ImGui.Key.ImGuiMod_Ctrl | ImGui.Key.ImGuiKey_Z))
+    {
+        undo();
+    }
+    if ImGui.IsKeyChordPressed(xx(ImGui.Key.ImGuiMod_Ctrl | ImGui.Key.ImGuiKey_Y))
+    {
+        redo();
+    }
+
     if (imgui_demo_open)
     {
         ImGui.ShowDemoWindow(*imgui_demo_open);
@@ -59,6 +68,27 @@ editor_update :: (dt: float)
             ImGui.MenuItem("Resources", "", *resources_open);
             ImGui.MenuItem("ImGui Demo", "", *imgui_demo_open);
             ImGui.MenuItem("ImGui Font", "", *imgui_font_open);
+
+            ImGui.EndMenu();
+        }
+
+        if ImGui.BeginMenu("Edit")
+        {
+            {
+                is_valid, command: = get_next_undo();
+                if ImGui.MenuItem(temp_c_string(tprint("Undo %", command.name)), "ctrl+Z", enabled=is_valid)
+                {
+                    undo();
+                }
+            }
+            
+            {
+                is_valid, command: = get_next_redo();
+                if ImGui.MenuItem(temp_c_string(tprint("Redo %", command.name)), "ctrl+Y", enabled=is_valid)
+                {
+                    redo();
+                }
+            }
 
             ImGui.EndMenu();
         }
@@ -117,20 +147,34 @@ editor_draw :: ()
     }
 }
 
+// @NOTE(remi): This pointer comes from a linear array. Do not store it
+editor_get_resource_editor :: (resource: *Resource)-> *ResourceEditor
+{
+    using YAE.editor;
+
+    success, index: = array_find(
+        edited_resources,
+        (item: ResourceEditor, user_data: *void) -> bool { return item.resource == user_data; },
+        resource
+    );
+    if !success return null;
+    return *edited_resources[index];
+}
+
 editor_open_resource :: (resource: *Resource)
 {
     using YAE.editor;
 
-    if array_find(
-        edited_resources,
-        (item: ResourceEditor, user_data: *void) -> bool { return item.resource == user_data; },
-        resource
-    ) return;
+    resource_editor_ptr: = editor_get_resource_editor(resource);
+    if resource_editor_ptr == null
+    {
+        resource_editor: ResourceEditor = .{ resource = resource };
+        resource_editor_init(*resource_editor);
+        array_add(*edited_resources, resource_editor);
+        resource_editor_ptr = array_back(edited_resources);
+    }
 
-    resource_editor: ResourceEditor = .{ resource = resource, is_open = true };
-    resource_editor_init(*resource_editor);
-
-    array_add(*edited_resources, resource_editor);
+    resource_editor_ptr.is_open = true;
 }
 
 editor_close_resource :: (resource: *Resource)

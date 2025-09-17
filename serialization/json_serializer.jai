@@ -76,12 +76,12 @@ json_serializer_write_json_file :: (serializer: *JsonSerializer, path :string) -
     return true;
 }
 
-json_serializer_get_json_string :: (serializer: *JsonSerializer) -> string
+json_serializer_get_json_string :: (serializer: *JsonSerializer, allocator: Allocator = temporary_allocator) -> string
 {
     assert(serializer != null);
     assert(serializer.mode == .NONE);
 
-    push_allocator(temporary_allocator);
+    push_allocator(allocator);
     builder: String_Builder;
     json_write_json_value(*builder, serializer.root_value);
     json_string: = builder_to_string(*builder);
@@ -259,6 +259,7 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "", alloca
             }
 
             push_allocator(ifx allocator != null then allocator else *context.default_allocator);
+            free(<<value);
             <<value = copy_string(next_value.str);
         }
         case .WRITE;

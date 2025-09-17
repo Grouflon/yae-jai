@@ -166,12 +166,12 @@ default_init_range :: (data: *void, begin: s64, end: s64, info: *Type_Info)
         info_struct: = cast(*Type_Info_Struct)info;
         if info_struct.initializer != null
         {
-            for begin..end-1  info_struct.initializer(data + it * info.runtime_size);
+            for begin..end  info_struct.initializer(data + it * info.runtime_size);
             return;
         }
     }
 
-    count := end - begin;
+    count := end - begin + 1;
     if count <= 0  return;
     memset(data + begin, 0, count * info.runtime_size);
 }
