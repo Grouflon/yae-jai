@@ -14,7 +14,7 @@ Spline2D :: struct
 
 deinit :: (using spline: *Spline2D)
 {
-    deinit(points);
+    array_reset(*points);
 }
 
 spline_add_point :: (using spline: *Spline2D, point: Vector2) -> *SplinePoint
