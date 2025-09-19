@@ -48,6 +48,8 @@ has_note_with_args :: (notes: []string, note: string) -> bool, []NoteArgument
         note_name: = stop_at_any(n, "(");
         if compare(note_name, note) != 0 continue;
 
+        if note_name.count == n.count return true, .[]; // No parentheses
+
         offset: = note_name.count + 1;
         args_string: = string.{ data = note_name.data + offset, count = n.count - offset };
         args_string = stop_at_any(args_string, ")");
@@ -58,6 +60,11 @@ has_note_with_args :: (notes: []string, note: string) -> bool, []NoteArgument
         for arg, i: args
         {
             trimmed_arg: = trim(arg);
+            // I'm not 100% sure we should exclude empty args
+            // @note() should for sure be equivalent to @note, but what about @note(,)?
+            // Let's do it for now because it makes things a lot simpler
+            if trimmed_arg.count == 0 continue;
+
             array_add(*result, .{
                 boolean = ifx trimmed_arg == "true" then true else false,
                 integer =  string_to_int(trimmed_arg),
