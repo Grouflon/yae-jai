@@ -15,8 +15,9 @@ JsonSerializer :: struct
     begin = (serializer: *Serializer) { json_serializer_begin(cast(*JsonSerializer)serializer); };
     end =   (serializer: *Serializer) { json_serializer_end(cast(*JsonSerializer)serializer); };
 
-    begin_array = (serializer: *Serializer, size: *s64, key: string) -> bool { return json_serializer_begin_array(cast(*JsonSerializer)serializer, size, key); };
-    end_array =   (serializer: *Serializer) -> bool                          { return json_serializer_end_array(cast(*JsonSerializer)serializer); };
+    begin_array =     (serializer: *Serializer, size: *s64, key: string) -> bool { return json_serializer_begin_array(cast(*JsonSerializer)serializer, size, key); };
+    set_array_index = (serializer: *Serializer, index: s64) -> bool              { return json_serializer_set_array_index(cast(*JsonSerializer)serializer, index); };
+    end_array =       (serializer: *Serializer) -> bool                          { return json_serializer_end_array(cast(*JsonSerializer)serializer); };
 
     begin_object = (serializer: *Serializer, keys: *[]string, key: string) -> bool { return json_serializer_begin_object(cast(*JsonSerializer)serializer, keys, key); };
     end_object   = (serializer: *Serializer) -> bool                               { return json_serializer_end_object(cast(*JsonSerializer)serializer); };
@@ -115,24 +116,24 @@ serialize :: (using s: *JsonSerializer, value: *bool, key: string = "") -> bool
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode == {
         case .READ;
         {
-            if next_value.type != .BOOLEAN
+            if current_value.type != .BOOLEAN
             {
                 last_error = "Read value is not of type bool";
                 return false;
             }
 
-            <<value = next_value.boolean;
+            <<value = current_value.boolean;
         }
         case .WRITE;
         {
-            next_value.type = .BOOLEAN;
-            next_value.boolean = <<value;
+            current_value.type = .BOOLEAN;
+            current_value.boolean = <<value;
         }
     }
     return true;
@@ -143,24 +144,24 @@ serialize_number :: inline (using s: *JsonSerializer, value: *$T, key: string = 
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode == {
         case .READ;
         {
-            if next_value.type != .NUMBER
+            if current_value.type != .NUMBER
             {
                 last_error = "Read value is not of type number";
                 return false;
             }
 
-            <<value = cast(T) next_value.number;
+            <<value = cast(T) current_value.number;
         }
         case .WRITE;
         {
-            next_value.type = .NUMBER;
-            next_value.number = cast(float64) <<value;
+            current_value.type = .NUMBER;
+            current_value.number = cast(float64) <<value;
         }
     }
     return true;
@@ -171,13 +172,13 @@ serialize_null :: (using s: *JsonSerializer, key: string = "") -> bool
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode == {
         case .READ;
         {
-            if next_value.type != .NULL
+            if current_value.type != .NULL
             {
                 last_error = "Read value is not of type null";
                 return false;
@@ -185,7 +186,7 @@ serialize_null :: (using s: *JsonSerializer, key: string = "") -> bool
         }
         case .WRITE;
         {
-            next_value.type = .NULL;
+            current_value.type = .NULL;
         }
     }
     return true;
@@ -246,13 +247,13 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "", alloca
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode == {
         case .READ;
         {
-            if next_value.type != .STRING
+            if current_value.type != .STRING
             {
                 last_error = "Read value is not of type string";
                 return false;
@@ -260,12 +261,12 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "", alloca
 
             push_allocator(ifx allocator != null then allocator else *context.default_allocator);
             free(<<value);
-            <<value = copy_string(next_value.str);
+            <<value = copy_string(current_value.str);
         }
         case .WRITE;
         {
-            next_value.type = .STRING;
-            next_value.str = copy_temporary_string(<<value);
+            current_value.type = .STRING;
+            current_value.str = copy_temporary_string(<<value);
         }
     }
     return true;
@@ -276,31 +277,54 @@ json_serializer_begin_array :: (using s: *JsonSerializer, size: *s64, key: strin
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode ==
     {
         case .READ;
         {
-            if (next_value.type != .ARRAY)
+            if (current_value.type != .ARRAY)
             {
                 last_error = "Read value is not of type array";
                 return false;
             }
-            <<size = next_value.array.count;
+            <<size = current_value.array.count;
         }
         case .WRITE;
         {
             byte_size: = <<size * size_of(JSON_Value);
-            next_value.type = .ARRAY;
-            next_value.array.data = talloc(byte_size);
-            memset(next_value.array.data, 0, byte_size);
-            next_value.array.count = <<size;
+            current_value.type = .ARRAY;
+            current_value.array.data = talloc(byte_size);
+            memset(current_value.array.data, 0, byte_size);
+            current_value.array.count = <<size;
         }
     }
-    array_add(*context_stack, .{ value = next_value });
+    array_add(*context_stack, .{ value = current_value });
 
+    return true;
+}
+
+json_serializer_set_array_index :: (using s: *JsonSerializer, index: s64) -> bool
+{
+    assert(s != null);
+    assert(mode != .NONE);
+
+    if context_stack.count == 0 || array_back(context_stack).value.type != .ARRAY
+    {
+        last_error = "Setting index outside of an array";
+        return false;
+    }
+
+    current_context: = array_back(context_stack);
+    array_count: = current_context.value.array.count;
+    if index < 0 || index >= array_count
+    {
+        last_error = tprint("index % is outside of array range (count=%)", index, array_count);
+        return false;
+    }
+
+    current_context.current_index = index;
     return true;
 }
 
@@ -324,26 +348,26 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
     assert(s != null);
     assert(mode != .NONE);
 
-    success, next_value: = select_next_value(s, key);
+    success, current_value: = get_current_value(s, key);
     if !success { return false; }
 
     if mode ==
     {
         case .READ;
         {
-            if (next_value.type != .OBJECT)
+            if (current_value.type != .OBJECT)
             {
                 last_error = "Read value is not of type object";
                 return false;
             }
 
-            assert(next_value.object != null);
+            assert(current_value.object != null);
             if keys != null
             {
-                keys.count = next_value.object.count;
-                keys.data = talloc(next_value.object.count * size_of(string));
+                keys.count = current_value.object.count;
+                keys.data = talloc(current_value.object.count * size_of(string));
                 i: int = 0;
-                for value, key: next_value.object
+                for value, key: current_value.object
                 {
                     (<<keys)[i] = key;
                     i += 1;
@@ -352,15 +376,15 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
         }
         case .WRITE;
         {
-            assert(next_value.type == .NULL); // Ensure we are not overwriting anything
+            assert(current_value.type == .NULL); // Ensure we are not overwriting anything
 
-            next_value.type = .OBJECT;
-            next_value.object = talloc(size_of(JSON_Object));
-            Initialize(next_value.object);
-            next_value.object.allocator = temporary_allocator;
+            current_value.type = .OBJECT;
+            current_value.object = talloc(size_of(JSON_Object));
+            Initialize(current_value.object);
+            current_value.object.allocator = temporary_allocator;
         }
     }
-    array_add(*context_stack, .{ value = next_value });
+    array_add(*context_stack, .{ value = current_value });
 
     return true;
 }
@@ -380,7 +404,7 @@ json_serializer_end_object :: (using s: *JsonSerializer) -> bool
     return true;
 }
 
-select_next_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Value
+get_current_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Value
 {
     assert(s != null);
     assert(mode != .NONE);
@@ -403,10 +427,9 @@ select_next_value :: (using s: *JsonSerializer, key: string) -> bool, *JSON_Valu
     if top_context.value.type == {
         case .ARRAY;
         {
-            top_context.current_index += 1;
-            if top_context.current_index >= top_context.value.array.count
+            if top_context.current_index < 0 || top_context.current_index >= top_context.value.array.count
             {
-                last_error = tprint("Cannot serialize more items than the size of the array (size=%).", top_context.value.array.count);
+                last_error = tprint("Cannot serialize item out of the range of the array (index=%, size=%). Did you forget to call `serializer_set_array_index`?", top_context.current_index, top_context.value.array.count);
                 return false, null;
             }
 

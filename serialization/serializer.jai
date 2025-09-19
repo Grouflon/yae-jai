@@ -13,13 +13,14 @@ Serializer :: struct
     begin: #type (serializer: *Serializer);
     end:   #type (serializer: *Serializer);
 
-    begin_array: #type (serializer: *Serializer, size: *s64, key: string) -> bool;
-    end_array:   #type (serializer: *Serializer) -> bool;
+    begin_array:     #type (serializer: *Serializer, size: *s64, key: string) -> bool;
+    set_array_index: #type (serializer: *Serializer, index: s64) -> bool;
+    end_array:       #type (serializer: *Serializer) -> bool;
 
     begin_object: #type (serializer: *Serializer, keys: *[]string, key: string) -> bool;
     end_object:   #type (serializer: *Serializer) -> bool;
 
-    _serialize_null:     #type (serializer: *Serializer, key: string) -> bool;
+    _serialize_null:    #type (serializer: *Serializer, key: string) -> bool;
     serialize_bool:     #type (serializer: *Serializer, value: *bool, key: string) -> bool;
     serialize_u8:       #type (serializer: *Serializer, value: *u8, key: string) -> bool;
     serialize_u16:      #type (serializer: *Serializer, value: *u16, key: string) -> bool;
@@ -54,6 +55,12 @@ serializer_begin_array :: (serializer: *Serializer, size: *s64, key: string = ""
 {
     assert(serializer != null);
     return serializer.begin_array(serializer, size, key);
+}
+
+serializer_set_array_index :: (serializer: *Serializer, index: s64) -> bool
+{
+    assert(serializer != null);
+    return serializer.set_array_index(serializer, index);
 }
 
 serializer_end_array :: (serializer: *Serializer) -> bool

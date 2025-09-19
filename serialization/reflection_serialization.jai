@@ -66,7 +66,9 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     size: s64 = 2;
                     if !serializer_begin_array(serializer, *size, key) return false;
                     if size != 2 return false;
+                    verify(serializer_set_array_index(serializer, 0));
                     verify(serialize(serializer, vector));
+                    verify(serializer_set_array_index(serializer, 1));
                     verify(serialize(serializer, vector+1));
                     verify(serializer_end_array(serializer));
                     return true;
@@ -77,8 +79,11 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     size: s64 = 3;
                     if !serializer_begin_array(serializer, *size, key) return false;
                     if size != 3 return false;
+                    verify(serializer_set_array_index(serializer, 0));
                     verify(serialize(serializer, vector));
+                    verify(serializer_set_array_index(serializer, 1));
                     verify(serialize(serializer, vector+1));
+                    verify(serializer_set_array_index(serializer, 2));
                     verify(serialize(serializer, vector+2));
                     verify(serializer_end_array(serializer));
                     return true;
@@ -89,9 +94,13 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     size: s64 = 4;
                     if !serializer_begin_array(serializer, *size, key) return false;
                     if size != 4 return false;
+                    verify(serializer_set_array_index(serializer, 0));
                     verify(serialize(serializer, vector));
+                    verify(serializer_set_array_index(serializer, 1));
                     verify(serialize(serializer, vector+1));
+                    verify(serializer_set_array_index(serializer, 2));
                     verify(serialize(serializer, vector+2));
+                    verify(serializer_set_array_index(serializer, 3));
                     verify(serialize(serializer, vector+3));
                     verify(serializer_end_array(serializer));
                     return true;
@@ -102,9 +111,13 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     size: s64 = 4;
                     if !serializer_begin_array(serializer, *size, key) return false;
                     if size != 4 return false;
+                    verify(serializer_set_array_index(serializer, 0));
                     verify(serialize(serializer, vector));
+                    verify(serializer_set_array_index(serializer, 1));
                     verify(serialize(serializer, vector+1));
+                    verify(serializer_set_array_index(serializer, 2));
                     verify(serialize(serializer, vector+2));
+                    verify(serializer_set_array_index(serializer, 3));
                     verify(serialize(serializer, vector+3));
                     verify(serializer_end_array(serializer));
                     return true;
@@ -398,6 +411,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
             success: = true;
             for i : 0..(size-1)
             {
+                serializer_set_array_index(serializer, i);
                 element_data: = array_data + i * info_array.element_type.runtime_size;
 
                 // What to do if only one element of the array fails?
