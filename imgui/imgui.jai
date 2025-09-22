@@ -107,7 +107,7 @@ ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> boo
         return custom_editor_function(value, info_struct);
     }
 
-    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct);
+    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct, "serialize");
     serialize_filter_function: = get_serialize_filter_function(info_struct);
 
     modified: = false;

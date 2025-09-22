@@ -5,10 +5,12 @@ CurveExtrapolation :: enum
     PING_PONG;
 }
 
-Curve :: struct
+Curve :: struct(MAX_POINTS: u64 = 16)
+    @custom_serialize(serialize_curve)
 {
-    points: [..]CurvePoint; @serialize // points must be kept ordered by increasing values of x
-    extrapolation: CurveExtrapolation = .CLAMP; @serialize
+    points: [MAX_POINTS]CurvePoint; // points must be kept ordered by increasing values of x
+    point_count: u16;
+    extrapolation: CurveExtrapolation = .CLAMP;
 }
 
 CurvePoint :: struct
@@ -35,9 +37,9 @@ curve_segment_bounds :: (p0: Vector2, d0: float, d1: float, p1: Vector2) -> Boun
 
 curve_bounds :: (using curve: Curve) -> Bounds
 {
-    if points.count == 0 { return .{}; }
+    if point_count == 0 { return .{}; }
     bounds: = make_bounds(points[0].position);
-    for i: 0.. points.count - 2
+    for i: 0.. point_count - 2
     {
         segment_bounds: = curve_segment_bounds(
             points[i].position,
@@ -52,9 +54,9 @@ curve_bounds :: (using curve: Curve) -> Bounds
 
 curve_evaluate :: (using curve: Curve, x: float) -> float
 {
-    if curve.points.count == 0 { return 0.0; }
-    min: float = first(curve.points).position.x;
-    max: float = last(curve.points).position.x;
+    if curve.point_count == 0 { return 0.0; }
+    min: float = curve.points[0].position.x;
+    max: float = curve.points[curve.point_count-1].position.x;
     range: = max - min;
     if range == 0 { return min; }
 
@@ -78,7 +80,7 @@ curve_evaluate :: (using curve: Curve, x: float) -> float
         }
     }
 
-    for i: 0..(points.count-2)
+    for i: 0..(point_count-2)
     {
         p0: = points[i];
         p1: = points[i+1];
@@ -98,7 +100,7 @@ curve_evaluate :: (using curve: Curve, x: float) -> float
 curve_set_point_position :: (using curve: *Curve, index: int, position: Vector2)
 {
     assert(curve != null);
-    assert(index >= 0 && index < points.count);
+    assert(index >= 0 && index < point_count);
 
     lower_limit: float = -FLOAT32_INFINITY;
     upper_limit: float = FLOAT32_INFINITY;
@@ -111,37 +113,75 @@ curve_set_point_position :: (using curve: *Curve, index: int, position: Vector2)
 curve_add_point_position :: (using curve: *Curve, index: int, delta: Vector2)
 {
     assert(curve != null);
-    assert(index >= 0 && index < points.count);
+    assert(index >= 0 && index < point_count);
 
     curve_set_point_position(curve, index, points[index].position + delta);
 }
 
-curve_insert_point :: (using curve: *Curve, point: Vector2)
+curve_insert_point :: (using curve: *Curve($MAX_POINTS), point: Vector2)
 {
     assert(curve != null);
 
+    if point_count >= MAX_POINTS
+    {
+        log_error("Exceeding curve points capacity(%). Increase curve capacity in code", MAX_POINTS);
+        return;
+    }
+
     i: = 0;
-    while i < points.count
+    while i < point_count
     {
         if point.x < points[i].position.x { break; }
         i += 1;
     }
 
-    array_insert_at(*curve.points, .{point, 0, 0 }, i);
+    fixed_array_insert_at(*curve.points, .{point, 0, 0 }, i);
+    point_count += 1;
 }
 
 curve_remove_point :: (using curve: *Curve, index: int)
 {
     assert(curve != null);
-    assert(index >= 0 && index < points.count);
+    assert(index >= 0 && index < point_count);
 
-    array_ordered_remove_by_index(*points, index);
+    fixed_array_remove_at(*points, index);
+    point_count -= 1;
 }
 
-curve_reset :: (using curve: *Curve)
+serialize_curve :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string) -> bool
 {
-    array_reset(*points);
-    <<curve = .{};
+    if !serializer_begin_object(serializer, null, key) return false;
+
+    // Get members pointers
+    keys, key_to_member_info, notes: = get_flattened_struct_members(xx info);
+    point_count_ptr: *u16 = data + table_find_pointer(*key_to_member_info, "point_count").offset;
+    points_ptr: *CurvePoint = data + table_find_pointer(*key_to_member_info, "points").offset;
+    extrapolation_ptr: *CurveExtrapolation = data + table_find_pointer(*key_to_member_info, "extrapolation").offset;
+
+    // Serialize points array
+    point_count: s64 = xx <<point_count_ptr;
+    if !serializer_begin_array(serializer, *point_count, "points") return false;
+    max_points: s64 = xx get_polymorphic_argument(u64, xx info, 0);
+    if point_count > max_points
+    {
+        log_warning("Curve points array is greater than the curve capacity. Cropping excess values");
+        point_count = max_points;
+    }
+    <<point_count_ptr = xx point_count;
+
+    for i: 0..point_count-1
+    {
+        serializer_set_array_index(serializer, i);
+        serialize(serializer, points_ptr + i);
+    }
+
+    serializer_end_array(serializer);
+
+    // Serialize additional data
+    serialize(serializer, extrapolation_ptr, "extrapolation");
+
+    serializer_end_object(serializer);
+    return true;
 }
 
 CurveEditor :: struct
@@ -192,7 +232,7 @@ EditValue :: (label: string, value: *Curve) -> bool
             closest_position: Vector2;
             closest_part: = PointPart.Point;
             closest_distance_squared: float = FLOAT32_INFINITY;
-            for i: 0..edited_curve.points.count-1
+            for i: 0..edited_curve.point_count-1
             {
                 point: = edited_curve.points[i];
 
@@ -316,7 +356,7 @@ EditValue :: (label: string, value: *Curve) -> bool
             }
 
             // Draw handles
-            for i: 0..edited_curve.points.count-1
+            for i: 0..edited_curve.point_count-1
             {
                 point: = edited_curve.points[i];
                 color: = rl.WHITE;
@@ -344,7 +384,7 @@ EditValue :: (label: string, value: *Curve) -> bool
                     imgui_canvas_draw_line(*canvas, point.position, p, color);
                     imgui_canvas_draw_handle(*canvas, p, 7, rgba(color, ifx back_tangent_highlighted then 0.7 else 0.3));
                 }
-                if i < edited_curve.points.count-1
+                if i < edited_curve.point_count-1
                 {
                     p: = screen_to_canvas(*canvas, tangent_screen_position(*canvas, point, 1));
                     imgui_canvas_draw_line(*canvas, point.position, p, color);
@@ -398,7 +438,7 @@ EditValue :: (label: string, value: *Curve) -> bool
                     edited = true;
                 }
             }
-            else if edited_curve.points.count < 2
+            else if edited_curve.point_count < 2
             {
                 if ImGui.Selectable("Add point")
                 {
@@ -445,10 +485,10 @@ EditValue :: (label: string, value: *Curve) -> bool
             push_context ctx
             {
                 curve: *Curve = data;
-                if curve.points.count == 0 { return 0.0; }
+                if curve.point_count == 0 { return 0.0; }
 
-                min: float = first(curve.points).position.x;
-                max: float = last(curve.points).position.x;
+                min: float = curve.points[0].position.x;
+                max: float = curve.points[curve.point_count-1].position.x;
                 step: float = (1.0 / xx STEPS) * (max - min);
 
                 return curve_evaluate(curve, min + (step * xx idx));
@@ -488,11 +528,11 @@ fit_canvas_to_curve :: (canvas: *ImGuiCanvas, curve: *Curve)
 {
     FIT_MARGIN :: 70.0;
     bounds: Bounds;
-    if curve.points.count == 0
+    if curve.point_count == 0
     {
         bounds = .{ .{0,0}, .{1,1} };
     }
-    else if curve.points.count == 1
+    else if curve.point_count == 1
     {
         bounds = .{ curve.points[0].position, curve.points[0].position + .{1,1} };
     }

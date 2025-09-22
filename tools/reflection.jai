@@ -223,3 +223,66 @@ enum_index_to_value :: (index: s64, info_enum: *Type_Info_Enum, value: *void)
         }
     }
 }
+
+MemberInfo :: struct
+{
+    tis_member: *Type_Info_Struct_Member;
+    offset: s64; // Relative to the base data pointer of the final struct. Might be different than the tis_member offset_in_bytes if we have inheritance
+}
+
+get_flattened_struct_members :: (info: *Type_Info_Struct, note_filter: string = "") -> keys: []string, key_to_type: Table(string, MemberInfo), notes: []string
+{
+    keys: [..]string;
+    keys.allocator = temporary_allocator;
+
+    key_to_member_info: Table(string, MemberInfo);
+    key_to_member_info.allocator = temporary_allocator;
+
+    notes: [..]string;
+    notes.allocator = temporary_allocator;
+
+    get_flattened_struct_members(info, note_filter, 0, *keys, *key_to_member_info, *notes);
+    return keys, key_to_member_info, notes;
+}
+
+#scope_file
+
+get_flattened_struct_members :: (info: *Type_Info_Struct, note_filter: string, base_offset: s64, keys: *[..]string, key_to_type: *Table(string, MemberInfo), notes: *[..]string)
+{
+    assert(info != null);
+    assert(keys != null);
+    assert(key_to_type != null);
+    assert(notes != null);
+
+    array_add(notes, ..info.notes);
+
+    for member_type_info, i : info.members
+    {
+        offset: = base_offset + member_type_info.offset_in_bytes;
+
+        if member_type_info.type.type == .STRUCT
+        {
+            member_tis: *Type_Info_Struct = xx member_type_info.type;
+
+            // Flatten special structs
+            // #as
+            if member_type_info.flags & .AS
+            {
+                get_flattened_struct_members(member_tis, note_filter, offset, keys, key_to_type, notes);
+                continue;
+            }
+
+            // union
+            if member_tis.textual_flags & .UNION
+            {
+                get_flattened_struct_members(member_tis, note_filter, offset, keys, key_to_type, notes);
+                continue;
+            }
+        }
+        
+        if note_filter.count > 0 && !has_note(*member_type_info, note_filter) { continue; }
+
+        array_add(keys, member_type_info.name);
+        table_add(key_to_type, member_type_info.name, .{*info.members[i], offset});
+    }
+}

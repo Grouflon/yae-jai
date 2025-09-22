@@ -259,7 +259,7 @@ back_in_out :: (t: float) -> float
     }
 }
 
-ease :: (type: EasingType, t: float, custom_curve: Curve = .{}) -> float
+ease :: (type: EasingType, t: float) -> float
 {
     if #complete type ==
     {
@@ -291,7 +291,17 @@ ease :: (type: EasingType, t: float, custom_curve: Curve = .{}) -> float
     case .BACK_IN;          return back_in(t);
     case .BACK_OUT;         return back_out(t);
     case .BACK_IN_OUT;      return back_in_out(t);
-    case .CUSTOM;           return curve_evaluate(custom_curve, t);
+    case .CUSTOM;           assert(false, "use custom curve overload if you want to use a custom curve");
+    }
+    return t;
+}
+
+ease :: (type: EasingType, t: float, custom_curve: Curve) -> float
+{
+    if type ==
+    {
+        case .CUSTOM; return curve_evaluate(custom_curve, t);
+        case; return ease(type, t);
     }
 }
 

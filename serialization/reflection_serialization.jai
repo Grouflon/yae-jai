@@ -229,7 +229,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     }
 
                     // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
-                    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct);
+                    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct, "serialize");
                     serialize_filter_function: = get_serialize_filter_function(info_struct);
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
@@ -427,67 +427,6 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
     return false;
-}
-
-MemberInfo :: struct
-{
-    tis_member: *Type_Info_Struct_Member;
-    offset: s64;
-}
-
-get_flattened_struct_members :: (info: *Type_Info_Struct) -> keys: []string, key_to_type: Table(string, MemberInfo), notes: []string
-{
-    keys: [..]string;
-    keys.allocator = temporary_allocator;
-
-    key_to_member_info: Table(string, MemberInfo);
-    key_to_member_info.allocator = temporary_allocator;
-
-    notes: [..]string;
-    notes.allocator = temporary_allocator;
-
-    get_flattened_struct_members(info, 0, *keys, *key_to_member_info, *notes);
-    return keys, key_to_member_info, notes;
-}
-
-get_flattened_struct_members :: (info: *Type_Info_Struct, base_offset: s64, keys: *[..]string, key_to_type: *Table(string, MemberInfo), notes: *[..]string)
-{
-    assert(info != null);
-    assert(keys != null);
-    assert(key_to_type != null);
-    assert(notes != null);
-
-    array_add(notes, ..info.notes);
-
-    for member_type_info, i : info.members
-    {
-        offset: = base_offset + member_type_info.offset_in_bytes;
-
-        if member_type_info.type.type == .STRUCT
-        {
-            member_tis: *Type_Info_Struct = xx member_type_info.type;
-
-            // Flatten special structs
-            // #as
-            if member_type_info.flags & .AS
-            {
-                get_flattened_struct_members(member_tis, offset, keys, key_to_type, notes);
-                continue;
-            }
-
-            // union
-            if member_tis.textual_flags & .UNION
-            {
-                get_flattened_struct_members(member_tis, offset, keys, key_to_type, notes);
-                continue;
-            }
-        }
-        
-        if !has_note(*member_type_info, "serialize") { continue; }
-
-        array_add(keys, member_type_info.name);
-        table_add(key_to_type, member_type_info.name, .{*info.members[i], offset});
-    }
 }
 
 #scope_file

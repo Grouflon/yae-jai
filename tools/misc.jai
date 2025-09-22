@@ -115,6 +115,24 @@ table_free :: (table: *Table)
     deinit(table);
 }
 
+fixed_array_insert_at :: (array: *[$COUNT]$T, item: T, index: s64)
+{
+    assert(array != null);
+    if index >= COUNT return;
+
+    memcpy(array.data + index + 1, array.data + index, (COUNT-index-1) * size_of(T));
+    memcpy(array.data + index, *item, size_of(T));
+}
+
+fixed_array_remove_at :: (array: *[$COUNT]$T, index: s64)
+{
+    assert(array != null);
+    if index >= COUNT return;
+
+    memcpy(array.data + index, array.data + index + 1, (COUNT-index-1) * size_of(T));
+    memset(array.data + COUNT-1, 0, size_of(T));
+}
+
 verify :: (result: bool)
 {
     if !result { assert(false); }
