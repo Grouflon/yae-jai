@@ -2,8 +2,8 @@
 // Runtime
 YaeCompileTimeInfo :: struct
 {
-    named_types: []*Type_Info_Struct;
     resource_types: []*Type_Info_Struct;
+    child_types: []ChildType;
     custom_serialize_types: []TypeFunction(CustomSerializationFunction);
     custom_editor_types: []TypeFunction(CustomEditorFunction);
     serialize_filter_types: []TypeFunction(SerializeFilterFunction);
@@ -22,13 +22,20 @@ TypeFunction :: struct(function_type: Type)
     function: function_type;
 }
 
+ChildType :: struct
+{
+    tis: *Type_Info_Struct;
+    parent: *Type_Info_Struct;
+}
+
 compile_time_registry : struct 
 {
     custom_serialize_registry: Table(*Type_Info, CustomSerializationFunction);
     custom_editor_registry: Table(*Type_Info, CustomEditorFunction);
     serialize_filter_registry: Table(*Type_Info, SerializeFilterFunction);
     deinit_registry: Table(*Type_Info_Struct, DeinitFunction);
-    named_types_registry: Table(StringHash, *Type_Info_Struct);
+    type_by_name: Table(StringHash, *Type_Info_Struct);
+    children_by_type: Table(*Type_Info_Struct, [..]*Type_Info_Struct);
 };
 
 
@@ -61,9 +68,13 @@ compile_time_registry_init :: (compile_time_info: *YaeCompileTimeInfo)
         table_add(*deinit_registry, xx type.ti, type.function);
     }
 
-    for tis: compile_time_info.named_types
+    for child_type: compile_time_info.child_types
     {
-        table_add(*named_types_registry, string_hash(tis.name), tis);
+        table_add(*type_by_name, string_hash(child_type.tis.name), child_type.tis);
+        table_add(*type_by_name, string_hash(child_type.parent.name), child_type.parent);
+
+        children: = find_or_add(*children_by_type, child_type.parent);
+        array_add_if_unique(children, child_type.tis);
     }
 }
 
@@ -74,7 +85,13 @@ compile_time_registry_shutdown :: ()
     deinit(*custom_serialize_registry);
     deinit(*custom_editor_registry);
     deinit(*serialize_filter_registry);
-    deinit(*named_types_registry);
+    deinit(*type_by_name);
+
+    for children: children_by_type
+    {
+        array_free(children);
+    }
+    deinit(*children_by_type);
 }
 
 get_serialize_filter_function :: (ti: *Type_Info) -> SerializeFilterFunction
@@ -113,7 +130,7 @@ get_type_by_name :: (name: StringHash) -> *Type_Info_Struct
 {
     using compile_time_registry;
 
-    found, tis: = table_find_new(*named_types_registry, name);
+    found, tis: = table_find_new(*type_by_name, name);
     if !found return null;
     return tis;
 }
@@ -131,10 +148,18 @@ is_polymorphic :: (tis: *Type_Info_Struct) -> bool
     return has_note(tis, "polymorphic");
 }
 
+polymorphic_cast :: (ptr: *$BaseType, $DestType: Type) -> *DestType
+{
+    if polymorphic_get_type(ptr) != type_info(DestType) return null;
+    return xx ptr;
+}
+
 polymorphic_get_type :: (ptr: *void, tis: *Type_Info_Struct) -> *Type_Info_Struct
 {
+    if ptr == null return null;
+
     found, args: = has_note_with_args(tis, "polymorphic");
-    if !found return null;
+    if !found return tis;
     assert(args.count == 1); // This is already checked for validity at compile time
 
     polymorphic_tis: *Type_Info_Struct;
@@ -239,7 +264,11 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     // Add all polymorphic hierarchy
                     if has_note(tis, "polymorphic", true)
                     {
-                        array_add(*polymorphic_types, tis);
+                        parent: = get_parent_type(tis);
+                        if parent != null && parent.type == .STRUCT
+                        {
+                            array_add(*child_types, .{tis = tis, parent = xx parent});
+                        }
                     }
                 }
 
@@ -279,6 +308,17 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             {
                                 if i > 0 append(*sb, ",");
                                 append(*sb, tprint("\n\ttype_info(%)", tis.name));
+                            }
+                            append(*sb, "\n],\n");
+                        }
+
+                        // Child Types
+                        {
+                            append(*sb, "child_types= .[");
+                            for child_type, i: child_types
+                            {
+                                if i > 0 append(*sb, ",");
+                                append(*sb, tprint("\n\t.{type_info(%),type_info(%)}", child_type.tis.name, child_type.parent.name));
                             }
                             append(*sb, "\n],\n");
                         }
@@ -335,17 +375,6 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             append(*sb, "\n],\n");
                         }
 
-                        // Named Types
-                        {
-                            append(*sb, "named_types= .[");
-                            for tis, i: polymorphic_types
-                            {
-                                if i > 0 append(*sb, ",");
-                                append(*sb, tprint("\n\ttype_info(%)", tis.name));
-                            }
-                            append(*sb, "\n],\n");
-                        }
-
                         append(*sb, "};\n");
 
                         add_build_string(builder_to_string(*sb), w);
@@ -361,7 +390,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
 
 // Compile time variables
 resource_types: [..]*Type_Info_Struct;
-polymorphic_types: [..]*Type_Info_Struct;
+child_types: [..]ChildType;
 custom_serialize_table: Table(*Type_Info_Struct, string);
 custom_editor_table: Table(*Type_Info_Struct, string);
 serialize_filter_table: Table(*Type_Info_Struct, string);

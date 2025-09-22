@@ -300,7 +300,7 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
 
                 case; // Generic structs
                 {
-                    info_struct: = cast(*Type_Info_Struct) info;
+                    info_struct: = polymorphic_get_type(value, xx info);
 
                     if label.count == 0
                     {

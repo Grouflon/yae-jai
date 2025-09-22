@@ -140,13 +140,11 @@ is_subclass_of :: (info: *Type_Info, of: *Type_Info, check_self: bool = true) ->
     return is_subclass_of(sub_type, of);
 }
 
-get_parent_type :: (info: *Type_Info) -> *Type_Info
+get_parent_type :: (tis: *Type_Info_Struct) -> *Type_Info
 {
-    if info == null return null;
-    if info.type != .STRUCT return null;
+    if tis == null return null;
 
-    info_struct := cast(*Type_Info_Struct) info;
-    for member: info_struct.members
+    for member: tis.members
     {
         if member.flags & .AS
         {
