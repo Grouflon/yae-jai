@@ -1,4 +1,4 @@
-RESOURCE_EDIT_BUFFER_TIME :: 0.3;
+RESOURCE_EDIT_BUFFER_TIME :: 0.05;
 
 ResourceEditor :: struct
 {

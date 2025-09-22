@@ -17,7 +17,11 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
             resource_ptr: = cast(**Resource) data;
 
             resource: = <<resource_ptr;
-            name: = ifx resource != null then resource.name else "";
+            name: string;
+            if serializer.mode == .WRITE
+            {
+                name = ifx resource != null then resource.name else "";
+            }
             success: = serialize(serializer, *name, key, *temporary_allocator);
             <<resource_ptr = get_resource_by_name(name);
 

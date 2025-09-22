@@ -37,8 +37,6 @@ add_data_change_command :: (data_ptr:*void, ti: *Type_Info, before_data: string,
         {
             command_data: *CommandData = xx user_data;
 
-            log("%", command_data.before_data);
-
             serializer: JsonSerializer;
             json_serializer_set_json_string(*serializer, command_data.before_data);
             serializer_begin(*serializer, .READ);
