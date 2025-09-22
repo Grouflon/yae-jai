@@ -376,12 +376,17 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
         }
         case .WRITE;
         {
-            assert(current_value.type == .NULL); // Ensure we are not overwriting anything
-
-            current_value.type = .OBJECT;
-            current_value.object = talloc(size_of(JSON_Object));
-            Initialize(current_value.object);
-            current_value.object.allocator = temporary_allocator;
+            if current_value.type == .NULL
+            {
+                current_value.type = .OBJECT;
+                current_value.object = talloc(size_of(JSON_Object));
+                Initialize(current_value.object);
+                current_value.object.allocator = temporary_allocator;
+            }
+            else if current_value.type != .OBJECT
+            {
+                assert(false, "We are overwriting above another type.");
+            }
         }
     }
     array_add(*context_stack, .{ value = current_value });

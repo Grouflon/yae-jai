@@ -37,11 +37,14 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         }
     }
 
-    // Resource pointer, override
     if info.type == .POINTER
     {
         ti: = (cast(*Type_Info_Pointer) info).pointer_to;
-        if is_subclass_of(ti, Resource)
+        if ti.type != .STRUCT return false;
+        tis: *Type_Info_Struct = xx ti;
+
+        // Resource pointer, override
+        if is_subclass_of(tis, Resource)
         {
             resource_ptr: = cast(**Resource) data;
 
@@ -51,6 +54,56 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
             <<resource_ptr = get_resource_by_name(name);
 
             return success;
+        }
+
+        // Polymorphic type, instantiate with a simple factory and fall back to standard struct serialization
+        // @NOTE(remi): Maybe this should be allowed for any pointer and not just polymorphic types honestly
+        // Maybe it is a different case where serializing type does not matter, but I don't know the actual use case yet
+        if is_polymorphic(tis)
+        {
+            object_ptr: *void = <<cast(**void)data;
+
+            if serializer.mode == .WRITE && object_ptr == null
+            {
+                return serialize_null(serializer, key);
+            }
+
+            // First incursion into the object to get the type
+            if !serializer_begin_object(serializer, null, key) return false;
+
+            polymorphic_tis: *Type_Info_Struct;
+            type_name: StringHash;
+
+            if serializer.mode == .WRITE
+            {
+                polymorphic_tis = polymorphic_get_type(object_ptr, tis);
+                assert(polymorphic_tis != null);
+                type_name = string_hash(polymorphic_tis.name);
+            }
+            serialize(serializer, *type_name, "type");
+            if serializer.mode == .READ
+            {
+                polymorphic_tis = get_type_by_name(type_name);
+            }
+
+            verify(serializer_end_object(serializer));
+
+            // Unknown type, we fail
+            if polymorphic_tis == null return false;
+
+            // Instantiate o
+            if serializer.mode == .READ
+            {
+                if object_ptr != null
+                {
+                    polymorphic_deinit(object_ptr, polymorphic_tis);
+                    free(object_ptr);
+                }
+                object_ptr = alloc(polymorphic_tis.runtime_size);
+                <<cast(**void)data = object_ptr;
+                default_init(object_ptr, polymorphic_tis);
+            }
+            return serialize(serializer, object_ptr, polymorphic_tis, key, params, ctx);
         }
     }
 
@@ -403,7 +456,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         maybe_grow(array_resizable, info_array.element_type.runtime_size);
                         array_data = array_resizable.data;
 
-                        default_init_range(array_data, previous_count+1, size-1, info_array.element_type);
+                        default_init_range(array_data, previous_count, size-1, info_array.element_type);
                     }
                 }
             }

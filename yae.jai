@@ -30,7 +30,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     log_verbose("working directory: %", get_working_directory());
 
     // Init core stuff
-    custom_function_registry_init(compile_time_info);
+    compile_time_registry_init(compile_time_info);
 
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
@@ -102,10 +102,9 @@ yae_shutdown :: ()
     rl.CloseWindow();
 
     physics_shutdown();
-    serialization_manager_shutdown();
     resource_manager_shutdown();
     undo_redo_manager_shutdown();
-    // object_registry_shutdown();
+    compile_time_registry_shutdown();
     free_string_hash_repository();
 
     // Memory leak check

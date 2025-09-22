@@ -6,9 +6,24 @@ NoteArgument :: struct
     text: string;
 }
 
-has_note :: (ti: *Type_Info_Struct, note: string) -> bool
+has_note :: (ti: *Type_Info_Struct, note: string, check_parents: bool = false) -> bool
 {
     if ti == null return false;
+
+    if check_parents
+    {
+        for member: ti.members
+        {
+            if !(member.flags & .AS) continue;
+            if member.type.type != .STRUCT continue;
+
+            if has_note(xx member.type, note, true)
+            {
+                return true;
+            }
+        }
+    }
+
     return has_note(ti.notes, note);
 }
 
@@ -22,7 +37,8 @@ has_note :: (notes: []string, note: string) -> bool
 {
     for n: notes
     {
-        if compare(n, note) == 0 return true;
+        note_name: = stop_at_any(n, "(");
+        if compare(note_name, note) == 0 return true;
     }
     return false;
 }
@@ -34,9 +50,25 @@ has_note_with_args :: (ti: *Type_Info_Struct_Member, note: string) -> bool, []No
     return found, args;
 }
 
-has_note_with_args :: (ti: *Type_Info_Struct, note: string) -> bool, []NoteArgument
+has_note_with_args :: (ti: *Type_Info_Struct, note: string, check_parents: bool = false) -> bool, []NoteArgument
 {
     if ti == null return false, .[];
+
+    if check_parents
+    {
+        for member: ti.members
+        {
+            if !(member.flags & .AS) continue;
+            if member.type.type != .STRUCT continue;
+
+            found, args: = has_note_with_args(xx member.type.type, note, true);
+            if found
+            {
+                return true, args;
+            }
+        }
+    }
+
     found, args: = has_note_with_args(ti.notes, note);
     return found, args;
 }
