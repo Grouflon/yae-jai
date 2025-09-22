@@ -495,6 +495,13 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
                 if popup_event_index >= 0
                 {
+                    text: = ifx animation.events[popup_event_index].disabled then "Enable" else "Disable";
+                    if ImGui.MenuItem(temp_c_string(text))
+                    {
+                        animation.events[popup_event_index].disabled = !animation.events[popup_event_index].disabled;
+                        animation_changed = true;
+                    }
+
                     if ImGui.MenuItem("Delete Event")
                     {
                         animation_remove_event(animation, popup_event_index);
@@ -592,6 +599,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 else if i == selected_event_index
                 {
                     c = color_set.selected;
+                }
+                if event.disabled
+                {
+                    c.a /= 2;
                 }
                 bounds: = cursor + get_event_local_bounds(animation, i);
                 draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, IM_COL32(c), 4.0, .RoundCornersAll);

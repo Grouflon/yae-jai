@@ -106,6 +106,7 @@ animation_player_get_current_box_events :: (using player: *AnimationPlayer) -> [
     for event: current_animation.events
     {
         if event.type != .BOX continue;
+        if event.disabled continue;
         if !is_frame_within_event(current_frame, *event) continue;
         array_add(*result, event.box);
     }
@@ -122,6 +123,7 @@ animation_player_draw :: (using player: *AnimationPlayer, position: Vector2, fli
     for event: current_animation.events
     {
         if event.type != .SPRITE continue;
+        if event.disabled continue;
         if !is_frame_within_event(current_frame, *event) continue;
 
         draw_sprite(position + event.sprite.offset, event.sprite.sprite, event.sprite.flip_x ^ flip_x, event.sprite.flip_y ^ flip_y, tint);

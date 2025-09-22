@@ -27,6 +27,7 @@ AnimationEvent :: struct
     begin: s32;  @serialize
     end: s32; @serialize // inclusive
     layer: u32; @serialize
+    disabled: bool; @serialize
 
     union
     {
@@ -100,6 +101,7 @@ animation_frame_bounds :: (using animation: *Animation, frame: s32) -> Bounds
     for event: animation.events
     {
         if event.type != .SPRITE continue;
+        if event.disabled continue;
         if !is_frame_within_event(frame, *event) continue;
 
         sprite: = get_sprite(event.sprite.sprite);
@@ -234,6 +236,7 @@ animation_evaluate_movement :: (using animation: *Animation, start_time: float, 
     for event: animation.events
     {
         if event.type != .MOVEMENT continue;
+        if event.disabled continue;
 
         if total_loop_count > 0
         {
