@@ -15,16 +15,15 @@
 // B -> {w/2,h/2} relative = {0,0} absolute
 
 
-ViewportBase :: struct
+Viewport :: struct
 {
-    size: Vector2; @serialize
-    target: Vector2; @serialize
-    zoom: Vector2 = .{1,1}; @serialize
+    target: Vector2;
+    zoom: Vector2 = .{1,1};
 
-    render_target: rl.RenderTexture2D;
+    render_texture: rl.RenderTexture2D;
 }
 
-viewport_align_points :: (viewport: *ViewportBase, viewport_p0: Vector2, world_p0: Vector2, viewport_p1: Vector2, world_p1: Vector2, uniform_zoom: bool = true)
+viewport_align_points :: (viewport: *Viewport, viewport_p0: Vector2, world_p0: Vector2, viewport_p1: Vector2, world_p1: Vector2, uniform_zoom: bool = true)
 {
     if viewport_p0 == viewport_p1 return;
     if world_p0 == world_p1 return;
@@ -37,23 +36,24 @@ viewport_align_points :: (viewport: *ViewportBase, viewport_p0: Vector2, world_p
     viewport_align_point(viewport, viewport_p0, world_p0);
 }
 
-viewport_align_point :: (viewport: *ViewportBase, viewport_position: Vector2, world_position: Vector2)
+viewport_align_point :: (viewport: *Viewport, viewport_position: Vector2, world_position: Vector2)
 {
     assert(viewport.zoom.x != 0.0);
     assert(viewport.zoom.y != 0.0);
 
+    render_size: = size(viewport);
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
-    viewport.target = world_position - (viewport_position - viewport.size * 0.5) / zoom;
+    viewport.target = world_position - (viewport_position - render_size * 0.5) / zoom;
 }
 
-viewport_pan :: (viewport: *ViewportBase, viewport_translation: Vector2)
+viewport_pan :: (viewport: *Viewport, viewport_translation: Vector2)
 {
     assert(viewport != null);
 
     viewport.target += Vector2.{-viewport_translation.x, viewport_translation.y} / viewport.zoom;
 }
 
-viewport_set_zoom_focused :: (viewport: *ViewportBase, focus_viewport_position: Vector2, zoom: Vector2)
+viewport_set_zoom_focused :: (viewport: *Viewport, focus_viewport_position: Vector2, zoom: Vector2)
 {
     if viewport.zoom == zoom return;
 
@@ -61,67 +61,74 @@ viewport_set_zoom_focused :: (viewport: *ViewportBase, focus_viewport_position: 
     assert(zoom.x != 0);
     assert(zoom.y != 0);
 
-    a: = (focus_viewport_position - (viewport.size * 0.5)) * .{1, -1};
+    render_size: = size(viewport);
+    a: = (focus_viewport_position - (render_size * 0.5)) * .{1, -1};
     viewport.target = viewport.target + (a / viewport.zoom) - (a / zoom);
     viewport.zoom = zoom;
 }
 
-viewport_to_world_position :: (viewport: *ViewportBase, viewport_position: Vector2) -> Vector2
+viewport_to_world_position :: (viewport: *Viewport, viewport_position: Vector2) -> Vector2
 {
     assert(viewport.zoom.x != 0.0);
     assert(viewport.zoom.y != 0.0);
 
+    render_size: = size(viewport);
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
-    return viewport.target + (viewport_position - viewport.size * 0.5) / zoom;
+    return viewport.target + (viewport_position - render_size * 0.5) / zoom;
 }
 
-viewport_from_world_position :: (viewport: *ViewportBase, world_position: Vector2) -> Vector2
+viewport_from_world_position :: (viewport: *Viewport, world_position: Vector2) -> Vector2
 {
     assert(viewport.zoom.x != 0.0);
     assert(viewport.zoom.y != 0.0);
 
+    render_size: = size(viewport);
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
-    return (world_position - viewport.target) * zoom + viewport.size * 0.5;
+    return (world_position - viewport.target) * zoom + render_size * 0.5;
 }
 
-viewport_update :: (viewport: *ViewportBase, size: Vector2) -> bool
+viewport_update :: (viewport: *Viewport, render_size: Vector2) -> bool
 {
-    return viewport_update(viewport, xx size.x, xx size.y);
-}
+    render_width: = ceil_to_s32(render_size.x);
+    render_height: = ceil_to_s32(render_size.y);
 
-viewport_update :: (using viewport: *ViewportBase, width: s32, height: s32) -> bool
-{
-    if width == render_target.texture.width && height == render_target.texture.height
+    if viewport.render_texture.texture.width == render_width && viewport.render_texture.texture.height == render_height
     {
         return false;
     }
 
-    if render_target.texture.id != 0
+    if viewport.render_texture.texture.id != 0
     {
-        rl.UnloadRenderTexture(render_target);
+        rl.UnloadRenderTexture(viewport.render_texture);
     }
-    render_target = rl.LoadRenderTexture(width, height);
-    size = .{xx width, xx height};
+    viewport.render_texture = rl.LoadRenderTexture(render_width, render_height);
     return true;
 }
 
-viewport_begin_render :: (using viewport: *ViewportBase)
+viewport_begin_render :: (using viewport: *Viewport)
 {
-    rl.BeginTextureMode(render_target);
+    rl.BeginTextureMode(render_texture);
+
 
     camera: = rl.Camera2D.{
-        offset = .{ xx viewport.render_target.texture.width, xx viewport.render_target.texture.height } * 0.5,
+        offset = size(viewport) * 0.5,
         target = target,
         zoom = zoom.x,
     };
     rl.BeginMode2D(camera);
 }
 
-viewport_end_render :: (using viewport: *ViewportBase)
+viewport_end_render :: (using viewport: *Viewport)
 {
     rl.EndMode2D();
     rl.EndTextureMode();
 }
 
+size :: (viewport: Viewport) -> Vector2 #expand
+{
+    return .{ xx viewport.render_texture.texture.width, xx viewport.render_texture.texture.height };
+}
+
 #scope_file
 rl :: #import "raylib";
+

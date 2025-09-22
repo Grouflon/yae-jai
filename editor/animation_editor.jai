@@ -1,7 +1,7 @@
 AnimationEditor :: struct
 {
     player: AnimationPlayer;
-    viewport: ViewportBase;
+    viewport: Viewport;
 
     is_dragging_viewport: = false;
     is_dragging_frame: = false;
@@ -642,7 +642,7 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     viewport_size: = ImGui.GetContentRegionAvail();
     viewport_screen_origin: = ImGui.GetCursorScreenPos();
     viewport_update(*viewport, viewport_size);
-    ImGui.Image(viewport.render_target.texture.id, viewport_size);
+    ImGui.Image(viewport.render_texture.texture.id, viewport_size);
 
     if frame_count == 2 // @NOTE(remi): Viewport is all over the place for between 1 and 2 frames when the window first appears
     {
@@ -758,8 +758,9 @@ animation_editor_viewport_draw :: (using editor: *AnimationEditor)
     // Draw Grid
     {
         GRID_STEP :: 100.0;
-        viewport_min: = viewport_to_world_position(*viewport, .{0, viewport.size.y});
-        viewport_max: = viewport_to_world_position(*viewport, .{viewport.size.x, 0});
+        viewport_size: = size(viewport);
+        viewport_min: = viewport_to_world_position(*viewport, .{0, viewport_size.y});
+        viewport_max: = viewport_to_world_position(*viewport, .{viewport_size.x, 0});
         viewport_range: = viewport_max - viewport_min;
         viewport_start: = viewport_min - .{fmod_cycling(viewport_min.x, GRID_STEP), fmod_cycling(viewport_min.y, GRID_STEP)};
         cells_count_h: = floor_to_s32(viewport_range.x / GRID_STEP) + 1;
@@ -826,7 +827,8 @@ animation_editor_frame_sprite :: (using editor: *AnimationEditor)
 
     if length_squared(sprite_size) < 0.0001 return;
 
-    viewport_align_points(*editor.viewport, FRAME_MARGIN, .{bounds.min.x, bounds.max.y}, editor.viewport.size - FRAME_MARGIN, .{bounds.max.x, bounds.min.y}, true);
+    viewport_size: = size(editor.viewport);
+    viewport_align_points(*editor.viewport, FRAME_MARGIN, .{bounds.min.x, bounds.max.y}, viewport_size - FRAME_MARGIN, .{bounds.max.x, bounds.min.y}, true);
     zoom: float = min(editor.viewport.zoom.x, editor.viewport.zoom.y);
     editor.viewport.zoom = xy(zoom - fmod_cycling(zoom, ZOOM_STEP));
 }
