@@ -5,11 +5,11 @@ CurveExtrapolation :: enum
     PING_PONG;
 }
 
-Curve :: struct(MAX_POINTS: u64 = 16)
+Curve :: struct(MAX_POINTS: s64 = 16)
     @custom_serialize(serialize_curve)
 {
     points: [MAX_POINTS]CurvePoint; // points must be kept ordered by increasing values of x
-    point_count: u16;
+    point_count: s16;
     extrapolation: CurveExtrapolation = .CLAMP;
 }
 
@@ -105,7 +105,7 @@ curve_set_point_position :: (using curve: *Curve, index: int, position: Vector2)
     lower_limit: float = -FLOAT32_INFINITY;
     upper_limit: float = FLOAT32_INFINITY;
     if index > 0 { lower_limit = points[index-1].position.x; }
-    if index < points.count-1 { upper_limit = points[index+1].position.x; }
+    if index < point_count-1 { upper_limit = points[index+1].position.x; }
 
     points[index].position = .{ clamp(position.x, lower_limit, upper_limit), position.y };
 }
@@ -264,7 +264,7 @@ EditValue :: (label: string, value: *Curve) -> bool
                 }
 
                 // front tangent
-                if i < edited_curve.points.count-1
+                if i < edited_curve.point_count-1
                 {
                     p: = tangent_screen_position(*canvas, point, 1);
                     d: = distance_squared(io.MousePos, p);
