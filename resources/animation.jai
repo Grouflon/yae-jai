@@ -33,7 +33,7 @@ AnimationEvent :: struct
         sprite: SpriteAnimationEvent; @serialize
         box: BoxAnimationEvent; @serialize
         movement: MovementAnimationEvent; @serialize
-    }
+    } 
 }
 
 animation_event_serialize_filter :: (parent_data: *void, parent_info: *Type_Info_Struct, member_info: *Type_Info_Struct_Member) -> bool
@@ -198,7 +198,6 @@ animation_remove_event :: (using animation: *Animation, index: s64)
         return;
     }
 
-    deinit(*animation.events[index]);
     array_ordered_remove_by_index(*animation.events, index);
 }
 
@@ -292,10 +291,6 @@ animation_unload :: (resource: *Resource)
 {
     using t: = cast(*Animation) resource;
 
-    for *event: events
-    {
-        deinit(event);
-    }
     array_reset(*events);
 
     for *layer: layers
@@ -303,16 +298,6 @@ animation_unload :: (resource: *Resource)
         deinit(layer);
     }
     array_reset(*layers);
-}
-
-deinit :: (event: *AnimationEvent)
-{
-    assert(event != null);
-    if event.type == .MOVEMENT
-    {
-        curve_reset(*event.movement.x_custom_curve);
-        curve_reset(*event.movement.y_custom_curve);
-    }
 }
 
 deinit :: (layer: *AnimationLayer)
