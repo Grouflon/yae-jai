@@ -10,7 +10,7 @@ YaeCompileTimeInfo :: struct
     deinit_functions: []TypeFunction(DeinitFunction);
 }
 
-CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string, params: SerializationParams, ctx: ReflectionContext) -> (default_serialize: bool, success: bool);
+CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string) -> (success: bool);
 CustomEditorFunction :: #type (data: *void, info: *Type_Info) -> bool;
 // @NOTE(remi): in the case of #as or unions, Type_Info_Struct_Member might come from a different Type_Info than the parent_info. Maybe it is not a good idea to give it as is
 SerializeFilterFunction :: #type (parent_data: *void, parent_info: *Type_Info_Struct, member_info: *Type_Info_Struct_Member) -> bool;

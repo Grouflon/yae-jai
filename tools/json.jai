@@ -36,7 +36,7 @@ json_try_copy_string :: (value: JSON_Value, key: string, out_string: *string) ->
     return true;
 }
 
-read_json_file :: (path: string, data: *$T, params: SerializationParams = .{}) -> bool
+read_json_file :: (path: string, data: *$T) -> bool
 {
     if data == null return false;
 
@@ -44,19 +44,19 @@ read_json_file :: (path: string, data: *$T, params: SerializationParams = .{}) -
     if !json_serializer_open_json_file(*serializer, path) return false;
 
     serializer_begin(*serializer, .READ);
-    success: = serialize(*serializer, data, params = params);
+    success: = serialize(*serializer, data);
     serializer_end(*serializer);
 
     return success;
 }
 
-write_json_file :: (path: string, data: *$T, params: SerializationParams = .{}) -> bool
+write_json_file :: (path: string, data: *$T) -> bool
 {
     if data == null return false;
 
     serializer: JsonSerializer;
     serializer_begin(*serializer, .WRITE);
-    success: = serialize(*serializer, data, params = params);
+    success: = serialize(*serializer, data);
     serializer_end(*serializer);
     
     if !success return false;

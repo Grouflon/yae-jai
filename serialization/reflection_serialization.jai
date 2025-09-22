@@ -1,42 +1,10 @@
-SerializationFilter :: struct
+serialize :: (serializer: *Serializer, value: *$T, key: string = "") -> bool
 {
-    type: enum
-    {
-        IN;  // Only serialize members that have the note
-        OUT; // Do not serialize members that have the note
-    }
-    subclass: *Type_Info; // Restrict the filter to subclasses of this
-    note: string;   
+    return serialize(serializer, value, type_info(T), key);
 }
 
-SerializationParams :: struct
+serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "") -> bool
 {
-    filters: []SerializationFilter;
-    custom_serialization_function: CustomSerializationFunction;
-}
-
-ReflectionContext :: struct // @NOTE(remi): may be useful to know the notes of your parent or member, I don't know
-{
-    parent: *Type_Info_Struct;
-    member: *Type_Info_Struct_Member;
-}
-
-serialize :: (serializer: *Serializer, value: *$T, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool
-{
-    return serialize(serializer, value, type_info(T), key, params, ctx);
-}
-
-serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: string = "", params: SerializationParams = .{}, ctx: ReflectionContext = .{}) -> bool
-{
-    if params.custom_serialization_function != null
-    {
-        fallback_to_default, success := params.custom_serialization_function(serializer, data, info, key, params, ctx);
-        if !fallback_to_default
-        {
-            return success;
-        }
-    }
-
     if info.type == .POINTER
     {
         ti: = (cast(*Type_Info_Pointer) info).pointer_to;
@@ -59,6 +27,10 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         // Polymorphic type, instantiate with a simple factory and fall back to standard struct serialization
         // @NOTE(remi): Maybe this should be allowed for any pointer and not just polymorphic types honestly
         // Maybe it is a different case where serializing type does not matter, but I don't know the actual use case yet
+
+        // The deinit thing does not seem to be related to being polymorphic or not, and probably not even being a pointer
+        // I think reading over a struct should trigger it, just like with strings, but it is probably best to avoid the pattern in the first place
+        // polymorphic pointer is specific though cause we are dropping and replacing the whole chunk of memory, and not writing over it
         if is_polymorphic(tis)
         {
             object_ptr: *void = <<cast(**void)data;
@@ -103,7 +75,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 <<cast(**void)data = object_ptr;
                 default_init(object_ptr, polymorphic_tis);
             }
-            return serialize(serializer, object_ptr, polymorphic_tis, key, params, ctx);
+            return serialize(serializer, object_ptr, polymorphic_tis, key);
         }
     }
 
@@ -203,7 +175,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                             return false;
                         }
 
-                        serialize_table :: (serializer: *Serializer, table: *Table(StringHash, $Dummy_Value_Type), value_type_info: *Type_Info, key: string, params: SerializationParams, ctx: ReflectionContext) -> bool
+                        serialize_table :: (serializer: *Serializer, table: *Table(StringHash, $Dummy_Value_Type), value_type_info: *Type_Info, key: string) -> bool
                         {
                             keys: [..]string;
                             keys.allocator = temporary_allocator;
@@ -224,17 +196,17 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                                 //NOTE: Need to convert string to number for int types. Can do this with a preprocessor
                                 key_hash: = string_hash(key);
                                 value_ptr: = find_or_add(table, key_hash);
-                                serialize(serializer, value_ptr, value_type_info, key, params, ctx);
+                                serialize(serializer, value_ptr, value_type_info, key);
                             }
                             return true;
                         }
 
                         if value_type.runtime_size ==
                         {
-                            case 1; return serialize_table(serializer, cast(*Table(StringHash,u8))data, value_type, key, params, ctx);
-                            case 2; return serialize_table(serializer, cast(*Table(StringHash,u16))data, value_type, key, params, ctx);
-                            case 4; return serialize_table(serializer, cast(*Table(StringHash,u32))data, value_type, key, params, ctx);
-                            case 8; return serialize_table(serializer, cast(*Table(StringHash,u64))data, value_type, key, params, ctx);
+                            case 1; return serialize_table(serializer, cast(*Table(StringHash,u8))data, value_type, key);
+                            case 2; return serialize_table(serializer, cast(*Table(StringHash,u16))data, value_type, key);
+                            case 4; return serialize_table(serializer, cast(*Table(StringHash,u32))data, value_type, key);
+                            case 8; return serialize_table(serializer, cast(*Table(StringHash,u64))data, value_type, key);
                             case;
                             {
                                 log_warning("unsupported Table value type (%)", <<value_type);
@@ -247,11 +219,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     custom_serialize_function: = get_custom_serialize_function(info_struct);
                     if custom_serialize_function != null
                     {
-                        fallback_to_default, success: = custom_serialize_function(serializer, data, info_struct, key, params, ctx);
-                        if !fallback_to_default
-                        {
-                            return success;
-                        }
+                        return custom_serialize_function(serializer, data, info_struct, key);
                     }
 
                     // We do not serialize unions
@@ -259,9 +227,6 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     {
                         return true;
                     }
-
-                    next_context: ReflectionContext;
-                    next_context.parent = info_struct;
 
                     // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
                     keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct);
@@ -274,19 +239,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         success, member_info: = table_find_new(*key_to_member_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
 
-                        // @NOTE(remi): We probably want to remove this parameterized filter thing. I don't think we'll ever need something different than static filter
-                        // params filters
                         skip: = false;
-                        for filter: params.filters
-                        {
-                            if filter.subclass != null && !is_subclass_of(info_struct, filter.subclass) { continue; }
-
-                            match: = has_note(member_info.tis_member, filter.note);
-                            if filter.type == .IN && !match { skip = true; break; }
-                            else if filter.type == .OUT && match { skip = true; break; }
-                        }
-                        if skip { continue; }
-
                         // serialize filter
                         if serialize_filter_function != null
                         {
@@ -294,11 +247,10 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         }
                         if skip { continue; }
 
-                        next_context.member = member_info.tis_member;
                         member_data: = data + member_info.offset;
 
                         // NOTE: for now we don't do anything if one of the members fails. We'll probably need a flag to define behavior but let's wait for use cases
-                        serialize(serializer, member_data, member_info.tis_member.type, key, params, next_context);
+                        serialize(serializer, member_data, member_info.tis_member.type, key);
                     }
                     verify(serializer_end_object(serializer));
 
@@ -468,7 +420,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                 element_data: = array_data + i * info_array.element_type.runtime_size;
 
                 // What to do if only one element of the array fails?
-                success = serialize(serializer, element_data, info_array.element_type, "", params, ctx) && success;
+                success = serialize(serializer, element_data, info_array.element_type, "") && success;
             }
             verify(serializer_end_array(serializer));
             return success;
