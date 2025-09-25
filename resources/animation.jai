@@ -26,6 +26,7 @@ AnimationEvent :: struct
     type: AnimationEventType; @serialize
     begin: s32;  @serialize
     end: s32; @serialize // inclusive
+    z_order: s32; @serialize // inclusive
     layer: u32; @serialize
     disabled: bool; @serialize
 
@@ -280,6 +281,54 @@ animation_evaluate_movement :: (using animation: *Animation, start_time: float, 
         movement += .{t_x * event.movement.x_movement, t_y * event.movement.y_movement};
     }
     return movement;
+}
+
+animation_move_event_to_top :: (using animation: *Animation, index: s64)
+{
+    assert(animation != null);
+    if index < 0 || index >= animation.events.count
+    {
+        log_warning("%: Event index % out of range", animation.name, index);
+        return;
+    }
+
+    animation.events[index].z_order = 10000;
+    animation_update_z_ordering(animation);
+}
+
+animation_update_z_ordering :: (using animation: *Animation)
+{
+    temp: [..]*AnimationEvent;
+    temp.allocator = temporary_allocator;
+
+    for *event: animation.events
+    {
+        array_add(*temp, event);
+    }
+    bubble_sort(temp, (a: *AnimationEvent, b: *AnimationEvent) -> s64
+    {
+        return compare(a.z_order, b.z_order);
+    });
+    for event, i: temp
+    {
+        event.z_order = xx i;
+    }
+}
+
+animation_get_z_ordered_events :: (using animation: *Animation) -> []*AnimationEvent
+{
+    temp: [..]*AnimationEvent;
+    temp.allocator = temporary_allocator;
+
+    for *event: animation.events
+    {
+        array_add(*temp, event);
+    }
+    bubble_sort(temp, (a: *AnimationEvent, b: *AnimationEvent) -> s64
+    {
+        return compare(a.z_order, b.z_order);
+    });
+    return temp;
 }
 
 #scope_file

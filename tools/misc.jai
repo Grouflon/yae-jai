@@ -194,5 +194,12 @@ default_init_range :: (data: *void, begin: s64, end: s64, info: *Type_Info)
     memset(data + begin, 0, count * info.runtime_size);
 }
 
+compare :: (a: $T, b: T) -> s64 {
+    delta := a - b;
+    if delta < 0 return -1;
+    if delta > 0 return  1;
+    return 0;
+}
+
 #scope_file
 vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s64 #foreign;

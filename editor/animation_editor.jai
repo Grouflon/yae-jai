@@ -6,6 +6,7 @@ AnimationEditor :: struct
     is_dragging_viewport: = false;
     is_dragging_frame: = false;
     drag_event_mode: = AnimationDragEventMode.NONE;
+    drag_start_mouse_position: Vector2;
     drag_frame_offset: = -1;
 
     is_drag_zone_hovered: = false;
@@ -204,9 +205,8 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
 
     previous_is_drag_zone_hovered: = is_drag_zone_hovered;
 
-    get_event_local_bounds :: (animation: *Animation, event_index: s64) -> Bounds
+    get_event_local_bounds :: (animation: *Animation, event: *AnimationEvent) -> Bounds
     {
-        event: = *animation.events[event_index];
         end_frame: = ifx event.end < event.begin then event.begin else event.end;
         begin: Vector2 = .{
             xx (LAYER_WIDTH + 1 + event.begin * (FRAME_WIDTH+1)),
@@ -218,6 +218,11 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
         };
         return .{ begin, end };
     }
+    get_event_local_bounds :: (animation: *Animation, event_index: s64) -> Bounds
+    {
+        return get_event_local_bounds(animation, *animation.events[event_index]);
+    }
+    
 
     if ImGui.BeginChild("timeline", .{}, .Borders, .AlwaysHorizontalScrollbar | .AlwaysVerticalScrollbar)
     {
@@ -241,7 +246,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
             is_layer_bar_hovered: = false;
             is_event_zone_hovered: = false;
             hovered_layer: = -1;
-            hovered_event: = -1;
+            hovered_event_index: = -1;
             hovered_frame: = -1;
             clamped_hovered_frame: = 0;
             next_drag_event_mode: = AnimationDragEventMode.NONE;
@@ -278,19 +283,26 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     bounds: = cursor + get_event_local_bounds(animation, i);
                     if ImGui.IsMouseHoveringRect(bounds.min, bounds.max)
                     {
-                        if mouse_position.x <= bounds.min.x + EVENT_SIDE_HANDLE_WIDTH
+                        if hovered_event_index < 0 || animation.events[hovered_event_index].z_order < animation.events[i].z_order
                         {
-                            next_drag_event_mode = .LEFT;
+                            hovered_event_index = i;
                         }
-                        else if mouse_position.x >= bounds.max.x - EVENT_SIDE_HANDLE_WIDTH
-                        {
-                            next_drag_event_mode = .RIGHT;
-                        }
-                        else
-                        {
-                            next_drag_event_mode = .CENTER;
-                        }
-                        hovered_event = i;
+                    }
+                }
+                if hovered_event_index >= 0
+                {
+                    bounds: = cursor + get_event_local_bounds(animation, hovered_event_index);
+                    if mouse_position.x <= bounds.min.x + EVENT_SIDE_HANDLE_WIDTH
+                    {
+                        next_drag_event_mode = .LEFT;
+                    }
+                    else if mouse_position.x >= bounds.max.x - EVENT_SIDE_HANDLE_WIDTH
+                    {
+                        next_drag_event_mode = .RIGHT;
+                    }
+                    else
+                    {
+                        next_drag_event_mode = .CENTER;
                     }
                 }
 
@@ -299,10 +311,11 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 {
                     if is_event_zone_hovered
                     {
-                        if hovered_event >= 0
+                        if hovered_event_index >= 0
                         {
-                            selected_event_index = hovered_event;
+                            selected_event_index = hovered_event_index;
                             drag_event_mode = next_drag_event_mode;
+                            drag_start_mouse_position = mouse_position;
                             drag_frame_offset = hovered_frame - animation.events[selected_event_index].begin;
                         }
                         else
@@ -330,7 +343,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     {
                         popup_layer_index = hovered_layer;
                         popup_frame_index = hovered_frame;
-                        popup_event_index = hovered_event;
+                        popup_event_index = hovered_event_index;
                         ImGui.OpenPopup(EDIT_EVENT_POPUP_NAME);
                     }
                     else if is_layer_bar_hovered
@@ -348,7 +361,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 {
                     if is_event_zone_hovered
                     {
-                        if hovered_event < 0 && hovered_layer >= 0 && hovered_frame >= 0
+                        if hovered_event_index < 0 && hovered_layer >= 0 && hovered_frame >= 0
                         {
                             selected_event_index = animation_add_event(animation, .{ begin=xx hovered_frame, end=xx hovered_frame, layer=xx hovered_layer });
                             animation_changed = true;
@@ -378,7 +391,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 if !ImGui.IsMouseDown(.Left)
                 {
                     // @NOTE(remi): We validate event modification on release of the button
-                    if drag_event_mode != .NONE
+                    if drag_event_mode != .NONE && drag_start_mouse_position != mouse_position
                     {
                         animation_changed = true;
                     }
@@ -432,11 +445,7 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                         event_moved: = prev_begin_value != event.begin || prev_layer_value != event.layer;
                         if event_moved
                         {
-                            e: = <<event;
-                            array_ordered_remove_by_index(*animation.events, selected_event_index);
-                            array_add(*animation.events, e);
-                            selected_event_index = animation.events.count-1;
-                            event = *animation.events[selected_event_index];
+                            animation_move_event_to_top(animation, selected_event_index);
                         }
                         // animation_changed = animation_changed || event_moved;
                     }
@@ -581,11 +590,14 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                 draw_list.AddLine(draw_list, cursor + .{0, y + LAYER_HEIGHT}, cursor + .{content_size.x, y + LAYER_HEIGHT}, color_light);
             }
 
-            for *event, i: animation.events
+            ordered_events: = animation_get_z_ordered_events(animation);
+            selected_event: *AnimationEvent = ifx selected_event_index >= 0 then *animation.events[selected_event_index] else null;
+            hovered_event: *AnimationEvent = ifx hovered_event_index >= 0 then *animation.events[hovered_event_index] else null;
+            for event: ordered_events
             {
                 color_set: = get_event_color_set(event);
                 c: = color_set.idle;
-                if i == hovered_event
+                if event == hovered_event
                 {
                     if ImGui.IsMouseDown(.Left)
                     {
@@ -596,15 +608,16 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                         c = color_set.hovered;
                     }
                 }
-                else if i == selected_event_index
+                else if event == selected_event
                 {
                     c = color_set.selected;
                 }
+                c.a = 220;
                 if event.disabled
                 {
                     c.a /= 2;
                 }
-                bounds: = cursor + get_event_local_bounds(animation, i);
+                bounds: = cursor + get_event_local_bounds(animation, event);
                 draw_list.AddRectFilled(draw_list, bounds.min, bounds.max, IM_COL32(c), 4.0, .RoundCornersAll);
             }
 
