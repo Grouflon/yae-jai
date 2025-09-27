@@ -138,6 +138,9 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     }
     ImGui.End();
 
+    // Animation
+    animation_player_update(*player, dt);
+
     // Viewport
     ImGui.SetNextWindowClass(*animation_editor_window_class);
     if ImGui.Begin(viewport_window_name(resource_editor), null)
@@ -145,12 +148,6 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
         animation_changed = animation_editor_viewport_update(editor) || animation_changed;
     }
     ImGui.End();
-
-    // Animation
-    animation_player_update(*player, dt);
-
-    // Draw viewport scene
-    animation_editor_viewport_draw(editor);
 
     return animation_changed;
 }
@@ -655,6 +652,13 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     viewport_size: = ImGui.GetContentRegionAvail();
     viewport_screen_origin: = ImGui.GetCursorScreenPos();
     viewport_update(*viewport, viewport_size);
+
+    viewport_screen_rect: = Rect.{viewport_screen_origin.x, viewport_screen_origin.y, viewport_size.x, viewport_size.y};
+    world_mouse_position: = viewport_screen_to_world_position(*viewport, viewport_screen_rect, rl.GetMousePosition());
+
+    // Draw viewport scene
+    animation_editor_viewport_draw(editor, world_mouse_position);
+
     ImGui.Image(viewport.render_texture.texture.id, viewport_size);
 
     if frame_count == 2 // @NOTE(remi): Viewport is all over the place for between 1 and 2 frames when the window first appears
@@ -671,7 +675,6 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
 
         ImGui.EndPopup();
     }
-
 
     DRAG_BUTTON :: ImGui.MouseButton.Middle;
     drag_button_pressed: = ImGui.IsMouseClicked(DRAG_BUTTON);
@@ -761,7 +764,7 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     return animation_changed;
 }
 
-animation_editor_viewport_draw :: (using editor: *AnimationEditor)
+animation_editor_viewport_draw :: (using editor: *AnimationEditor, world_mouse_position: Vector2)
 {
     viewport_begin_render(*viewport);
     defer viewport_end_render(*viewport);
@@ -814,6 +817,8 @@ animation_editor_viewport_draw :: (using editor: *AnimationEditor)
             draw_outlined_rect(position + event.rect, physics_layer_to_color(event.physics_layer));
         }
     }
+
+    rl.DrawCircleV(world_mouse_position, 5 / viewport.zoom.x, rl.YELLOW);
 }
 
 animation_editor_frame_sprite :: (using editor: *AnimationEditor)
