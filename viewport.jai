@@ -69,6 +69,7 @@ viewport_set_zoom_focused :: (viewport: *Viewport, focus_viewport_position: Vect
 
 viewport_to_world_position :: (viewport: *Viewport, viewport_position: Vector2) -> Vector2
 {
+    assert(viewport != null);
     assert(viewport.zoom.x != 0.0);
     assert(viewport.zoom.y != 0.0);
 
@@ -79,12 +80,23 @@ viewport_to_world_position :: (viewport: *Viewport, viewport_position: Vector2) 
 
 viewport_from_world_position :: (viewport: *Viewport, world_position: Vector2) -> Vector2
 {
+    assert(viewport != null);
     assert(viewport.zoom.x != 0.0);
     assert(viewport.zoom.y != 0.0);
 
     render_size: = size(viewport);
     zoom: = Vector2.{viewport.zoom.x, -viewport.zoom.y};
     return (world_position - viewport.target) * zoom + render_size * 0.5;
+}
+
+viewport_screen_to_world_position :: (viewport: *Viewport, viewport_screen_rect: Rect, screen_mouse_position: Vector2) -> Vector2
+{
+    assert(viewport != null);
+    
+    viewport_size: = size(viewport);
+    ratio: = viewport_size / Vector2.{viewport_screen_rect.w, viewport_screen_rect.h};
+    viewport_mouse_position: = (screen_mouse_position - Vector2.{viewport_screen_rect.x, viewport_screen_rect.y}) * ratio;
+    return viewport_to_world_position(viewport, viewport_mouse_position);
 }
 
 viewport_update :: (viewport: *Viewport, render_size: Vector2) -> bool
