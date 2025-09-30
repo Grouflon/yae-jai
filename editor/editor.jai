@@ -175,6 +175,10 @@ editor_open_resource :: (resource: *Resource)
     }
 
     resource_editor_ptr.is_open = true;
+
+    resource_window_name: = temp_c_string(get_editor_window_name(resource_editor_ptr));
+    ImGui.SetWindowCollapsed(resource_window_name, false);
+    ImGui.SetWindowFocus(resource_window_name);
 }
 
 editor_close_resource :: (resource: *Resource)

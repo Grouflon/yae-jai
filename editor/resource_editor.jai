@@ -120,8 +120,6 @@ default_resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) 
     return ImGui_EditStructMembers(resource_editor.resource, resource_editor.resource.type);
 }
 
-#scope_file
-
 get_editor_window_name :: (resource_editor: *ResourceEditor) -> string
 {
     if resource_editor == null return "";
@@ -129,6 +127,8 @@ get_editor_window_name :: (resource_editor: *ResourceEditor) -> string
 
     return tprint("%: %", resource_editor.resource.type.name, resource_editor.resource.name);
 }
+
+#scope_file
 
 resource_editor_clear_cache :: (resource_editor: *ResourceEditor)
 {
