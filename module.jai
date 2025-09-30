@@ -1,6 +1,6 @@
 #load "animation_player.jai";
-#load "compile_time.jai";
 #load "color.jai";
+#load "compile_time.jai";
 #load "draw.jai";
 #load "entity.jai";
 #load "log.jai";
@@ -27,9 +27,10 @@
 #load "math/rect.jai";
 #load "math/spline.jai";
 
-#load "resources/texture_file.jai";
-#load "resources/aseprite_file.jai";
 #load "resources/animation.jai";
+#load "resources/aseprite_file.jai";
+#load "resources/shader.jai";
+#load "resources/texture_file.jai";
 
 #load "serialization/json_serializer.jai";
 #load "serialization/reflection_serialization.jai";
@@ -39,12 +40,12 @@
 #load "tools/filesystem.jai";
 #load "tools/json.jai";
 #load "tools/misc.jai";
-#load "tools/reflection.jai";
 #load "tools/os.jai";
+#load "tools/reflection.jai";
 
-#load "editor/editor.jai";
 #load "editor/animation_editor.jai";
 #load "editor/aseprite_file_editor.jai";
+#load "editor/editor.jai";
 #load "editor/resource_browser.jai";
 #load "editor/resource_editor.jai";
 #load "editor/texture_file_editor.jai";
