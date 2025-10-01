@@ -9,6 +9,7 @@
 #load "raylib_imgui.jai";
 #load "resource.jai";
 #load "resource_manager.jai";
+#load "settings.jai";
 #load "statemachine.jai";
 #load "string_hash.jai";
 #load "tilemap.jai";

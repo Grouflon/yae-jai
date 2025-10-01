@@ -1,20 +1,21 @@
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 RAYLIB_LOG_SECTION :: Log_Section.{ "Raylib" };
 
-YAE : struct
+YAE :: struct
 {
-    debugger_handle : *void;
-    
     app_window_rect: IntRect = .{0, 30, 800, 600}; @serialize
     console_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
     debugger_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
 
-    editor: Editor; @serialize
+    debugger_handle: *void;
+    settings: Settings;
+    editor: Editor;
 };
+yae: YAE;
 
 yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, title: string)
 {
-    using YAE;
+    using yae;
     context.logger = yae_logger;
     rl.SetTraceLogCallback(tracelog_callback);
 
@@ -44,18 +45,16 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     rl.SetTargetFPS(60);
     rl.SetExitKey(.KEY_NULL);
 
-    // Gather resources
-    // resource_manager_gather_and_watch_resources("data");
-
-    // Read settings
-    if read_json_file(YAE_SETTINGS_PATH, *YAE)
+    // Init Settings
+    register_settings_section("app", *yae, null, (data: *void)
     {
-        console_handle: = get_console_window_handle();
-
-        if YAE.debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, YAE.debugger_window_rect); }
-        if YAE.console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), YAE.console_window_rect); }
-        if YAE.app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), YAE.app_window_rect); }
-    }
+        using t: *YAE = xx data;
+        if debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, debugger_window_rect); }
+        if console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), console_window_rect); }
+        if app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), app_window_rect); }
+    });
+    editor_register_settings_section();
+    settings_init(); // also loads settings
 
     // Init stuff
     editor_init();
@@ -90,7 +89,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
 
 yae_shutdown :: ()
 {
-    using YAE;
+    using yae;
 
     log_verbose("shutting down yae...");
     log_indent();
@@ -105,7 +104,8 @@ yae_shutdown :: ()
     resource_manager_shutdown();
     undo_redo_manager_shutdown();
     compile_time_registry_shutdown();
-    free_string_hash_repository();
+
+    settings_shutdown();
 
     // Memory leak check
     #if YAE_DEBUG_MEMORY
@@ -130,18 +130,17 @@ get_time :: () -> float64
 
 yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
 {
-    using YAE;
+    using yae;
 
     while !rl.WindowShouldClose()
     {
         reset_temporary_storage();
         dt: = rl.GetFrameTime();
 
-        // Settings cache & update
-        prev_yae_state: = YAE;
-        { success, rect: = get_window_rect(debugger_handle);                if success YAE.debugger_window_rect = rect; }
-        { success, rect: = get_window_rect(get_console_window_handle());    if success YAE.console_window_rect = rect; }
-        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success YAE.app_window_rect = rect; }
+        // Update Windows rects
+        { success, rect: = get_window_rect(debugger_handle);                if success yae.debugger_window_rect = rect; }
+        { success, rect: = get_window_rect(get_console_window_handle());    if success yae.console_window_rect = rect; }
+        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success yae.app_window_rect = rect; }
         
         // Update
         {
@@ -165,14 +164,7 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
             raylib_imgui_render();
         }
 
-        // Settings compare & save
-        settings_save_requested: = memcmp(*prev_yae_state, *YAE, size_of(type_of(YAE))) != 0;
-        if settings_save_requested
-        {
-            settings_save_requested = false;
-            make_directory_if_it_does_not_exist(get_directory(YAE_SETTINGS_PATH), true);
-            write_json_file(YAE_SETTINGS_PATH, *YAE);
-        }
+        settings_update();
     }
 }
 
@@ -211,7 +203,6 @@ tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
     }
 }
 
-YAE_SETTINGS_PATH :: "temp/yae_settings.json";
 
 #import "System";
 rl :: #import "raylib";

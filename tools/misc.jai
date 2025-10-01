@@ -155,6 +155,13 @@ c_format_string :: (fmt: *u8, args: *void, $BUFFER_SIZE: = 1024) -> string
     return copy_temporary_string(to_string(buffer.data, result));
 }
 
+replace_string :: (dest: *string, src: string)
+{
+    dest.data = realloc(dest.data, src.count, dest.count);
+    memcpy(dest.data, src.data, src.count);
+    dest.count = src.count;
+}
+
 mem_swap :: (a: *void, b: *void, size: s64)
 {
     tmp: = talloc(size);

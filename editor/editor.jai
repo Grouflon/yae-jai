@@ -12,27 +12,53 @@ Editor :: struct
 
 editor_init :: ()
 {
-    using YAE.editor;
-
-    for *resource_editor: edited_resources
-    {
-        resource_editor_init(resource_editor);
-    }
+    using yae.editor;
 }
 
 editor_shutdown :: ()
 {
-    using YAE.editor;
+    using yae.editor;
 
     for *resource_editor: edited_resources
     {
         resource_editor_shutdown(resource_editor);
     }
+
+}
+
+editor_register_settings_section :: ()
+{
+    using yae.editor;
+
+    register_settings_section("editor", *yae.editor,
+    (data: *void)
+    {
+        using t: *Editor = xx data;
+        for *resource_editor: edited_resources
+        {
+            resource_editor_init(resource_editor);
+        }
+    },
+    (data: *void)
+    {
+        using t: *Editor = xx data;
+        for *resource_editor: edited_resources
+        {
+            resource_editor_shutdown(resource_editor);
+        }
+    });
+}
+
+editor_unregister_settings_section :: ()
+{
+    using yae.editor;
+
+    unregister_settings_section("editor");
 }
 
 editor_update :: (dt: float)
 {
-    using YAE.editor;
+    using yae.editor;
 
     if ImGui.IsKeyChordPressed(xx(ImGui.Key.ImGuiMod_Ctrl | ImGui.Key.ImGuiKey_Z))
     {
@@ -139,7 +165,7 @@ editor_update :: (dt: float)
 
 editor_draw :: ()
 {
-    using YAE.editor;
+    using yae.editor;
 
     if display_colliders
     {
@@ -150,7 +176,7 @@ editor_draw :: ()
 // @NOTE(remi): This pointer comes from a linear array. Do not store it
 editor_get_resource_editor :: (resource: *Resource)-> *ResourceEditor
 {
-    using YAE.editor;
+    using yae.editor;
 
     success, index: = array_find(
         edited_resources,
@@ -163,7 +189,7 @@ editor_get_resource_editor :: (resource: *Resource)-> *ResourceEditor
 
 editor_open_resource :: (resource: *Resource)
 {
-    using YAE.editor;
+    using yae.editor;
 
     resource_editor_ptr: = editor_get_resource_editor(resource);
     if resource_editor_ptr == null
@@ -183,7 +209,7 @@ editor_open_resource :: (resource: *Resource)
 
 editor_close_resource :: (resource: *Resource)
 {
-    using YAE.editor;
+    using yae.editor;
     
     found, i: = array_find(
         edited_resources,
@@ -197,7 +223,7 @@ editor_close_resource :: (resource: *Resource)
 
 editor_close_resource :: (index: s64)
 {
-    using YAE.editor;
+    using yae.editor;
     resource_editor: = *edited_resources[index];
 
     resource_editor_clear_window_settings(resource_editor);
@@ -207,7 +233,7 @@ editor_close_resource :: (index: s64)
 
 editor_push_window_drag_disabled :: ()
 {
-    using YAE.editor;
+    using yae.editor;
 
     if window_drag_disabled_count == 0
     {
@@ -218,7 +244,7 @@ editor_push_window_drag_disabled :: ()
 
 editor_pop_window_drag_disabled :: ()
 {
-    using YAE.editor;
+    using yae.editor;
 
     window_drag_disabled_count -= 1;
     if window_drag_disabled_count == 0
