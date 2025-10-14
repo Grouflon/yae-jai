@@ -10,6 +10,11 @@ YAE :: struct
     debugger_handle: *void;
     settings: Settings;
     editor: Editor;
+
+    root_directory: string;
+    yae_directory: string;
+
+    time: float;
 };
 yae: YAE;
 
@@ -26,13 +31,16 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
 
     // Normalize working directory
     exe_directory: = path_strip_filename(get_path_of_running_executable());
-    root_directory: = tprint("%/..", exe_directory);
+    root_directory = copy_string(normalize_path(tprint("%/..", exe_directory)));
     set_working_directory(root_directory);
-    log_verbose("working directory: %", get_working_directory());
+    yae_directory = sprint("%/modules/yae", root_directory);
+    log_verbose("working directory: %", root_directory);
+    log_verbose("yae directory: %", yae_directory);
 
     // Init core stuff
     compile_time_registry_init(compile_time_info);
 
+    time = 0;
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
     physics_init();
@@ -107,6 +115,11 @@ yae_shutdown :: ()
 
     settings_shutdown();
 
+    free(yae_directory);
+    free(root_directory);
+    yae_directory = .{};
+    root_directory = .{};
+
     // Memory leak check
     #if YAE_DEBUG_MEMORY
     {
@@ -136,6 +149,7 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
     {
         reset_temporary_storage();
         dt: = rl.GetFrameTime();
+        time += dt;
 
         // Update Windows rects
         { success, rect: = get_window_rect(debugger_handle);                if success yae.debugger_window_rect = rect; }
