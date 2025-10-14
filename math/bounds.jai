@@ -125,6 +125,16 @@ operator - :: (a: T, b: BoundsBase($T)) -> BoundsBase(T)
     return .{b - a.min, b - a.max};
 }
 
+to_rect :: (bounds: Bounds) -> Rect
+{
+    return .{
+        bounds.min.x,
+        bounds.min.y,
+        bounds.max.x - bounds.min.x,
+        bounds.max.y - bounds.min.y,
+    };
+}
+
 #scope_file
 
 get_hash :: (bounds: $T/BoundsBase) -> u32
