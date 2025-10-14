@@ -36,7 +36,7 @@ editor_register_settings_section :: ()
         using t: *Editor = xx data;
         for *resource_editor: edited_resources
         {
-            resource_editor_init(resource_editor);
+            resource_editor_shutdown(resource_editor);
         }
     },
     (data: *void)
@@ -44,7 +44,7 @@ editor_register_settings_section :: ()
         using t: *Editor = xx data;
         for *resource_editor: edited_resources
         {
-            resource_editor_shutdown(resource_editor);
+            resource_editor_init(resource_editor);
         }
     });
 }
