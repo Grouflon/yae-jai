@@ -27,6 +27,23 @@ shader_end_draw :: (using shader: *Shader)
     rl.EndShaderMode();
 }
 
+// @NOTE(remi): It seems that supporting an array of textures will require raylib modification to support sampler2DArray uniform type
+shader_set_uniform_array :: (using shader: *Shader, uniform_name: string, array: []$T)
+{
+    assert(shader != null);
+
+    location: = rl.GetShaderLocation(program, temp_c_string(uniform_name));
+    rl.SetShaderValueV(program, location, *array.data, xx type_to_uniform_type(T), xx array.count);
+}
+
+shader_set_uniform :: (using shader: *Shader, uniform_name: string, value: rl.Texture)
+{
+    assert(shader != null);
+
+    location: = rl.GetShaderLocation(program, temp_c_string(uniform_name));
+    rl.SetShaderValueTexture(program, location, value);
+}
+
 shader_set_uniform :: (using shader: *Shader, uniform_name: string, value: $T)
 {
     assert(shader != null);
@@ -78,17 +95,17 @@ shader_unload :: (resource: *Resource)
     }
 }
 
-type_to_uniform_type :: ($T: Type) -> rl.ShaderUniformDataType
+type_to_uniform_type :: ($T: Type) -> rl.ShaderUniformDataType #expand
 {
-    info : *Type_Info : type_info(T);
     #if T ==
     {
         case float; return .RL_SHADER_UNIFORM_FLOAT;
         case Vector2; return .RL_SHADER_UNIFORM_VEC2;
         case Vector3; return .RL_SHADER_UNIFORM_VEC2;
         case Vector4; return .RL_SHADER_UNIFORM_VEC2;
+        case int; return .RL_SHADER_UNIFORM_INT;
         case s32; return .RL_SHADER_UNIFORM_INT;
-        case; #assert false;
+        case; #assert false; // uniform type not supported
     }
 
     // RL_SHADER_UNIFORM_FLOAT     :: 0;
