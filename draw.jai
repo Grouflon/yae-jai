@@ -1,34 +1,62 @@
-dash_stroke_shader : Shader;
-dash_stroke_shader_uniforms : [3]s32;
+// dash_stroke_shader : Shader;
+// dash_stroke_shader_uniforms : [3]s32;
+
+antialiased_circle_shader: rl.Shader;
+texture_1px_white: rl.Texture2D;
 
 draw_init :: ()
 {
-    dash_stroke_shader = LoadShader("data/shaders/dashed_line.vert", "data/shaders/dashed_line.frag");
-    dash_stroke_shader_uniforms[0] = GetShaderLocation(dash_stroke_shader, "points");
-    dash_stroke_shader_uniforms[1] = GetShaderLocation(dash_stroke_shader, "dashSize");
-    dash_stroke_shader_uniforms[2] = GetShaderLocation(dash_stroke_shader, "dashOffset");
+    // dash_stroke_shader = LoadShader("data/shaders/dashed_line.vert", "data/shaders/dashed_line.frag");
+    // dash_stroke_shader_uniforms[0] = GetShaderLocation(dash_stroke_shader, "points");
+    // dash_stroke_shader_uniforms[1] = GetShaderLocation(dash_stroke_shader, "dashSize");
+    // dash_stroke_shader_uniforms[2] = GetShaderLocation(dash_stroke_shader, "dashOffset");
+
+    image: = rl.GenImageColor(1, 1, rl.WHITE);
+    texture_1px_white = rl.LoadTextureFromImage(image);
+    rl.UnloadImage(image);
+
+    antialiased_circle_shader = rl.LoadShader(null, temp_c_string(tprint("%/data/shaders/antialiased_circle.fs", yae.yae_directory)));
 }
 
 draw_shutdown :: ()
 {
-    UnloadShader(dash_stroke_shader);
+    // UnloadShader(dash_stroke_shader);
+    rl.UnloadShader(antialiased_circle_shader);
+
+    rl.UnloadTexture(texture_1px_white);
 }
 
-draw_dashed_line :: (_startPos: Vector2, _endPos: Vector2, _color: Color, _dash_size: float = 4.0, _dash_offset: float = 0.0)
+draw_antialiased_circle :: (center: Vector2, radius: float, color: Color = rl.WHITE)
 {
-    BeginShaderMode(dash_stroke_shader);
+    // rl.PushMatrix();
+    // defer rl.PopMatrix();
+    // rl.Translatef(center.x, center.y ,-0.5);
+    // rl.Rotatef(-90, 1,0,0);
+
+    BeginShaderMode(antialiased_circle_shader);
     defer EndShaderMode();
 
-    points: [2]Vector2 = .[_startPos, _endPos];
-    dash_size: = _dash_size;
-    dash_offset: = _dash_offset;
+    rl.DrawTexturePro(texture_1px_white, .{0,0,1,1}, .{center.x-radius, center.y-radius, radius*2, radius*2}, .{}, 0, color);
 
-    SetShaderValueV(dash_stroke_shader, dash_stroke_shader_uniforms[0], points.data, xx ShaderUniformDataType.RL_SHADER_UNIFORM_VEC2, 2);
-    SetShaderValue(dash_stroke_shader, dash_stroke_shader_uniforms[1], *dash_size, xx ShaderUniformDataType.RL_SHADER_UNIFORM_FLOAT);
-    SetShaderValue(dash_stroke_shader, dash_stroke_shader_uniforms[2], *dash_offset, xx ShaderUniformDataType.RL_SHADER_UNIFORM_FLOAT);
-
-    DrawLineV(_startPos, _endPos, _color);
+    // rl.DrawLine3D(.{0,0,0}, .{10,7,0}, color);
+    // rl.DrawPlane(.{}, .{radius, radius} * 2, color);
 }
+
+// draw_dashed_line :: (_startPos: Vector2, _endPos: Vector2, _color: Color, _dash_size: float = 4.0, _dash_offset: float = 0.0)
+// {
+//     BeginShaderMode(dash_stroke_shader);
+//     defer EndShaderMode();
+
+//     points: [2]Vector2 = .[_startPos, _endPos];
+//     dash_size: = _dash_size;
+//     dash_offset: = _dash_offset;
+
+//     SetShaderValueV(dash_stroke_shader, dash_stroke_shader_uniforms[0], points.data, xx ShaderUniformDataType.RL_SHADER_UNIFORM_VEC2, 2);
+//     SetShaderValue(dash_stroke_shader, dash_stroke_shader_uniforms[1], *dash_size, xx ShaderUniformDataType.RL_SHADER_UNIFORM_FLOAT);
+//     SetShaderValue(dash_stroke_shader, dash_stroke_shader_uniforms[2], *dash_offset, xx ShaderUniformDataType.RL_SHADER_UNIFORM_FLOAT);
+
+//     DrawLineV(_startPos, _endPos, _color);
+// }
 
 draw_cone :: (_start: Vector2, _target: Vector2, _angle_rad: float, _length: float, _color: Color)
 {
@@ -45,12 +73,12 @@ draw_outlined_rect :: (rect: Rect, color: Color = RED)
     bg_color: = color;
     bg_color.a = bg_color.a / 2;
 
-    bounds: = get_rect_bounds(rect);
-    w: = width(bounds);
-    h: = height(bounds);
+    bounds: = to_bounds(rect);
+    pos: Vector2 = .{rect.x, rect.y};
+    size: Vector2 = .{rect.w, rect.h};
 
-    DrawRectangleV(bounds.min, .{w, h}, bg_color);
-    DrawRectangleLinesEx(.{bounds.min.x, bounds.min.y, w, h}, 1.0, color);
+    DrawRectangleV(pos, size, bg_color);
+    DrawRectangleLinesEx(.{pos.x, pos.y, size.x, size.y}, 1.0, color);
 }
 
 draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
@@ -144,3 +172,6 @@ draw_bezier_quad :: (_start: Vector2, _mid: Vector2, _end: Vector2, _color: Colo
     }
 }
 
+#scope_file
+
+rl :: #import "raylib";

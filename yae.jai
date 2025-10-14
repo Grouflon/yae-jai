@@ -65,6 +65,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     settings_init(); // also loads settings
 
     // Init stuff
+    draw_init();
     editor_init();
 
     // Init ImGui
@@ -105,6 +106,7 @@ yae_shutdown :: ()
     raylib_imgui_shutdown();
 
     editor_shutdown();
+    draw_shutdown();
 
     rl.CloseWindow();
 
