@@ -152,7 +152,13 @@ c_format_string :: (fmt: *u8, args: *void, $BUFFER_SIZE: = 1024) -> string
 {
     buffer: [BUFFER_SIZE]u8;
     result: = vsnprintf(buffer.data, BUFFER_SIZE, fmt, args);
-    return copy_temporary_string(to_string(buffer.data, result));
+    if result < 0
+    {
+        result = BUFFER_SIZE-1;
+    }
+    s: = to_string(buffer.data, result);
+    assert(s.count < BUFFER_SIZE);
+    return copy_temporary_string(s);
 }
 
 replace_string :: (dest: *string, src: string)
@@ -209,4 +215,4 @@ compare :: (a: $T, b: T) -> s64 {
 }
 
 #scope_file
-vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s64 #foreign;
+vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s32 #foreign;
