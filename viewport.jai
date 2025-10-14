@@ -101,23 +101,20 @@ viewport_screen_to_world_position :: (viewport: *Viewport, viewport_screen_rect:
 
 viewport_update :: (viewport: *Viewport, render_size: Vector2) -> bool
 {
-    render_width: = ceil_to_s32(render_size.x);
-    render_height: = ceil_to_s32(render_size.y);
-
-    if viewport.render_texture.texture.width == render_width && viewport.render_texture.texture.height == render_height
-    {
-        return false;
-    }
-
-    if viewport.render_texture.texture.id != 0
-    {
-        rl.UnloadRenderTexture(viewport.render_texture);
-    }
-    viewport.render_texture = rl.LoadRenderTexture(render_width, render_height);
-    return true;
+    assert(viewport != null);
+    return resize_render_texture(*viewport.render_texture, render_size);
 }
 
-viewport_begin_render :: (using viewport: *Viewport)
+viewport_release :: (using viewport: *Viewport)
+{
+    if render_texture.texture.id != 0
+    {
+        rl.UnloadRenderTexture(render_texture);
+        render_texture = .{};
+    }
+}
+
+viewport_begin_render :: (using viewport: Viewport)
 {
     rl.BeginTextureMode(render_texture);
 
@@ -130,7 +127,7 @@ viewport_begin_render :: (using viewport: *Viewport)
     rl.BeginMode2D(camera);
 }
 
-viewport_end_render :: (using viewport: *Viewport)
+viewport_end_render :: (using viewport: Viewport)
 {
     rl.EndMode2D();
     rl.EndTextureMode();
