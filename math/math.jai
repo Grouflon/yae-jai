@@ -242,6 +242,11 @@ barycentric_coordinates :: (p: Vector2, a: Vector2, b: Vector2, c: Vector2) -> V
     return result;
 }
 
+normalized_sin :: (x: float) -> float
+{
+    return sin(x) * 0.5 + 0.5;
+}
+
 #scope_file
 
 #import "Math";
