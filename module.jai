@@ -47,6 +47,7 @@
 #load "editor/animation_editor.jai";
 #load "editor/aseprite_file_editor.jai";
 #load "editor/editor.jai";
+#load "editor/gizmo.jai";
 #load "editor/resource_browser.jai";
 #load "editor/resource_editor.jai";
 #load "editor/texture_file_editor.jai";

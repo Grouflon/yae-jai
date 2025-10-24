@@ -14,6 +14,7 @@
 // A -> {0,0} relative = {-w/2,h/2} absolute
 // B -> {w/2,h/2} relative = {0,0} absolute
 
+VIEWPORT_ZOOM_STEP :: 0.5;
 
 Viewport :: struct
 {
@@ -21,6 +22,24 @@ Viewport :: struct
     zoom: Vector2 = .{1,1};
 
     render_texture: rl.RenderTexture2D;
+    mouse_input: ViewportMouseInput;
+}
+
+ViewportMouseInput :: struct
+{
+    BUTTON_COUNT :: 3;
+
+    viewport_position: Vector2;
+    viewport_delta: Vector2;
+    world_position: Vector2;
+    world_delta: Vector2;
+
+    pressed: [BUTTON_COUNT] bool;
+    released: [BUTTON_COUNT] bool;
+    down: [BUTTON_COUNT] bool;
+
+    viewport_hovered: bool;
+    viewport_panned: bool;
 }
 
 viewport_align_points :: (viewport: *Viewport, viewport_p0: Vector2, world_p0: Vector2, viewport_p1: Vector2, world_p1: Vector2, uniform_zoom: bool = true)
@@ -105,6 +124,67 @@ viewport_update :: (viewport: *Viewport, render_size: Vector2) -> bool
     return resize_render_texture(*viewport.render_texture, render_size);
 }
 
+ViewportFlags :: enum_flags u32
+{
+    ALLOW_ZOOM :: 1 << 0;
+    ALLOW_PAN :: 1 << 1;
+
+    DEFAULT_FLAGS :: ALLOW_ZOOM|ALLOW_PAN;
+}
+
+imgui_viewport :: (viewport: *Viewport, flags: ViewportFlags = .DEFAULT_FLAGS, size: Vector2 = .{})
+{
+    // Draw ImGui Image
+    available_size: = ImGui.GetContentRegionAvail();
+    image_size: = size;
+    viewport_screen_origin: = ImGui.GetCursorScreenPos();
+    if image_size.x == 0 image_size.x = available_size.x;
+    if image_size.y == 0 image_size.y = available_size.y;
+
+    viewport_update(viewport, image_size);
+    ImGui.Image(viewport.render_texture.texture.id, image_size);
+
+    // Sanitize Input
+    io: = ImGui.GetIO();
+    viewport_screen_rect: = to_rect(Bounds.{ ImGui.GetItemRectMin(), ImGui.GetItemRectMax() });
+    mouse_world_position: = viewport_screen_to_world_position(viewport, viewport_screen_rect, io.MousePos);
+    prev_mouse_world_position: = viewport_screen_to_world_position(viewport, viewport_screen_rect, io.MousePos - io.MouseDelta);
+
+    viewport.mouse_input.viewport_position = io.MousePos - viewport_screen_origin;
+    viewport.mouse_input.viewport_delta =    io.MouseDelta;
+    viewport.mouse_input.world_position =    mouse_world_position;
+    viewport.mouse_input.world_delta =       mouse_world_position - prev_mouse_world_position;
+    viewport.mouse_input.pressed =           .[io.MouseClicked[0], io.MouseClicked[1], io.MouseClicked[2]];
+    viewport.mouse_input.released =          .[io.MouseReleased[0], io.MouseReleased[1], io.MouseReleased[2]];
+    viewport.mouse_input.down =              .[io.MouseDown[0], io.MouseDown[1], io.MouseDown[2]];
+    viewport.mouse_input.viewport_hovered =  ImGui.IsItemHovered();
+
+    // Zoom
+    if viewport.mouse_input.viewport_hovered
+    {
+        wanted_zoom: = clamp(viewport.zoom + xy(VIEWPORT_ZOOM_STEP * ImGui.GetIO().MouseWheel), 0.5, 50.0);
+        viewport_set_zoom_focused(viewport, viewport.mouse_input.viewport_position, wanted_zoom);
+    }
+
+    // Pan
+    PAN_BUTTON :: ImGui.MouseButton.Middle;
+    pan_button_pressed: = viewport.mouse_input.pressed[PAN_BUTTON];
+    pan_button_down: = viewport.mouse_input.down[PAN_BUTTON];
+    if viewport.mouse_input.viewport_hovered && pan_button_pressed
+    {
+        viewport.mouse_input.viewport_panned = true;
+    }
+    if viewport.mouse_input.viewport_panned && !pan_button_down
+    {
+        viewport.mouse_input.viewport_panned = false;
+    }
+
+    if viewport.mouse_input.viewport_panned
+    {
+        viewport_pan(viewport, viewport.mouse_input.viewport_delta);
+    }
+}
+
 viewport_release :: (using viewport: *Viewport)
 {
     if render_texture.texture.id != 0
@@ -114,10 +194,14 @@ viewport_release :: (using viewport: *Viewport)
     }
 }
 
-viewport_begin_render :: (using viewport: Viewport)
-{
-    rl.BeginTextureMode(render_texture);
+rendered_viewport: *Viewport;
 
+viewport_begin_render :: (using viewport: *Viewport)
+{
+    assert(rendered_viewport == null);
+    rendered_viewport = viewport;
+    
+    rl.BeginTextureMode(render_texture);
 
     camera: = rl.Camera2D.{
         offset = size(viewport) * 0.5,
@@ -127,13 +211,17 @@ viewport_begin_render :: (using viewport: Viewport)
     rl.BeginMode2D(camera);
 }
 
-viewport_end_render :: (using viewport: Viewport)
+viewport_end_render :: (using viewport: *Viewport)
 {
+    assert(rendered_viewport == viewport);
+
     rl.EndMode2D();
     rl.EndTextureMode();
+
+    rendered_viewport = null;
 }
 
-size :: (viewport: Viewport) -> Vector2 #expand
+size :: (viewport: *Viewport) -> Vector2 #expand
 {
     return .{ xx viewport.render_texture.texture.width, xx viewport.render_texture.texture.height };
 }

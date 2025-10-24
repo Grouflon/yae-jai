@@ -20,7 +20,7 @@ AnimationEditor :: struct
 
     default_resource_editor: bool = false;
 
-    frame_count: = -1;
+    frame_number: = -1;
 
     show_movement: bool = true;
     show_boxes: bool = true;
@@ -47,7 +47,7 @@ animation_editor_init :: (resource_editor: *ResourceEditor)
 animation_editor_shutdown :: (resource_editor: *ResourceEditor)
 {
     assert(resource_editor != null);
-    using t: = cast(*AnimationEditor)resource_editor;
+    using t: = cast(*AnimationEditor)resource_editor.payload;
 
     if is_drag_zone_hovered
     {
@@ -64,7 +64,7 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
     using editor: = cast(*AnimationEditor) resource_editor.payload;
     assert(editor != null);
 
-    frame_count += 1;
+    frame_number += 1;
 
     if ImGui.BeginMenuBar()
     {
@@ -157,8 +157,6 @@ animation_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 properties_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf03a Properties##%", editor.resource)); }
 timeline_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("\uf008 Timeline##%", editor.resource)); }
 viewport_window_name :: inline (editor: *ResourceEditor) -> *u8 { return temp_c_string(tprint("Viewport##%", editor.resource)); }
-
-ZOOM_STEP :: 0.5;
 
 animation_editor_properties_update :: (using editor: *AnimationEditor) -> bool
 {
@@ -462,6 +460,10 @@ animation_editor_timeline_update :: (using editor: *AnimationEditor) -> bool
                     if selected_event_index >= 0
                     {
                         animation_remove_event(animation, selected_event_index);
+                        if hovered_event_index == selected_event_index
+                        {
+                            hovered_event_index = -1;
+                        }
                         selected_event_index = -1;
                         drag_event_mode = .NONE;
                         drag_frame_offset = -1;
@@ -649,19 +651,40 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
 
     animation_changed: = false;
     animation: = editor.player.current_animation;
-    viewport_size: = ImGui.GetContentRegionAvail();
-    viewport_screen_origin: = ImGui.GetCursorScreenPos();
-    viewport_update(*viewport, viewport_size);
+    
+    imgui_viewport(*viewport);
+    viewport_size: = size(*viewport);
+    
 
-    viewport_screen_rect: = Rect.{viewport_screen_origin.x, viewport_screen_origin.y, viewport_size.x, viewport_size.y};
-    world_mouse_position: = viewport_screen_to_world_position(*viewport, viewport_screen_rect, rl.GetMousePosition());
+    // Rect editors
+    // Clear obsolete editors
+    // for _, event_index: box_editors
+    // {
+    //     if event_index < 0 || event_index >= animation.events.count || animation.events[event_index].type != .BOX
+    //     {
+    //         table_remove(*box_editors, event_index);
+    //     }
+    // }
+    // // Add new editors, and update all
+    // viewport_mouse_input: = get_imgui_viewport_item_mouse_input(*viewport);
+    // for *event, event_index: animation.events
+    // {
+    //     if event.type != .BOX continue;
 
-    // Draw viewport scene
-    animation_editor_viewport_draw(editor, world_mouse_position);
+    //     rect_editor: = find_or_add(*box_editors, event_index);
+    //     if rect_editor_update(rect_editor, *event.box.rect, viewport_mouse_input)
+    //     {
+    //         animation_changed = true;
+    //     }
+        
+    //     if rect_editor.is_selected
+    //     {
+    //         selected_event_index = event_index;
+    //         animation_move_event_to_top(animation, event_index);
+    //     }
+    // }
 
-    ImGui.Image(viewport.render_texture.texture.id, viewport_size);
-
-    if frame_count == 2 // @NOTE(remi): Viewport is all over the place for between 1 and 2 frames when the window first appears
+    if frame_number == 2 // @NOTE(remi): Viewport is all over the place for between 1 and 2 frames when the window first appears
     {
         animation_editor_frame_sprite(editor);
     }
@@ -674,29 +697,6 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
         }
 
         ImGui.EndPopup();
-    }
-
-    DRAG_BUTTON :: ImGui.MouseButton.Middle;
-    drag_button_pressed: = ImGui.IsMouseClicked(DRAG_BUTTON);
-    drag_button_down: = ImGui.IsMouseDown(DRAG_BUTTON);
-    mouse_viewport_position: = ImGui.GetIO().MousePos - viewport_screen_origin;
-    if ImGui.IsItemHovered()
-    {
-        wanted_zoom: = clamp(editor.viewport.zoom + xy(ZOOM_STEP * ImGui.GetIO().MouseWheel), 0.5, 50.0);
-        viewport_set_zoom_focused(*editor.viewport, mouse_viewport_position, wanted_zoom);
-        if drag_button_pressed { editor.is_dragging_viewport = true; }
-    }
-
-    if !drag_button_down
-    {
-        editor.is_dragging_viewport = false;
-    }
-
-    if editor.is_dragging_viewport
-    {
-        d: = ImGui.GetMouseDragDelta(DRAG_BUTTON, 0);
-        ImGui.ResetMouseDragDelta(DRAG_BUTTON);
-        viewport_pan(*editor.viewport, d);
     }
 
     // Zoom Display
@@ -761,64 +761,65 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
     ImGui.PopStyleVar(2);
     ImGui.PopStyleColor();
 
+    // Draw viewport scene 
+    // @NOTE(remi): should always happen after imgui_viewport call, cause that's where viewport size and input are updated.
+    {
+        viewport_begin_render(*viewport);
+        defer viewport_end_render(*viewport);
+
+        rl.ClearBackground(rl.LIGHTGRAY);
+
+        // Draw Grid
+        {
+            GRID_STEP :: 100.0;
+            viewport_size: = size(*viewport);
+            viewport_min: = viewport_to_world_position(*viewport, .{0, viewport_size.y});
+            viewport_max: = viewport_to_world_position(*viewport, .{viewport_size.x, 0});
+            viewport_range: = viewport_max - viewport_min;
+            viewport_start: = viewport_min - .{fmod_cycling(viewport_min.x, GRID_STEP), fmod_cycling(viewport_min.y, GRID_STEP)};
+            cells_count_h: = floor_to_s32(viewport_range.x / GRID_STEP) + 1;
+            cells_count_v: = floor_to_s32(viewport_range.y / GRID_STEP) + 1;
+
+            // Vertical lines
+            for i: 0.. cells_count_h
+            {
+                start: = viewport_start + .{xx i * GRID_STEP, 0};
+                color: = ifx abs(start.x) < rl.EPSILON then rl.GREEN else rl.GRAY;
+                rl.DrawLineV(start, .{start.x, viewport_max.y}, color);
+            }
+
+            // Horizontal lines
+            for i: 0.. cells_count_v
+            {
+                start: = viewport_start + .{0, xx i * GRID_STEP};
+                color: = ifx abs(start.y) < rl.EPSILON then rl.RED else rl.GRAY;
+                rl.DrawLineV(start, .{viewport_max.x, start.y}, color);
+            }
+        }
+
+        
+        position: Vector2;
+        if show_movement
+        {
+            time: = (player.current_loop_count % xx player.current_animation.preview_loop_count) * animation_duration(player.current_animation);
+            time += player.current_time_s;
+            position = animation_evaluate_movement(player.current_animation, 0, time);
+        }
+        animation_player_draw(*player, position);
+
+        if show_boxes
+        {
+            for *event, i: player.current_animation.events
+            {
+                if event.type != .BOX continue;
+                if !is_frame_within_event(player.current_frame, event) continue;
+
+                animation_changed = gizmo_rect(*event.box.rect) || animation_changed;
+            }
+        }
+    }
+
     return animation_changed;
-}
-
-animation_editor_viewport_draw :: (using editor: *AnimationEditor, world_mouse_position: Vector2)
-{
-    viewport_begin_render(*viewport);
-    defer viewport_end_render(*viewport);
-
-    rl.ClearBackground(rl.LIGHTGRAY);
-
-    // Draw Grid
-    {
-        GRID_STEP :: 100.0;
-        viewport_size: = size(viewport);
-        viewport_min: = viewport_to_world_position(*viewport, .{0, viewport_size.y});
-        viewport_max: = viewport_to_world_position(*viewport, .{viewport_size.x, 0});
-        viewport_range: = viewport_max - viewport_min;
-        viewport_start: = viewport_min - .{fmod_cycling(viewport_min.x, GRID_STEP), fmod_cycling(viewport_min.y, GRID_STEP)};
-        cells_count_h: = floor_to_s32(viewport_range.x / GRID_STEP) + 1;
-        cells_count_v: = floor_to_s32(viewport_range.y / GRID_STEP) + 1;
-
-        // Vertical lines
-        for i: 0.. cells_count_h
-        {
-            start: = viewport_start + .{xx i * GRID_STEP, 0};
-            color: = ifx abs(start.x) < rl.EPSILON then rl.GREEN else rl.GRAY;
-            rl.DrawLineV(start, .{start.x, viewport_max.y}, color);
-        }
-
-        // Horizontal lines
-        for i: 0.. cells_count_v
-        {
-            start: = viewport_start + .{0, xx i * GRID_STEP};
-            color: = ifx abs(start.y) < rl.EPSILON then rl.RED else rl.GRAY;
-            rl.DrawLineV(start, .{viewport_max.x, start.y}, color);
-        }
-    }
-
-    
-    position: Vector2;
-    if show_movement
-    {
-        time: = (player.current_loop_count % xx player.current_animation.preview_loop_count) * animation_duration(player.current_animation);
-        time += player.current_time_s;
-        position = animation_evaluate_movement(player.current_animation, 0, time);
-    }
-    animation_player_draw(*player, position);
-
-    if show_boxes
-    {
-        box_events: = animation_player_get_current_box_events(*player);
-        for event: box_events
-        {
-            draw_outlined_rect(position + event.rect, physics_layer_to_color(event.physics_layer));
-        }
-    }
-
-    rl.DrawCircleV(world_mouse_position, 5 / viewport.zoom.x, rl.YELLOW);
 }
 
 animation_editor_frame_sprite :: (using editor: *AnimationEditor)
@@ -845,10 +846,10 @@ animation_editor_frame_sprite :: (using editor: *AnimationEditor)
 
     if length_squared(sprite_size) < 0.0001 return;
 
-    viewport_size: = size(editor.viewport);
+    viewport_size: = size(*editor.viewport);
     viewport_align_points(*editor.viewport, FRAME_MARGIN, .{bounds.min.x, bounds.max.y}, viewport_size - FRAME_MARGIN, .{bounds.max.x, bounds.min.y}, true);
     zoom: float = min(editor.viewport.zoom.x, editor.viewport.zoom.y);
-    editor.viewport.zoom = xy(zoom - fmod_cycling(zoom, ZOOM_STEP));
+    editor.viewport.zoom = xy(zoom - fmod_cycling(zoom, VIEWPORT_ZOOM_STEP));
 }
 
 get_event_color_set :: (event: *AnimationEvent) -> ButtonColorSet
