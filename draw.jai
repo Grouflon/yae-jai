@@ -74,11 +74,10 @@ draw_outlined_rect :: (rect: Rect, color: Color = RED)
     bg_color.a = bg_color.a / 2;
 
     bounds: = to_bounds(rect);
-    pos: Vector2 = .{rect.x, rect.y};
-    size: Vector2 = .{rect.w, rect.h};
+    rect_size: = size(bounds);
 
-    DrawRectangleV(pos, size, bg_color);
-    DrawRectangleLinesEx(.{pos.x, pos.y, size.x, size.y}, 1.0, color);
+    DrawRectangleV(bounds.min, rect_size, bg_color);
+    DrawRectangleLinesEx(.{bounds.min.x, bounds.min.y, rect_size.x, rect_size.y}, 1.0, color);
 }
 
 draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
