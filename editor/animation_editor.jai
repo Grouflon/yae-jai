@@ -812,9 +812,12 @@ animation_editor_viewport_update :: (using editor: *AnimationEditor) -> bool
             for *event, i: player.current_animation.events
             {
                 if event.type != .BOX continue;
+                if event.disabled continue;
                 if !is_frame_within_event(player.current_frame, event) continue;
 
-                animation_changed = gizmo_rect(*event.box.rect) || animation_changed;
+                rect: = event.box.rect + position;
+
+                animation_changed = gizmo_rect(*rect, physics_layer_to_color(event.box.physics_layer)) || animation_changed;
             }
         }
     }
