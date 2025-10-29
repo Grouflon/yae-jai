@@ -4,8 +4,12 @@ Settings :: struct
 {
     sections: Table(StringHash, SettingsSection);
     cached_json_settings: string;
-    watcher: File_Watcher;
     skip_next_reload: bool;
+
+    #if FILE_WATCH_SUPPORTED
+    {
+        watcher: File_Watcher;
+    }
 }
 
 LoadSettingsCallback :: #type (data: *void);
@@ -23,29 +27,32 @@ settings_init :: ()
 
     load_settings();
 
-    // File watch
-    on_file_modified :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void)
+    #if FILE_WATCH_SUPPORTED
     {
-        if change.events != .MODIFIED return;
-
-        path: = normalize_path(change.full_path);
-        if path != normalize_path(SETTINGS_PATH) return;
-
-        if !yae.settings.skip_next_reload
+        // File watch
+        on_file_modified :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void)
         {
-            load_settings();
+            if change.events != .MODIFIED return;
+
+            path: = normalize_path(change.full_path);
+            if path != normalize_path(SETTINGS_PATH) return;
+
+            if !yae.settings.skip_next_reload
+            {
+                load_settings();
+            }
+            yae.settings.skip_next_reload = false;
         }
-        yae.settings.skip_next_reload = false;
-    }
-    if !init(*watcher, on_file_modified, events_to_watch = .MODIFIED)
-    {
-        log_error("Could not initialize watcher");
-    }
-    directory: = get_directory(SETTINGS_PATH);
-    make_directory_if_it_does_not_exist(directory, true);
-    if !add_directories(*watcher, directory)
-    {
-        log_error("Could not watch directory %", directory);
+        if !init(*watcher, on_file_modified, events_to_watch = .MODIFIED)
+        {
+            log_error("Could not initialize watcher");
+        }
+        directory: = get_directory(SETTINGS_PATH);
+        make_directory_if_it_does_not_exist(directory, true);
+        if !add_directories(*watcher, directory)
+        {
+            log_error("Could not watch directory %", directory);
+        }
     }
 }
 
@@ -53,7 +60,10 @@ settings_shutdown :: ()
 {
     using yae.settings;
 
-    deinit(*watcher);
+    #if FILE_WATCH_SUPPORTED
+    {
+        deinit(*watcher);
+    }
 
     free(cached_json_settings);
     cached_json_settings = .{};
@@ -78,7 +88,10 @@ settings_update :: ()
 {
     using yae.settings;
 
-    process_changes(*watcher);
+    #if FILE_WATCH_SUPPORTED
+    {
+        process_changes(*watcher);
+    }
 
     settings_save_if_changed();
 }
@@ -175,4 +188,9 @@ serialize_settings :: (serializer: *Serializer) -> bool
         serialize(serializer, section.data, section.type, name_hash.str);
     }
     return true;
+}
+
+#if FILE_WATCH_SUPPORTED
+{
+    #import "File_Watcher";
 }

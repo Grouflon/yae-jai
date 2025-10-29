@@ -86,4 +86,7 @@ yae_logger :: (message: string, data: *void, info: Log_Info)
 
 log_indent_level: u8 = 0;
 
-Windows :: #import "Windows";
+#if OS == .WINDOWS
+{
+    Windows :: #import "Windows";
+}

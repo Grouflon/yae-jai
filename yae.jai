@@ -7,14 +7,24 @@ YAE :: struct
     console_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
     debugger_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
 
+    window_handle: *void;
     debugger_handle: *void;
     settings: Settings;
+    renderer: Renderer;
+
+#if WITH_EDITOR
+{
     editor: Editor;
+}
 
     root_directory: string;
     yae_directory: string;
 
-    time: float;
+    time: float64;
+    should_close: bool;
+
+    update_function: #type (dt: float);
+    draw_function: #type ();
 };
 yae: YAE;
 
@@ -22,7 +32,6 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
 {
     using yae;
     context.logger = yae_logger;
-    rl.SetTraceLogCallback(tracelog_callback);
 
     log_verbose("Initializing yae...");
     log_indent();
@@ -40,18 +49,20 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     // Init core stuff
     compile_time_registry_init(compile_time_info);
 
-    time = 0;
+    time = get_time();
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
     physics_init();
 
     // Init Window
-    window_flags: rl.ConfigFlags;
-    window_flags |= .FLAG_WINDOW_RESIZABLE;
-    rl.InitWindow(width, height, temp_c_string(title));
-    rl.SetWindowState(xx window_flags);
-    rl.SetTargetFPS(60);
-    rl.SetExitKey(.KEY_NULL);
+    window_handle = create_window(width, height, title);
+    renderer_init();
+    // window_flags: rl.ConfigFlags;
+    // window_flags |= .FLAG_WINDOW_RESIZABLE;
+    // rl.InitWindow(width, height, temp_c_string(title));
+    // rl.SetWindowState(xx window_flags);
+    // rl.SetTargetFPS(60);
+    // rl.SetExitKey(.KEY_NULL);
 
     // Init Settings
     register_settings_section("app", *yae, null, (data: *void)
@@ -59,38 +70,20 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
         using t: *YAE = xx data;
         if debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, debugger_window_rect); }
         if console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), console_window_rect); }
-        if app_window_rect != IntRect.{} { set_window_rect(rl.GetWindowHandle(), app_window_rect); }
+        if app_window_rect != IntRect.{} { set_window_rect(window_handle, app_window_rect); }
     });
+#if WITH_EDITOR
+{
     editor_register_settings_section();
+}
     settings_init(); // also loads settings
 
     // Init stuff
-    draw_init();
+    // draw_init();
+#if WITH_EDITOR
+{
     editor_init();
-
-    // Init ImGui
-    imgui_config: RaylibImGuiConfig = .{
-        theme = .DARK,
-        fonts = .[
-            .{
-                // path = "./data/fonts/Font Awesome 6 Free-Regular-400.otf",
-                path = "./data/fonts/Font Awesome 6 Free-Solid-900.otf",
-                size = 14,
-                range = .[0xf000, 0xf2e0],
-                config = .{
-                    FontDataOwnedByAtlas = true,
-                    MergeMode = true,
-                    OversampleH = 2,
-                    OversampleV = 1,
-                    RasterizerMultiply = 1.0,
-                    RasterizerDensity = 1.0,
-                    GlyphMaxAdvanceX = FLOAT32_MAX,
-                    GlyphOffset = .{0, 2}
-                }
-            }
-        ],
-    };
-    raylib_imgui_init(imgui_config);
+}
 
     log_verbose("yae initialized.");
     log_unindent();
@@ -103,12 +96,14 @@ yae_shutdown :: ()
     log_verbose("shutting down yae...");
     log_indent();
 
-    raylib_imgui_shutdown();
-
+#if WITH_EDITOR
+{
     editor_shutdown();
-    draw_shutdown();
+}
+    // draw_shutdown();
 
-    rl.CloseWindow();
+    renderer_shutdown();
+    destroy_window(window_handle);
 
     physics_shutdown();
     resource_manager_shutdown();
@@ -138,87 +133,110 @@ yae_shutdown :: ()
     log_unindent();
 }
 
-get_time :: () -> float64
+yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
 {
-    return rl.GetTime();
+    yae.update_function = update_function;
+    yae.draw_function = draw_function;
+
+    #if OS == .WASM { return; }
+
+    while !yae.should_close
+    {
+        previous_time: = yae.time;
+        yae.time = get_time();
+        dt: = yae.time - previous_time;
+
+        yae_frame(xx dt);
+    }
 }
 
-yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
+yae_frame :: (dt: float)
 {
     using yae;
 
-    while !rl.WindowShouldClose()
+    reset_temporary_storage();
+    // time += dt;
+
+    // Update Windows rects
+    { success, rect: = get_window_rect(debugger_handle);                if success yae.debugger_window_rect = rect; }
+    { success, rect: = get_window_rect(get_console_window_handle());    if success yae.console_window_rect = rect; }
+    { success, rect: = get_window_rect(window_handle);           if success yae.app_window_rect = rect; }
+    
+    // Update
     {
-        reset_temporary_storage();
-        dt: = rl.GetFrameTime();
-        time += dt;
+        update_input_events();
+        resource_manager_update();
+        // raylib_imgui_new_frame(dt);
 
-        // Update Windows rects
-        { success, rect: = get_window_rect(debugger_handle);                if success yae.debugger_window_rect = rect; }
-        { success, rect: = get_window_rect(get_console_window_handle());    if success yae.console_window_rect = rect; }
-        { success, rect: = get_window_rect(rl.GetWindowHandle());           if success yae.app_window_rect = rect; }
-        
-        // Update
+        for events_this_frame
         {
-            resource_manager_update();
-            raylib_imgui_new_frame(dt);
+            if it.type == .QUIT then should_close = true;
+        }
 
-            if update_function != null { update_function(dt); }
+        if update_function != null { update_function(dt); }
 
+        #if WITH_EDITOR
+        {
             editor_update(dt);
         }
-
-        // Draw
-        {
-            rl.BeginDrawing();
-            defer rl.EndDrawing();
-
-            rl.ClearBackground(rl.BLACK);
-
-            if draw_function != null { draw_function(); }
-
-            raylib_imgui_render();
-        }
-
-        settings_update();
     }
+
+    // Draw
+    {
+        begin_draw();
+        defer end_draw();
+        // rl.BeginDrawing();
+        // defer rl.EndDrawing();
+
+        // rl.ClearBackground(rl.BLACK);
+
+        if draw_function != null { draw_function(); }
+
+        // raylib_imgui_render();
+
+        swap_buffers(yae.window_handle);
+    }
+
+    settings_update();
 }
 
 #scope_file
 
-tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
-{
-    ctx: #Context;
-    ctx.logger = yae_logger;
-    push_context ctx
-    {
-        trace_log_level: rl.TraceLogLevel = xx log_level;
-        t: = c_format_string(text, args);
+// tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
+// {
+//     ctx: #Context;
+//     ctx.logger = yae_logger;
+//     push_context ctx
+//     {
+//         trace_log_level: rl.TraceLogLevel = xx log_level;
+//         t: = c_format_string(text, args);
 
-        if trace_log_level == 
-        {
-            case .RL_LOG_TRACE; #through;
-            case .RL_LOG_DEBUG;
-            {
-                log_verbose(t, section = *RAYLIB_LOG_SECTION);
-            }
-            case;
-            {
-                log(t);
-            }
-            case .RL_LOG_WARNING;
-            {
-                log_warning(t, section = *RAYLIB_LOG_SECTION);
-            }
-            case .RL_LOG_ERROR;
-            case .RL_LOG_FATAL;
-            {
-                log_error(t, section = *RAYLIB_LOG_SECTION);
-            }
-        }
-    }
-}
+//         if trace_log_level == 
+//         {
+//             case .RL_LOG_TRACE; #through;
+//             case .RL_LOG_DEBUG;
+//             {
+//                 log_verbose(t, section = *RAYLIB_LOG_SECTION);
+//             }
+//             case;
+//             {
+//                 log(t);
+//             }
+//             case .RL_LOG_WARNING;
+//             {
+//                 log_warning(t, section = *RAYLIB_LOG_SECTION);
+//             }
+//             case .RL_LOG_ERROR;
+//             case .RL_LOG_FATAL;
+//             {
+//                 log_error(t, section = *RAYLIB_LOG_SECTION);
+//             }
+//         }
+//     }
+// }
 
 
 #import "System";
-rl :: #import "raylib";
+#import "Input";
+
+// rl :: #import "raylib";

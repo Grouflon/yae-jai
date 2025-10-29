@@ -18,8 +18,8 @@ resource_editor_init :: (resource_editor: *ResourceEditor)
 
     if resource_editor.resource.type ==
     {
-        case type_info(Animation); animation_editor_init(resource_editor);
-        case type_info(AsepriteFile); aseprite_file_editor_init(resource_editor);
+        // case type_info(Animation); animation_editor_init(resource_editor);
+        // case type_info(AsepriteFile); aseprite_file_editor_init(resource_editor);
         case type_info(TextureFile); texture_file_editor_init(resource_editor);
     }
 }
@@ -31,8 +31,8 @@ resource_editor_shutdown :: (resource_editor: *ResourceEditor)
 
     if resource_editor.resource.type ==
     {
-        case type_info(Animation); animation_editor_shutdown(resource_editor);
-        case type_info(AsepriteFile); aseprite_file_editor_shutdown(resource_editor);
+        // case type_info(Animation); animation_editor_shutdown(resource_editor);
+        // case type_info(AsepriteFile); aseprite_file_editor_shutdown(resource_editor);
         case type_info(TextureFile); texture_file_editor_shutdown(resource_editor);
     }
     free(resource_editor.cached_before_modification_data);
@@ -66,8 +66,8 @@ resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
         if resource_editor.resource.type ==
         {
-            case type_info(Animation); modified = animation_editor_update(resource_editor, dt);
-            case type_info(AsepriteFile); modified = aseprite_file_editor_update(resource_editor, dt);
+            // case type_info(Animation); modified = animation_editor_update(resource_editor, dt);
+            // case type_info(AsepriteFile); modified = aseprite_file_editor_update(resource_editor, dt);
             case type_info(TextureFile); modified = texture_file_editor_update(resource_editor, dt);
             
             case; modified = default_resource_editor_update(resource_editor, dt);

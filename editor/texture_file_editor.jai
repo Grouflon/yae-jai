@@ -64,7 +64,7 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
         ratio_x: = size_available.x / cast(float)texture_file.texture.width;
         ratio_y: = size_available.y / cast(float)texture_file.texture.height;
         ratio: = min(ratio_x, ratio_y);
-        ImGui.Image(texture_file.texture.id, ratio * Vector2.{cast(float)texture_file.texture.width, cast(float)texture_file.texture.height});
+        ImGui.Image(texture_file.texture.handle, ratio * Vector2.{cast(float)texture_file.texture.width, cast(float)texture_file.texture.height});
         is_image_hovered: = ImGui.IsWindowHovered() && ImGui.IsItemHovered();
 
         for sprite, i: texture_file.sprites

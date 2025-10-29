@@ -158,3 +158,4 @@ serialize :: (serializer: *Serializer, value: *string, key: string = "", allocat
     assert(serializer != null);
     return serializer.serialize_string(serializer, value, key, allocator);
 }
+

@@ -5,9 +5,13 @@ ResourceManager :: struct
     resource_by_path: Table(StringHash, *Resource);
     resources_by_type: Table(*Type_Info_Struct, [..]*Resource);
 
-    watcher: File_Watcher;
     file_dependencies: Table(StringHash, [..]*Resource);
     resources_to_reload: Table(*Resource, u8); // just a hashset
+
+    #if FILE_WATCH_SUPPORTED
+    {
+        watcher: File_Watcher;
+    }
 }
 resource_manager: ResourceManager;
 
@@ -15,28 +19,31 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct)
 {
     using resource_manager;
 
-    // File watch
-    on_file_modified :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void)
+    #if FILE_WATCH_SUPPORTED
     {
-        if change.events != .MODIFIED { return; }
-        path: = normalize_path(change.full_path);
-
-        resources: = table_find_pointer(*resource_manager.file_dependencies, string_hash(path));
-        if resources == null { return; }
-
-        for resource: <<resources
+        // File watch
+        on_file_modified :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void)
         {
-            table_set(*resource_manager.resources_to_reload, resource, 0);
+            if change.events != .MODIFIED { return; }
+            path: = normalize_path(change.full_path);
+
+            resources: = table_find_pointer(*resource_manager.file_dependencies, string_hash(path));
+            if resources == null { return; }
+
+            for resource: <<resources
+            {
+                table_set(*resource_manager.resources_to_reload, resource, 0);
+            }
         }
-    }
-    if !init(*watcher, on_file_modified, events_to_watch = .MODIFIED)
-    {
-        log_error("Could not initialize watcher", section= *RESOURCE_LOG_SECTION);
-    }
-    resource_folders: []string = .["data"];
-    if !add_directories(*watcher, ..resource_folders)
-    {
-        log_error("Could not watch directories %", resource_folders, section= *RESOURCE_LOG_SECTION);
+        if !init(*watcher, on_file_modified, events_to_watch = .MODIFIED)
+        {
+            log_error("Could not initialize watcher", section= *RESOURCE_LOG_SECTION);
+        }
+        resource_folders: []string = .["data"];
+        if !add_directories(*watcher, ..resource_folders)
+        {
+            log_error("Could not watch directories %", resource_folders, section= *RESOURCE_LOG_SECTION);
+        }
     }
 }
 
@@ -245,7 +252,10 @@ resource_manager_update :: ()
 {
     using resource_manager;
 
-    process_changes(*watcher);
+    #if FILE_WATCH_SUPPORTED
+    {
+        process_changes(*watcher);
+    }
 
     for _, resource: resources_to_reload
     {
@@ -293,4 +303,7 @@ unload_all_resources :: ()
 
 #scope_file
 
-#import "File_Watcher";
+#if FILE_WATCH_SUPPORTED
+{
+    #import "File_Watcher";
+}

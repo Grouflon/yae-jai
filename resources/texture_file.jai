@@ -13,7 +13,7 @@ TextureFile :: struct
     }
     sprites: [..]Sprite; @serialize
 
-    texture: Texture2D;
+    texture: Texture;
     name_to_sprite_index: Table(StringHash, s64);
 }
 
@@ -89,7 +89,8 @@ texture_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*TextureFile) resource;
 
-    texture = rl.LoadTexture(temp_c_string(path));
+    success:, texture = load_texture(path);
+    if !success return false;
 
     for sprite, i: sprites
     {
@@ -103,10 +104,10 @@ texture_unload :: (resource: *Resource)
 {
     using t: = cast(*TextureFile) resource;
 
-    rl.UnloadTexture(texture);
+    unload_texture(texture);
 
     array_reset(*sprites);
     table_reset_and_free(*name_to_sprite_index);
 }
 
-rl :: #import "raylib";
+// rl :: #import "raylib";

@@ -214,24 +214,24 @@ compare :: (a: $T, b: T) -> s64 {
     return 0;
 }
 
-resize_render_texture :: (render_texture: *rl.RenderTexture2D, size: Vector2) -> bool
-{
-    assert(render_texture != null);
+// resize_render_texture :: (render_texture: *rl.RenderTexture2D, size: Vector2) -> bool
+// {
+//     assert(render_texture != null);
 
-    width: = ceil_to_s32(size.x);
-    height: = ceil_to_s32(size.y);
+//     width: = ceil_to_s32(size.x);
+//     height: = ceil_to_s32(size.y);
 
-    if render_texture.texture.width == width && render_texture.texture.height == height { return false; }
+//     if render_texture.texture.width == width && render_texture.texture.height == height { return false; }
 
-    if render_texture.texture.id != 0
-    {
-        rl.UnloadRenderTexture(render_texture);
-    }
-    <<render_texture = rl.LoadRenderTexture(width, height);
-    return true;
-}
+//     if render_texture.texture.id != 0
+//     {
+//         rl.UnloadRenderTexture(render_texture);
+//     }
+//     <<render_texture = rl.LoadRenderTexture(width, height);
+//     return true;
+// }
 
 #scope_file
 vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s32 #foreign;
 
-rl :: #import "raylib";
+// rl :: #import "raylib";

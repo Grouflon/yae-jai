@@ -80,7 +80,7 @@ draw_outlined_rect :: (rect: Rect, color: Color = RED)
     DrawRectangleLinesEx(.{bounds.min.x, bounds.min.y, rect_size.x, rect_size.y}, 1.0, color);
 }
 
-draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
+draw_sprite :: (_position: Vector2, _texture: Texture, _data:*AsepriteData, _frame_index: s32 = 0, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
 {
     if _frame_index >= _data.frames.count { return; }
 
@@ -97,7 +97,7 @@ draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _f
     );
 }
 
-draw_sprite :: (_position: Vector2, _texture: Texture2D, _data:*AsepriteData, _frame_name: string, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
+draw_sprite :: (_position: Vector2, _texture: Texture, _data:*AsepriteData, _frame_name: string, _flip_x: bool = false, _flip_y: bool = false, _tint: Color = WHITE)
 {
     index, found: = table_find(*_data.name_to_frame, _frame_name);
     if !found { return; }

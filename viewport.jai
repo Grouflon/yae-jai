@@ -227,5 +227,5 @@ size :: (viewport: *Viewport) -> Vector2 #expand
 }
 
 #scope_file
-rl :: #import "raylib";
+// rl :: #import "raylib";
 

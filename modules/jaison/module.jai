@@ -218,7 +218,7 @@ unescape :: (str: string) -> result: string, success: bool {
 }
 
 #import "Basic";
-#import "File";
+// #import "File";
 #import "String";
 
 #import "Hash_Table";

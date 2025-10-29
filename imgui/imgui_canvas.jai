@@ -117,7 +117,7 @@ imgui_canvas_end :: (using canvas: *ImGuiCanvas)
     // ImGui.Value("scrolling", scrolling);
 }
 
-imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2, color: Color = rl.WHITE, thickness: float = 1.0)
+imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2, color: Color = WHITE, thickness: float = 1.0)
 {
     screen_p0: = canvas_to_screen(canvas, p0);
     screen_p1: = canvas_to_screen(canvas, p1);
@@ -126,10 +126,10 @@ imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2,
     draw_end: = draw_origin + draw_size;
 
 
-    ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color.r, color.g, color.b, color.a), thickness);
+    ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color), thickness);
 }
 
-imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: Color = rl.RED, thickness: float = 1.0)
+imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: Color = RED, thickness: float = 1.0)
 {
     p_min: = canvas_to_screen(canvas, bounds.min);
     p_max: = canvas_to_screen(canvas, bounds.max);
@@ -216,5 +216,3 @@ imgui_canvas_fit_to_points :: (using canvas: *ImGuiCanvas, screen_p0: Vector2, c
     o: = draw_origin + .{0, draw_size.y};
     scrolling = screen_p0 - o - (zoom * canvas_p0 * f);
 }
-
-rl:: #import "raylib";

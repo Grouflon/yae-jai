@@ -1,16 +1,4 @@
 
-get_console_window_handle :: () -> *void
-{
-    #if OS == .WINDOWS
-    {
-        return GetConsoleWindow();
-    }
-    else
-    {
-        return null;
-    }
-}
-
 get_window_title :: (handle: *void) -> string
 {
     #if OS == .WINDOWS
