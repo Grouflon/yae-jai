@@ -184,7 +184,6 @@ yae_frame :: (dt: float)
     // Draw
     {
         begin_draw();
-        defer end_draw();
         // rl.BeginDrawing();
         // defer rl.EndDrawing();
 
@@ -194,6 +193,7 @@ yae_frame :: (dt: float)
 
         // raylib_imgui_render();
 
+        end_draw();
         swap_buffers(yae.window_handle);
     }
 

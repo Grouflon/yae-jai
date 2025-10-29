@@ -73,14 +73,43 @@ renderer_shutdown :: ()
     // no need to destroy context apparently
 }
 
-load_texture :: (file_path: string) -> bool, Texture
+load_texture :: (image_data: ImageData) -> Texture
 {
-    return false, .{};
+    if image_data.data == null return .{};
+    if image_data.channels != 4
+    {
+        log_error("only rgba8 images is supported for now");
+        return .{};
+    }
+
+    texture: Texture;
+    texture.width = image_data.width;
+    texture.height = image_data.height;
+
+    GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+    GL_VERIFY(glGenTextures(1, *texture.handle));
+    GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture.handle));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GL_VERIFY(glTexImage2D(
+        GL_TEXTURE_2D,    // target
+        0,                // level
+        GL_RGBA8,         // internal format
+        image_data.width,           // width
+        image_data.height,          // height
+        0,                // border, must be 0
+        GL_RGBA,          // format
+        GL_UNSIGNED_BYTE, // type
+        image_data.data
+    ));
+    return texture;
 }
 
 unload_texture :: (texture: Texture)
 {
-    
+    if texture.handle == 0 return;
+
+    GL_VERIFY(glDeleteTextures(1, *texture.handle));
 }
 
 begin_camera :: (camera: Camera)

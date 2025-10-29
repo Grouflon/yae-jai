@@ -77,11 +77,11 @@ read_and_decode_image :: (filename: string) -> bool, ImageData
     data: = stbi_load(temp_c_string(filename), *width, *height, *channels, 4);
     if data == null { return false, .{}; }
 
-    texture_data: TextureData;
+    texture_data: ImageData;
     texture_data.data = data;
     texture_data.width = xx width;
     texture_data.height = xx height;
-    texture_data.channels = xx channels;
+    texture_data.channels = 4;
     return true, texture_data;
 }
 

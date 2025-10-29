@@ -18,8 +18,6 @@ ImageData :: struct
 // get_window_position :: (window_handle: *void) -> int, int;
 // get_mouse_position :: (window_handle: *void) -> Vector2;
 // update_input_events :: ();
-get_window_width :: () -> int { w, h: = get_window_size(yae.window_handle); return w; }
-get_window_height :: () -> int { w, h: = get_window_size(yae.window_handle); return h; }
 get_window_size :: () -> int, int { w, h: = get_window_size(yae.window_handle); return w, h; }
 get_viewport_size :: () -> int, int { w, h: = get_viewport_size(yae.window_handle); return w, h; }
 get_mouse_position :: () -> Vector2 { return get_mouse_position(yae.window_handle); }

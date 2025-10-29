@@ -89,8 +89,10 @@ texture_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*TextureFile) resource;
 
-    success:, texture = load_texture(path);
+    success, image_data: = read_and_decode_image(path);
     if !success return false;
+    
+    texture = load_texture(image_data);
 
     for sprite, i: sprites
     {
