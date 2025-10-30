@@ -71,18 +71,23 @@ swap_buffers :: (window: *void)
     Windows.SwapBuffers(dc);
 }
 
-read_and_decode_image :: (filename: string) -> bool, ImageData
+read_and_decode_image :: (filename: string, allocator: *Allocator) -> ImageData
 {
+    if allocator != null
+    {
+        context.allocator = allocator;
+    }
+
     width, height, channels: s32;
     data: = stbi_load(temp_c_string(filename), *width, *height, *channels, 4);
-    if data == null { return false, .{}; }
+    if data == null { return .{}; }
 
     texture_data: ImageData;
     texture_data.data = data;
     texture_data.width = xx width;
     texture_data.height = xx height;
     texture_data.channels = 4;
-    return true, texture_data;
+    return texture_data;
 }
 
 // FileSystem

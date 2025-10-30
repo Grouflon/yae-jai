@@ -89,8 +89,8 @@ texture_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*TextureFile) resource;
 
-    success, image_data: = read_and_decode_image(path);
-    if !success return false;
+    image_data: = read_and_decode_image(path, *temporary_allocator);
+    if image_data.data == null return false;
     
     texture = load_texture(image_data);
 

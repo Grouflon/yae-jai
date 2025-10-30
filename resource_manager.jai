@@ -211,6 +211,8 @@ get_resources_by_type_info :: (info: *Type_Info) -> []*Resource
 
 resource_add_file_watch :: (resource: *Resource, file_path: string)
 {
+    #if !FILE_WATCH_SUPPORTED { return; }
+
     using resource_manager;
 
     assert(resource != null);
@@ -232,6 +234,8 @@ resource_add_file_watch :: (resource: *Resource, file_path: string)
 
 resource_remove_file_watch :: (resource: *Resource, file_path: string)
 {
+    #if !FILE_WATCH_SUPPORTED { return; }
+    
     using resource_manager;
 
     assert(resource != null);

@@ -3,7 +3,8 @@
 // Window
 create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void #foreign;
 destroy_window :: (window_handle: *void) #foreign;
-get_canvas_size :: () -> Vector2 #foreign;
+get_canvas_width :: () -> s32 #foreign;
+get_canvas_height :: () -> s32 #foreign;
 
 get_console_window_handle :: () -> *void
 {
@@ -17,14 +18,12 @@ get_window_position :: (window_handle: *void) -> width: int, height: int
 
 get_window_size :: (window_handle: *void) -> width: int, height: int
 {
-    size: = get_canvas_size();
-    return xx size.x, xx size.y;
+    return get_canvas_width(), get_canvas_height();
 }
 
 get_viewport_size :: (window_handle: *void) -> int, int
 {
-    size: = get_canvas_size();
-    return xx size.x, xx size.y;
+    return get_canvas_width(), get_canvas_height();
 }
 
 update_input_events :: ()
@@ -148,7 +147,13 @@ get_time :: () -> float64 #foreign;
 
 // Rendering
 create_opengl_context :: () #foreign;
-read_and_decode_image :: (filename: string) -> ImageData #foreign;
+read_and_decode_image :: (filename: string, allocator: *Allocator) -> ImageData
+{
+    data: ImageData;
+    read_and_decode_image(filename, allocator, *data);
+    return data;
+}
+read_and_decode_image :: (filename: string, allocator: *Allocator, out_image_data: *ImageData) #foreign;
 get_mouse_position :: (window_handle: *void) -> Vector2 #foreign;
 
 init_opengl_context :: (window: *void)
@@ -257,10 +262,12 @@ make_directory_if_it_does_not_exist :: (name: string, recursive := false) -> dir
 read_entire_file :: (path: string) -> string, bool
 {
     content: string;
-    success: = read_entire_file(path, *content);
+    size: u64;
+    success: = read_entire_file(path, cast(**void)*content.data, *size);
+    content.count = xx size;
     return content, success;
 }
-read_entire_file :: (path: string, out_data: *string) -> bool #foreign;
+read_entire_file :: (path: string, out_data: **void, out_size: *u64) -> bool #foreign;
 write_entire_file :: (path: string, data: *void, count: int) -> bool #foreign;
 
 // WASM Module implementations.

@@ -64,5 +64,25 @@ wasm_alloc :: (size: s64, allocator: *Allocator) -> *void #c_call
     }
 }
 
+wasm_temp_alloc :: (size: s64) -> *void #c_call
+{
+    return wasm_alloc(size, *temporary_allocator);
+}
+
+wasm_memcmp :: (a: *void, b: *void, size: s64) -> s16 #c_call
+{
+    for i: 0..(size-1)
+    {
+        a_value: s16 = xx <<cast(*u8)a;
+        b_value: s16 = xx <<cast(*u8)b;
+        diff: = a_value - b_value;
+        if diff != 0
+        {
+            return diff;
+        }
+    }
+    return 0;
+}
+
 #scope_file
 #import "yae";
