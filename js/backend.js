@@ -575,8 +575,7 @@ function instantiate_yae(wasm_path, content_element)
     ).then(
         (obj) => {
             exports = obj.instance.exports;
-            console.log(exports);
-            console.log(exports.memory);
+            console.log(exports, exports.memory);
             executable_path = wasm_path;
 
             alloc = find_name_by_regexp(exports, "wasm_alloc");

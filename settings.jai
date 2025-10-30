@@ -99,6 +99,8 @@ settings_update :: ()
 // @NOTE(remi): This will become inefficient as the size of settings grow. But is very convenient until then (no need to mark settings dirty on the user side)
 settings_save_if_changed :: ()
 {
+    #if OS == .WASM return; // Json Serializer does not work on wasm. fuckit for now, but in anycase writing files does not makes sense on web platform
+
     using yae.settings;
 
     serializer: JsonSerializer;
