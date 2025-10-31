@@ -1,6 +1,7 @@
 // WITH_EDITOR :: (OS != .WASM);
 WITH_EDITOR :: false;
 FILE_WATCH_SUPPORTED :: (OS != .WASM);
+YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 // #load "animation_player.jai";
 #load "camera.jai";

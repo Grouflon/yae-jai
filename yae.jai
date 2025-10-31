@@ -1,4 +1,3 @@
-YAE_DEBUG_MEMORY :: (OS != .WASM);
 RAYLIB_LOG_SECTION :: Log_Section.{ "Raylib" };
 
 YAE :: struct

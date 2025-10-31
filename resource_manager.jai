@@ -51,7 +51,10 @@ resource_manager_shutdown :: ()
 {
     using resource_manager;
 
-    deinit(*watcher);
+    #if FILE_WATCH_SUPPORTED
+    {
+        deinit(*watcher);
+    }
 
     for resource: resources
     {
