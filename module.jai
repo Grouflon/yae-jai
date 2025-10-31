@@ -9,6 +9,7 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 #load "compile_time.jai";
 // #load "draw.jai";
 #load "entity.jai";
+#load "input.jai";
 #load "log.jai";
 #load "physics.jai";
 #load "pool.jai";
