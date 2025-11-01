@@ -35,12 +35,23 @@ get_viewport_size :: (window_handle: *void) -> width: int, height: int
     return rect.right - rect.left, rect.bottom - rect.top;
 }
 
+is_window_focused :: () -> bool
+{
+    return input_application_has_focus;
+}
+
 mouse_position: Vector2;
 get_mouse_position :: (window_handle: *void) -> Vector2
 {
     x, y, success: = get_mouse_pointer_position(window_handle, false);
     if success { mouse_position = .{ xx x, xx y}; };
     return mouse_position;
+}
+
+set_mouse_position :: (window_handle: *void, position: Vector2)
+{
+    // Probably need to do something better, like relative to the window
+    SetCursorPos(xx position.x, xx position.y);
 }
 
 update_input_events :: ()
@@ -121,6 +132,7 @@ write_entire_file :: (path: string, data: *void, count: int) -> bool
 GetConsoleWindow :: () -> Windows.HWND #foreign kernel32;
 GetWindowTextA :: (window: Windows.HWND, out_str: *u8, max_string_length: s32) -> s32 #foreign user32;
 EnumWindows :: (f: #type (window: Windows.HWND, data: *void) -> bool #c_call, data: *void) -> bool #foreign user32;
+SetCursorPos :: (x : s32, y : s32) -> s32 #foreign user32;
 
 Windows :: #import "Windows";
 kernel32 :: #system_library "kernel32";

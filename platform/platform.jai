@@ -17,10 +17,14 @@ ImageData :: struct
 // get_viewport_size :: (window_handle: *void) -> int, int;
 // get_window_position :: (window_handle: *void) -> int, int;
 // get_mouse_position :: (window_handle: *void) -> Vector2;
+// set_mouse_position :: (window_handle: *void, position: Vector2);
 // update_input_events :: ();
+// is_window_focused :: () -> bool;
 get_window_size :: () -> int, int { w, h: = get_window_size(yae.window_handle); return w, h; }
 get_viewport_size :: () -> int, int { w, h: = get_viewport_size(yae.window_handle); return w, h; }
 get_mouse_position :: () -> Vector2 { return get_mouse_position(yae.window_handle); }
+set_mouse_position :: (position: Vector2) { set_mouse_position(yae.window_handle, position); }
+get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT
 
 // Time
 // get_time :: () -> float64;

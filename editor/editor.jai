@@ -14,29 +14,7 @@ editor_init :: ()
 {
     using yae.editor;
 
-    // Init ImGui
-    // imgui_config: RaylibImGuiConfig = .{
-    //     theme = .DARK,
-    //     fonts = .[
-    //         .{
-    //             // path = "./data/fonts/Font Awesome 6 Free-Regular-400.otf",
-    //             path = "./data/fonts/Font Awesome 6 Free-Solid-900.otf",
-    //             size = 14,
-    //             range = .[0xf000, 0xf2e0],
-    //             config = .{
-    //                 FontDataOwnedByAtlas = true,
-    //                 MergeMode = true,
-    //                 OversampleH = 2,
-    //                 OversampleV = 1,
-    //                 RasterizerMultiply = 1.0,
-    //                 RasterizerDensity = 1.0,
-    //                 GlyphMaxAdvanceX = FLOAT32_MAX,
-    //                 GlyphOffset = .{0, 2}
-    //             }
-    //         }
-    //     ],
-    // };
-    // raylib_imgui_init(imgui_config);
+
 }
 
 editor_shutdown :: ()
@@ -48,7 +26,6 @@ editor_shutdown :: ()
         resource_editor_shutdown(resource_editor);
     }
 
-    // raylib_imgui_shutdown();
 }
 
 editor_register_settings_section :: ()

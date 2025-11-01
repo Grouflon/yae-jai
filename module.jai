@@ -1,6 +1,7 @@
-// WITH_EDITOR :: (OS != .WASM);
-WITH_EDITOR :: false;
+WITH_EDITOR :: (OS != .WASM);
+// WITH_EDITOR :: false;
 FILE_WATCH_SUPPORTED :: (OS != .WASM);
+IMGUI_SUPPORTED :: (OS != .WASM);
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 // #load "animation_player.jai";
@@ -13,7 +14,6 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 #load "log.jai";
 #load "physics.jai";
 #load "pool.jai";
-// #load "raylib_imgui.jai";
 #load "resource.jai";
 #load "resource_manager.jai";
 #load "settings.jai";
@@ -62,11 +62,16 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
     #load "editor/resource_browser.jai";
     #load "editor/resource_editor.jai";
     #load "editor/texture_file_editor.jai";
+}
 
+#if IMGUI_SUPPORTED
+{
     #load "imgui/imgui.jai";
+    #load "imgui/imgui_backend.jai";
     #load "imgui/imgui_canvas.jai";
     ImGui :: #import,dir "./modules/ImGui";
 }
+    
 
 #scope_module
 

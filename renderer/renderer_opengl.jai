@@ -6,6 +6,9 @@ TextureHandle :: GLuint;
 OpenGLRenderer :: struct
 {
     generic_shader_program: GLuint;
+    mvp_uniform_location: GLint;
+    texture_uniform_location: GLint;
+
     vao: GLuint;
     vbo: GLuint;
     ibo: GLuint;
@@ -30,6 +33,9 @@ renderer_init :: ()
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
 
+    // Global settings
+    GL_VERIFY(glEnable(GL_CULL_FACE));
+
     // Generic shader
     vertex_shader: = create_shader(GL_VERTEX_SHADER, .[GENERIC_VERTEX_SHADER_SRC]);
     fragment_shader: = create_shader(GL_FRAGMENT_SHADER, .[GENERIC_FRAGMENT_SHADER_SRC]);
@@ -37,6 +43,9 @@ renderer_init :: ()
     GL_VERIFY(glDeleteShader(vertex_shader));
     GL_VERIFY(glDeleteShader(fragment_shader));
     GL_VERIFY(glUseProgram(generic_shader_program));
+    mvp_uniform_location = glGetUniformLocation(generic_shader_program, "uMvp");
+    texture_uniform_location = glGetUniformLocation(generic_shader_program, "uTexture");
+
 
     // Vertex Buffer
     GL_VERIFY(glGenBuffers(1, *vbo));
@@ -116,9 +125,12 @@ begin_camera :: (camera: Camera)
 {
     using yae.renderer;
 
-    location: = glGetUniformLocation(generic_shader_program, "uMvp");
+    width, height: = get_viewport_size(yae.window_handle);
+    GL_VERIFY(glViewport(0, 0, xx width, xx height));
+    GL_VERIFY(glScissor(0, 0, xx width, xx height));
+
     mvp: = camera_to_vp_matrix(camera);
-    GL_VERIFY(glUniformMatrix4fv(location, 1, GL_TRUE, cast(*GLfloat)*mvp));
+    GL_VERIFY(glUniformMatrix4fv(mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
 }
 
 end_camera :: ()
@@ -130,10 +142,6 @@ begin_draw :: ()
 {
     using yae.renderer;
     assert(!is_drawing);
-
-    width, height: = get_window_size(yae.window_handle);
-    GL_VERIFY(glViewport(0, 0, xx width, xx height));
-    GL_VERIFY(glScissor(0, 0, xx width, xx height));
 
     is_drawing = true;
 }
@@ -151,8 +159,7 @@ end_draw :: ()
         GL_VERIFY(glActiveTexture(GL_TEXTURE0));
         GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
 
-        texture_location: = glGetUniformLocation(generic_shader_program, "uTexture");
-        GL_VERIFY(glUniform1i(texture_location, 0));
+        GL_VERIFY(glUniform1i(texture_uniform_location, 0));
 
         GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
     }
@@ -172,7 +179,7 @@ clear_background :: (color: Color)
     GL_VERIFY(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 }
 
-draw_command :: (vertices: []Vertex, indices: []u32, texture: TextureHandle)
+draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
 {
     using yae.renderer;
 
@@ -226,6 +233,89 @@ renderer_destroy_texture :: (handle: TextureHandle)
     GL_VERIFY(glDeleteTextures(1, *handle));
 }
 
+draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
+{
+    using yae.renderer;
+    assert(!is_drawing);
+
+    fb_width := (draw_data.DisplaySize.x * draw_data.FramebufferScale.x);
+    fb_height := (draw_data.DisplaySize.y * draw_data.FramebufferScale.y);
+    if fb_width == 0 || fb_height == 0 return;
+
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
+    glEnable(GL_SCISSOR_TEST);
+
+    glViewport(0, 0, xx fb_width, xx fb_height);
+    L: float = draw_data.DisplayPos.x;
+    R: float = draw_data.DisplayPos.x + draw_data.DisplaySize.x;
+    T: float = draw_data.DisplayPos.y;
+    B: float = draw_data.DisplayPos.y + draw_data.DisplaySize.y;
+    ortho_projection: [4][4]float =
+    .[
+        .[ 2.0/(R-L),     0.0,         0.0,   0.0 ],
+        .[ 0.0,           2.0/(T-B),   0.0,   0.0 ],
+        .[ 0.0,           0.0,        -1.0,   0.0 ],
+        .[ (R+L)/(L-R),  (T+B)/(B-T),  0.0,   1.0 ],
+    ];
+    glUseProgram(generic_shader_program);
+    glUniform1i(texture_uniform_location, 0);
+    glUniformMatrix4fv(mvp_uniform_location, 1, GL_FALSE, xx ortho_projection.data);
+
+
+    clip_off: = draw_data.DisplayPos;         // (0,0) unless using multi-viewports
+    clip_scale: = draw_data.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+    for i: 0..draw_data.CmdListsCount-1
+    {
+        command_list: = << (draw_data.CmdLists.Data + i);
+
+        vertices: [..]Vertex;
+        vertices.allocator = temporary_allocator;
+        array_reserve(*vertices, command_list.VtxBuffer.Size);
+
+        for j: 0..(command_list.VtxBuffer.Size-1)
+        {
+            v: = command_list.VtxBuffer.Data[j];
+            array_add(*vertices, Vertex.{
+                .{v.pos.x, v.pos.y, 0},
+                .{v.uv.x, v.uv.y},
+                color_to_normalized_vector4(v.col)
+            });
+        }
+
+        GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertices.count * size_of(Vertex), vertices.data, GL_STREAM_DRAW));
+        GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, command_list.IdxBuffer.Size * size_of(u16), command_list.IdxBuffer.Data, GL_STREAM_DRAW));
+
+        for j: 0..command_list.CmdBuffer.Size-1
+        {
+            cmd: = command_list.CmdBuffer.Data[j];
+
+            clip_min: = Vector2.{(cmd.ClipRect.x - clip_off.x) * clip_scale.x, (cmd.ClipRect.y - clip_off.y) * clip_scale.y};
+            clip_max: = Vector2.{(cmd.ClipRect.z - clip_off.x) * clip_scale.x, (cmd.ClipRect.w - clip_off.y) * clip_scale.y};
+            if clip_max.x <= clip_min.x || clip_max.y <= clip_min.y
+                continue;
+
+            glScissor(xx clip_min.x, xx (fb_height - clip_max.y), xx (clip_max.x - clip_min.x), xx (clip_max.y - clip_min.y));
+
+            if cmd.UserCallback != null
+            {
+                cmd.UserCallback(command_list, *cmd);
+                continue;
+            }
+
+            GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+            GL_VERIFY(glBindTexture(GL_TEXTURE_2D, xx cmd.TextureId));
+
+            GL_VERIFY(glDrawElements(GL_TRIANGLES, cmd.ElemCount, GL_UNSIGNED_SHORT, xx (cmd.IdxOffset * size_of(u16))));
+        }
+    }
+}
+
 #scope_file
 
 GENERIC_VERTEX_SHADER_SRC :: #string END
@@ -244,7 +334,7 @@ uniform mat4 uMvp;
 void main()
 {
     gl_Position = uMvp * vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
-    fragTexCoord = vec2(inTexCoord.x, -inTexCoord.y); // Textures are stored upside-down in opengl
+    fragTexCoord = inTexCoord;
     fragColor = inColor;
 }
 END
@@ -262,8 +352,7 @@ uniform sampler2D uTexture;
 
 void main()
 {
-    vec4 pixel = texture(uTexture, fragTexCoord);
-    outColor = pixel * fragColor;
+    outColor = fragColor * texture(uTexture, fragTexCoord);
 }
 END
 

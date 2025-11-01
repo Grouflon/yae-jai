@@ -63,6 +63,33 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     // rl.SetTargetFPS(60);
     // rl.SetExitKey(.KEY_NULL);
 
+    // ImGui
+    if IMGUI_SUPPORTED
+    {
+        imgui_config: ImGuiConfig = .{
+            theme = .DARK,
+            fonts = .[
+                .{
+                    // path = tprint("%/data/fonts/Font Awesome 6 Free-Regular-400.otf", yae_directory),
+                    path = tprint("%/data/fonts/Font Awesome 6 Free-Solid-900.otf", yae_directory),
+                    size = 14,
+                    range = .[0xf000, 0xf2e0],
+                    config = .{
+                        FontDataOwnedByAtlas = true,
+                        MergeMode = true,
+                        OversampleH = 2,
+                        OversampleV = 1,
+                        RasterizerMultiply = 1.0,
+                        RasterizerDensity = 1.0,
+                        GlyphMaxAdvanceX = FLOAT32_MAX,
+                        GlyphOffset = .{0, 2}
+                    }
+                }
+            ],
+        };
+        imgui_init(imgui_config);
+    }
+
     // Init Settings
     register_settings_section("app", *yae, null, (data: *void)
     {
@@ -79,10 +106,10 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
 
     // Init stuff
     // draw_init();
-#if WITH_EDITOR
-{
-    editor_init();
-}
+    #if WITH_EDITOR
+    {
+        editor_init();
+    }
 
     log_verbose("yae initialized.");
     log_unindent();
@@ -95,11 +122,16 @@ yae_shutdown :: ()
     log_verbose("shutting down yae...");
     log_indent();
 
-#if WITH_EDITOR
-{
-    editor_shutdown();
-}
+    #if WITH_EDITOR
+    {
+        editor_shutdown();
+    }
     // draw_shutdown();
+
+    #if IMGUI_SUPPORTED
+    {
+        imgui_shutdown();
+    }
 
     renderer_shutdown();
     destroy_window(window_handle);
@@ -165,7 +197,11 @@ yae_frame :: (dt: float)
     {
         update_input_events();
         resource_manager_update();
-        // raylib_imgui_new_frame(dt);
+
+        #if IMGUI_SUPPORTED
+        {
+            imgui_new_frame(dt);
+        }
 
         for events_this_frame
         {
@@ -190,9 +226,13 @@ yae_frame :: (dt: float)
 
         if draw_function != null { draw_function(); }
 
-        // raylib_imgui_render();
-
         end_draw();
+
+        #if IMGUI_SUPPORTED
+        {
+            imgui_render();
+        }
+
         swap_buffers(yae.window_handle);
     }
 

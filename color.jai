@@ -93,3 +93,13 @@ hsv_to_color :: (h: float, s: float, v: float) -> Color
 {
     return ColorFromHSV(h, s, v);
 }
+
+color_to_normalized_vector4 :: (c: Color) -> Vector4
+{
+    return .{cast(float)c.r / 255, cast(float)c.g / 255, cast(float)c.b / 255, cast(float)c.a / 255};
+}
+
+color_to_normalized_vector4 :: (c: u32) -> Vector4
+{
+    return color_to_normalized_vector4(<<cast(*Color)*c);
+}
