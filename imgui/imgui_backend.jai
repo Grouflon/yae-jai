@@ -83,7 +83,6 @@ imgui_new_frame :: (dt: float)
     ImGui.NewFrame();
 }
 
-debug_texture: TextureHandle;
 imgui_render :: ()
 {
     ImGui.Render();
