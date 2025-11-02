@@ -9,6 +9,29 @@ Texture :: struct
     handle: TextureHandle;
 }
 
+TextureFilter :: enum
+{
+    LINEAR;
+    NEAREST;
+}
+
+TextureWrap :: enum
+{
+    REPEAT;
+    MIRRORED_REPEAT;
+    CLAMP_TO_BORDER;
+    CLAMP_TO_EDGE;
+    MIRROR_CLAMP_TO_EDGE;
+}
+
+TextureParameters :: struct
+{
+    min_filter: TextureFilter = .LINEAR;
+    mag_filter: TextureFilter = .LINEAR;
+    wrap_s: TextureWrap = .REPEAT;
+    wrap_t: TextureWrap = .REPEAT;
+}
+
 Vertex :: struct
 {
     position: Vector3;

@@ -82,7 +82,7 @@ renderer_shutdown :: ()
     // no need to destroy context apparently
 }
 
-load_texture :: (image_data: ImageData) -> Texture
+load_texture :: (image_data: ImageData, texture_params: TextureParameters = .{}) -> Texture
 {
     if image_data.data == null return .{};
     if image_data.channels != 4
@@ -98,8 +98,32 @@ load_texture :: (image_data: ImageData) -> Texture
     GL_VERIFY(glActiveTexture(GL_TEXTURE0));
     GL_VERIFY(glGenTextures(1, *texture.handle));
     GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture.handle));
-    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+
+    to_gl :: (filter: TextureFilter) -> GLint
+    {
+        if #complete filter ==
+        {
+            case .LINEAR; return GL_LINEAR;
+            case .NEAREST; return GL_NEAREST;
+        }    
+    }
+
+    to_gl :: (wrap: TextureWrap) -> GLint
+    {
+        if #complete wrap ==
+        {
+            case .REPEAT; return GL_REPEAT;
+            case .MIRRORED_REPEAT; return GL_MIRRORED_REPEAT;
+            case .CLAMP_TO_BORDER; return GL_CLAMP_TO_BORDER;
+            case .CLAMP_TO_EDGE; return GL_CLAMP_TO_EDGE;
+            case .MIRROR_CLAMP_TO_EDGE; return GL_MIRROR_CLAMP_TO_EDGE;
+        }    
+    }
+
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, to_gl(texture_params.min_filter)));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, to_gl(texture_params.mag_filter)));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, to_gl(texture_params.wrap_s)));
+    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, to_gl(texture_params.wrap_t)));
     GL_VERIFY(glTexImage2D(
         GL_TEXTURE_2D,    // target
         0,                // level
