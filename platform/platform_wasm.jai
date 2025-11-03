@@ -207,6 +207,10 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glGetUniformLocation = _glGetUniformLocation;
     procs.glUniform1i = _glUniform1i;
     procs.glUniformMatrix4fv = _glUniformMatrix4fv;
+    procs.glEnable = _glEnable;
+    procs.glDisable = _glDisable;
+    procs.glBlendEquation = _glBlendEquation;
+    procs.glBlendFuncSeparate = _glBlendFuncSeparate;
 }
 
 _glGetString :: (pname: GLenum) -> *GLubyte #foreign;
@@ -245,6 +249,10 @@ _glTexImage2D :: (target: GLenum, level: GLint, internalformat: GLint, width: GL
 _glGetUniformLocation :: (program: GLuint, name: *GLchar) -> GLint #foreign;
 _glUniform1i :: (location: GLint, v0: GLint) #foreign;
 _glUniformMatrix4fv :: (location: GLint, count: GLsizei, transpose: GLboolean, value: *GLfloat) #foreign;
+_glEnable :: (cap: GLenum) -> void #foreign;
+_glDisable :: (cap: GLenum) -> void #foreign;
+_glBlendEquation :: (mode: GLenum) -> void #foreign;
+_glBlendFuncSeparate :: (sfactorRGB: GLenum, dfactorRGB: GLenum, sfactorAlpha: GLenum, dfactorAlpha: GLenum) -> void #foreign;
 
 #import "GL"(DUMP_GL_ERRORS = true);
 #scope_export

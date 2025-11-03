@@ -33,9 +33,6 @@ renderer_init :: ()
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
 
-    // Global settings
-    GL_VERIFY(glEnable(GL_CULL_FACE));
-
     // Generic shader
     vertex_shader: = create_shader(GL_VERTEX_SHADER, .[GENERIC_VERTEX_SHADER_SRC]);
     fragment_shader: = create_shader(GL_FRAGMENT_SHADER, .[GENERIC_FRAGMENT_SHADER_SRC]);
@@ -167,6 +164,14 @@ begin_draw :: ()
     using yae.renderer;
     assert(!is_drawing);
 
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_STENCIL_TEST);
+    glEnable(GL_SCISSOR_TEST);
+
     is_drawing = true;
 }
 
@@ -257,6 +262,8 @@ renderer_destroy_texture :: (handle: TextureHandle)
     GL_VERIFY(glDeleteTextures(1, *handle));
 }
 
+#if IMGUI_SUPPORTED
+{
 draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
 {
     using yae.renderer;
@@ -338,6 +345,7 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
             GL_VERIFY(glDrawElements(GL_TRIANGLES, cmd.ElemCount, GL_UNSIGNED_SHORT, xx (cmd.IdxOffset * size_of(u16))));
         }
     }
+}
 }
 
 #scope_file

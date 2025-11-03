@@ -64,7 +64,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     // rl.SetExitKey(.KEY_NULL);
 
     // ImGui
-    if IMGUI_SUPPORTED
+    #if IMGUI_SUPPORTED
     {
         imgui_config: ImGuiConfig = .{
             theme = .DARK,
@@ -98,10 +98,10 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
         if console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), console_window_rect); }
         if app_window_rect != IntRect.{} { set_window_rect(window_handle, app_window_rect); }
     });
-#if WITH_EDITOR
-{
-    editor_register_settings_section();
-}
+    #if WITH_EDITOR
+    {
+        editor_register_settings_section();
+    }
     settings_init(); // also loads settings
 
     // Init stuff

@@ -334,6 +334,26 @@ const gl_exports =
         matrix = new Float32Array(exports.memory.buffer, Number(value), 16);
         gl.uniformMatrix4fv(gl.get_location(location_index), transpose, matrix);
     },
+
+    _glEnable: (cap) =>
+    {
+        gl.enable(cap);
+    },
+
+    _glDisable: (cap) =>
+    {
+        gl.disable(cap);
+    },
+
+    _glBlendEquation: (mode) =>
+    {
+        gl.blendEquation(mode);
+    },
+
+    _glBlendFuncSeparate: (srcRGB, dstRGB, srcAlpha, dstAlpha) =>
+    {
+        gl.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+    },
 }
 
 let image_data = null;
