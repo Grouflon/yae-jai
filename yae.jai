@@ -106,7 +106,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     settings_init(); // also loads settings
 
     // Init stuff
-    // draw_init();
+    draw_init();
     #if WITH_EDITOR
     {
         editor_init();
@@ -127,7 +127,7 @@ yae_shutdown :: ()
     {
         editor_shutdown();
     }
-    // draw_shutdown();
+    draw_shutdown();
 
     #if IMGUI_SUPPORTED
     {
@@ -220,10 +220,6 @@ yae_frame :: (dt: float)
     // Draw
     {
         begin_draw();
-        // rl.BeginDrawing();
-        // defer rl.EndDrawing();
-
-        // rl.ClearBackground(rl.BLACK);
 
         if draw_function != null { draw_function(); }
 

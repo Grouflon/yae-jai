@@ -2,12 +2,11 @@ Renderer :: OpenGLRenderer;
 
 RENDERER_INVALID_HANDLE :: 0;
 TextureHandle :: GLuint;
+ShaderProgramHandle :: GLuint;
 
 OpenGLRenderer :: struct
 {
-    generic_shader_program: GLuint;
-    mvp_uniform_location: GLint;
-    texture_uniform_location: GLint;
+    generic_shader: ShaderProgram;
 
     vao: GLuint;
     vbo: GLuint;
@@ -18,6 +17,9 @@ OpenGLRenderer :: struct
     vertex_buffer: [..]Vertex;
     index_buffer: [..]u16;
     command_buffer: [..]DrawCommand;
+
+    shader_stack: [..]ShaderProgram;
+    camera_stack: [..]Camera;
 }
 
 renderer_init :: ()
@@ -33,16 +35,9 @@ renderer_init :: ()
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
 
-    // Generic shader
-    vertex_shader: = create_shader(GL_VERTEX_SHADER, .[GENERIC_VERTEX_SHADER_SRC]);
-    fragment_shader: = create_shader(GL_FRAGMENT_SHADER, .[GENERIC_FRAGMENT_SHADER_SRC]);
-    generic_shader_program = create_shader_program(.[vertex_shader, fragment_shader]);
-    GL_VERIFY(glDeleteShader(vertex_shader));
-    GL_VERIFY(glDeleteShader(fragment_shader));
-    GL_VERIFY(glUseProgram(generic_shader_program));
-    mvp_uniform_location = glGetUniformLocation(generic_shader_program, "uMvp");
-    texture_uniform_location = glGetUniformLocation(generic_shader_program, "uTexture");
-
+    generic_shader = load_shader();
+    assert(generic_shader.handle != RENDERER_INVALID_HANDLE);
+    array_add(*shader_stack, generic_shader);
 
     // Vertex Buffer
     GL_VERIFY(glGenBuffers(1, *vbo));
@@ -71,10 +66,12 @@ renderer_shutdown :: ()
 {
     using yae.renderer;
 
-    GL_VERIFY(glDeleteProgram(generic_shader_program));
+    unload_shader(generic_shader);
     array_reset(*vertex_buffer);
     array_reset(*index_buffer);
     array_reset(*command_buffer);
+    array_reset(*shader_stack);
+    array_reset(*camera_stack);
 
     // no need to destroy context apparently
 }
@@ -137,33 +134,85 @@ load_texture :: (image_data: ImageData, texture_params: TextureParameters = .{})
 
 unload_texture :: (texture: Texture)
 {
-    if texture.handle == 0 return;
-
+    if texture.handle == RENDERER_INVALID_HANDLE return;
     GL_VERIFY(glDeleteTextures(1, *texture.handle));
+}
+
+load_shader :: (vs_text: string = "", fs_text: string = "") -> ShaderProgram, bool
+{
+    _vs_text: = vs_text;
+    _fs_text: = fs_text;
+
+    if _vs_text.count == 0 _vs_text = GENERIC_VERTEX_SHADER_SRC;
+    if _fs_text.count == 0 _fs_text = GENERIC_FRAGMENT_SHADER_SRC;
+
+    // Generic shader
+    result: bool;
+    vertex_shader:, result = create_shader(GL_VERTEX_SHADER, .[_vs_text]);
+    if !result return .{}, false;
+    defer GL_VERIFY(glDeleteShader(vertex_shader));
+    fragment_shader:, result = create_shader(GL_FRAGMENT_SHADER, .[_fs_text]);
+    if !result return .{}, false;
+    defer GL_VERIFY(glDeleteShader(fragment_shader));
+
+    program:, result = create_shader_program(.[vertex_shader, fragment_shader]);
+    if !result return .{}, false;
+    
+    return ShaderProgram.{
+        handle = program,
+        mvp_uniform_location = glGetUniformLocation(program, "uMvp"),
+        texture_uniform_location = glGetUniformLocation(program, "uTexture"),
+    }, true;
+}
+
+unload_shader :: (program: ShaderProgram)
+{
+    if program.handle == RENDERER_INVALID_HANDLE return;
+    GL_VERIFY(glDeleteProgram(program.handle));
 }
 
 begin_camera :: (camera: Camera)
 {
+    draw_all_commands();
+
     using yae.renderer;
-
-    width, height: = get_viewport_size(yae.window_handle);
-    GL_VERIFY(glViewport(0, 0, xx width, xx height));
-    GL_VERIFY(glScissor(0, 0, xx width, xx height));
-
-    mvp: = camera_to_vp_matrix(camera);
-    GL_VERIFY(glUniformMatrix4fv(mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
+    array_add(*camera_stack, camera);
 }
 
 end_camera :: ()
 {
+    draw_all_commands();
 
+    using yae.renderer;
+    assert(camera_stack.count > 0);
+    pop(*camera_stack);
+}
+
+begin_shader :: (handle: ShaderProgramHandle)
+{
+    draw_all_commands();
+
+    using yae.renderer;
+    assert(handle != RENDERER_INVALID_HANDLE);
+    array_add(*shader_stack, handle);
+}
+
+end_shader :: ()
+{
+    draw_all_commands();
+
+    using yae.renderer;
+    assert(shader_stack.count > 1);
+    pop(*shader_stack);
 }
 
 begin_draw :: ()
 {
     using yae.renderer;
     assert(!is_drawing);
+    assert(shader_stack.count == 1);
 
+    glUseProgram(shader_stack[0].handle);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -172,30 +221,17 @@ begin_draw :: ()
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_SCISSOR_TEST);
 
+    width, height: = get_viewport_size(yae.window_handle);
+    GL_VERIFY(glViewport(0, 0, xx width, xx height));
+    GL_VERIFY(glScissor(0, 0, xx width, xx height));
+
     is_drawing = true;
 }
 
 end_draw :: ()
 {
     using yae.renderer;
-    assert(is_drawing);
-
-    GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
-    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
-
-    for command: command_buffer
-    {
-        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
-
-        GL_VERIFY(glUniform1i(texture_uniform_location, 0));
-
-        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
-    }
-
-    command_buffer.count = 0;
-    vertex_buffer.count = 0;
-    index_buffer.count = 0;
+    draw_all_commands();
     is_drawing = false;
 }
 
@@ -208,6 +244,7 @@ clear_background :: (color: Color)
     GL_VERIFY(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 }
 
+// NOTE: this actually queue commands instead of drawing them instantly.
 draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
 {
     using yae.renderer;
@@ -224,11 +261,6 @@ draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
         size = xx indices.count,
         texture = texture
     });
-}
-
-draw_sprite :: (texture: Texture, position: Vector2)
-{
-
 }
 
 renderer_create_texture :: (width: u32, height: u32, data: *u8) -> TextureHandle
@@ -293,10 +325,10 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
         .[ 0.0,           0.0,        -1.0,   0.0 ],
         .[ (R+L)/(L-R),  (T+B)/(B-T),  0.0,   1.0 ],
     ];
-    glUseProgram(generic_shader_program);
-    glUniform1i(texture_uniform_location, 0);
-    glUniformMatrix4fv(mvp_uniform_location, 1, GL_FALSE, xx ortho_projection.data);
 
+    glUseProgram(generic_shader.handle);
+    glUniform1i(generic_shader.texture_uniform_location, 0);
+    glUniformMatrix4fv(generic_shader.mvp_uniform_location, 1, GL_FALSE, xx ortho_projection.data);
 
     clip_off: = draw_data.DisplayPos;         // (0,0) unless using multi-viewports
     clip_scale: = draw_data.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -424,7 +456,7 @@ create_shader :: (shader_type: GLuint, sources: []string) -> GLuint, bool
         info: = string.{ size, info_log.data };
         log(tprint("Shader Compilation Failed: %", info));
         GL_VERIFY(glDeleteShader(shader));
-        return 0, false;
+        return RENDERER_INVALID_HANDLE, false;
     }
     return shader, true;
 }
@@ -448,9 +480,40 @@ create_shader_program :: (shaders: []GLuint) -> GLuint, bool
         info: = string.{ size, info_log.data };
         log(tprint("Program Link Failed: %", info));
         GL_VERIFY(glDeleteProgram(shader_program));
-        return 0, false;
+        return RENDERER_INVALID_HANDLE, false;
     }
     return shader_program, true;
+}
+
+draw_all_commands :: ()
+{
+    using yae.renderer;
+    assert(is_drawing);
+
+    if command_buffer.count == 0 return;
+
+    GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
+    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
+
+    shader: = last(shader_stack);
+    GL_VERIFY(glUseProgram(shader.handle));
+
+    mvp: = camera_to_vp_matrix(last(camera_stack));
+    GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
+
+    for command: command_buffer
+    {
+        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
+
+        GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
+
+        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
+    }
+
+    command_buffer.count = 0;
+    vertex_buffer.count = 0;
+    index_buffer.count = 0;
 }
 
 #import "GL"(DUMP_GL_ERRORS = true);

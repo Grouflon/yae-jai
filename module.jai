@@ -8,7 +8,7 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 #load "camera.jai";
 #load "color.jai";
 #load "compile_time.jai";
-// #load "draw.jai";
+#load "draw.jai";
 #load "entity.jai";
 #load "input.jai";
 #load "log.jai";

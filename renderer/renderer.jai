@@ -1,12 +1,20 @@
 // == Each renderer must define those
 // RENDERER_INVALID_HANDLE :: 0;
 // TextureHandle :: GLuint;
+// ShaderProgramHandle :: GLuint;
 
 Texture :: struct
 {
     width: u32;
     height: u32;
     handle: TextureHandle;
+}
+
+ShaderProgram :: struct
+{
+    handle: ShaderProgramHandle;
+    mvp_uniform_location: s32;
+    texture_uniform_location: s32;
 }
 
 TextureFilter :: enum
