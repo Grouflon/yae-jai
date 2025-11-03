@@ -26,9 +26,27 @@ draw_shutdown :: ()
     // rl.UnloadTexture(texture_1px_white);
 }
 
-draw_sprite :: (position: Vector2, texture: Texture, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
+draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, draw_rect: Rect = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
-    
+    if texture.handle == RENDERER_INVALID_HANDLE return;
+
+    _sprite_rect: = sprite_rect;
+    if _sprite_rect == Rect.{} _sprite_rect = .{0, 0, xx texture.width, xx texture.height};
+    _draw_rect: = sprite_rect;
+    if _draw_rect == Rect.{} _draw_rect = .{0, 0, _sprite_rect.w, _sprite_rect.h};
+
+    min: Vector3 = position + .{draw_rect.x, draw_rect.y, 0};
+    max: Vector3 = min + .{draw_rect.w, draw_rect.y, 0};
+
+    c: = color_to_normalized_vector4(tint);
+    vertices: []Vertex = .[
+        .{ min, .{0,0}, c },
+        .{ .{min.x, max.y, position.z }, .{0,1}, c },
+        .{ max, .{1,1}, c },
+        .{ .{max.x, min.y, position.z }, .{1,0}, c },
+    ];
+    indices: []u16 = .[0,1,2,1,3,2];
+    draw_command(vertices, indices, texture.handle);
 }
 
 
