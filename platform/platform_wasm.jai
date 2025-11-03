@@ -278,9 +278,10 @@ read_entire_file :: (path: string) -> string, bool
 read_entire_file :: (path: string, out_data: **void, out_size: *u64) -> bool #foreign;
 write_entire_file :: (path: string, data: *void, count: int) -> bool #foreign;
 
-// WASM Module implementations.
+// WASM Modules implementations.
 // If any become too complex, we might just want to duplicate the module in yae and do proper implementation there.
 // But for now this approach is simpler architecturally
+// We can also maybe insert stuff in the modules at compile time. See the wasm example for that
 // System
 get_path_of_running_executable :: () -> string #foreign;
 // Basic

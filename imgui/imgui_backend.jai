@@ -56,10 +56,22 @@ imgui_init :: (config: ImGuiConfig = .{})
 
     io.ConfigFlags_ |= .ImGuiConfigFlags_DockingEnable;
 
-    // // Setup clipboard functions
-    // io.GetClipboardTextFn = (_user_data: *void) -> *u8 #c_call { return GetClipboardText(); };
-    // io.SetClipboardTextFn = (user_data: *void, text: *u8) #c_call { SetClipboardText(text); };
-    // io.ClipboardUserData = null;
+    // Setup clipboard functions
+    io.GetClipboardTextFn = (_user_data: *void) -> *u8 #c_call
+    {
+        push_context
+        {
+            return temp_c_string(get_clipboard_text());
+        }
+    };
+    io.SetClipboardTextFn = (user_data: *void, text: *u8) #c_call
+    {
+        push_context
+        {
+            set_clipboard_text(to_string(text));
+        }
+    };
+    io.ClipboardUserData = null;
 }
 
 imgui_shutdown :: ()
@@ -95,6 +107,10 @@ ImGuiBackendData :: struct
     config: ImGuiConfig;
     imgui_context: *ImGui.ImGuiContext;
     last_frame_focused: bool;
+    last_control_down: bool;
+    last_shift_down: bool;
+    last_alt_down: bool;
+    last_super_down: bool;
 }
 backend_data: ImGuiBackendData;
 
@@ -184,7 +200,7 @@ update_events :: (io: *ImGui.IO)
 
     // Input Devices
     update_mouse_events(io);
-    // update_keyboard_events(io);
+    update_keyboard_events(io);
     // update_gamepad_events(io);
 }
 
@@ -218,57 +234,70 @@ update_mouse_events :: (io: *ImGui.IO)
     }
 
     // Wheel
-    mouse_wheel: Vector2 = .{0, xx mouse_delta_z};
+    MOUSE_WHEEL_SCALE :: 120;
+    mouse_wheel: Vector2 = Vector2.{0, xx mouse_delta_z} / MOUSE_WHEEL_SCALE;
     io.AddMouseWheelEvent(io, mouse_wheel.x, mouse_wheel.y);
 }
 
-// raylib_imgui_render :: ()
-// {
-//     ImGui.Render();
+update_keyboard_events :: (io: *ImGui.IO)
+{
+    // Modifer Keys
+    ctrl_down: = is_down(.CTRL);
+    if ctrl_down != backend_data.last_control_down
+    {
+        io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Ctrl, ctrl_down);
+        backend_data.last_control_down = ctrl_down;
+    }
 
-//     io: = ImGui.GetIO();
+    shift_down: = is_down(.SHIFT);
+    if shift_down != backend_data.last_shift_down
+    {
+        io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Shift, shift_down);
+        backend_data.last_shift_down = shift_down;
+    }
 
-//     fb_width := (io.DisplaySize.x * io.DisplayFramebufferScale.x);
-//     fb_height := (io.DisplaySize.y * io.DisplayFramebufferScale.y);
-//     if fb_width == 0 || fb_height == 0 return;
+    alt_down: = is_down(.ALT);
+    if alt_down != backend_data.last_alt_down
+    {
+        io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Alt, alt_down);
+        backend_data.last_alt_down = alt_down;
+    }
 
-//     draw_data: = ImGui.GetDrawData();
-//     // draw_data.ScaleClipRects(draw_data, *io.DisplayFramebufferScale);
+    super_down: = is_down(.CMD);
+    if super_down != backend_data.last_super_down
+    {
+        io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Super, super_down);
+        backend_data.last_super_down = super_down;
+    }
 
-//     DrawRenderBatchActive();
-//     DisableBackfaceCulling();
-//     EnableScissorTest();
+    // Key Pressed/Released
+    for key_code: 0..enum_highest_value(Key_Code)
+    {
+        found, imgui_key: = table_find_new(*imgui_keymap, xx key_code);
+        if !found { continue; }
 
-//     for i: 0..draw_data.CmdListsCount-1
-//     {
-//         command_list: = << (draw_data.CmdLists.Data + i);
+        if is_pressed(xx key_code)
+        {
+            io.AddKeyEvent(io, imgui_key, true);
+        }
+        if is_released(xx key_code)
+        {
+            io.AddKeyEvent(io, imgui_key, false);
+        }
+    }
 
-//         for j: 0..command_list.CmdBuffer.Size-1
-//         {
-//             cmd: = command_list.CmdBuffer.Data[j];
 
-//             Scissor(
-//                 xx (cmd.ClipRect.x),
-//                 xx (io.DisplaySize.y - cmd.ClipRect.w),
-//                 xx (cmd.ClipRect.z - cmd.ClipRect.x),
-//                 xx (cmd.ClipRect.w - cmd.ClipRect.y)
-//             );
-
-//             if cmd.UserCallback != null
-//             {
-//                 cmd.UserCallback(command_list, *cmd);
-//                 continue;
-//             }
-
-//             render_triangles(cmd.ElemCount, cmd.IdxOffset, command_list.IdxBuffer.Data, command_list.VtxBuffer.Data, cmd.TextureId);
-//             DrawRenderBatchActive();
-//         }
-//     }
-
-//     SetTexture(0);
-//     DisableScissorTest();
-//     EnableBackfaceCulling();
-// }
+    // Key Capture
+    if io.WantCaptureKeyboard
+    {
+        // add the text input in order
+        pressed: = get_characters_pressed();
+        if pressed.count > 0
+        {
+            io.AddInputCharactersUTF8(io, temp_c_string(pressed));
+        }
+    }
+}
 
 // update_mouse_cursor :: (io: *ImGui.IO)
 // {
@@ -342,66 +371,6 @@ update_mouse_events :: (io: *ImGui.IO)
 //     }
 // }
 
-// update_keyboard_events :: (io: *ImGui.IO)
-// {
-//     // Modifer Keys
-//     ctrl_down: = IsKeyDown(xx KeyboardKey.KEY_RIGHT_CONTROL) || IsKeyDown(xx KeyboardKey.KEY_LEFT_CONTROL);
-//     if ctrl_down != global_state.last_control_down
-//     {
-//         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Ctrl, ctrl_down);
-//         global_state.last_control_down = ctrl_down;
-//     }
-
-//     shift_down: = IsKeyDown(xx KeyboardKey.KEY_RIGHT_SHIFT) || IsKeyDown(xx KeyboardKey.KEY_LEFT_SHIFT);
-//     if shift_down != global_state.last_shift_down
-//     {
-//         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Shift, shift_down);
-//         global_state.last_shift_down = shift_down;
-//     }
-
-//     alt_down: = IsKeyDown(xx KeyboardKey.KEY_RIGHT_ALT) || IsKeyDown(xx KeyboardKey.KEY_LEFT_ALT);
-//     if alt_down != global_state.last_alt_down
-//     {
-//         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Alt, alt_down);
-//         global_state.last_alt_down = alt_down;
-//     }
-
-//     super_down: = IsKeyDown(xx KeyboardKey.KEY_RIGHT_SUPER) || IsKeyDown(xx KeyboardKey.KEY_LEFT_SUPER);
-//     if super_down != global_state.last_super_down
-//     {
-//         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Super, super_down);
-//         global_state.last_super_down = super_down;
-//     }
-
-//     // Key Pressed/Released
-//     for raylib_key: KeyboardKey.KEY_NULL..KeyboardKey.KEY_KP_EQUAL
-//     {
-//         found, imgui_key: = table_find_new(*imgui_keymap, raylib_key);
-//         if !found { continue; }
-
-//         if IsKeyPressed(xx raylib_key)
-//         {
-//             io.AddKeyEvent(io, imgui_key, true);
-//         }
-//         if IsKeyReleased(xx raylib_key)
-//         {
-//             io.AddKeyEvent(io, imgui_key, false);
-//         }
-//     }
-
-//     // Key Capture
-//     if io.WantCaptureKeyboard
-//     {
-//         // add the text input in order
-//         pressed: = GetCharPressed();
-//         while pressed != 0
-//         {
-//             io.AddInputCharacter(io, cast(u32) pressed);
-//             pressed = GetCharPressed();
-//         }
-//     }
-// }
-
 // update_gamepad_events :: (io: *ImGui.IO)
 // {
 //     handle_gamepad_button_event :: (io: *ImGui.IO, button: GamepadButton, key: ImGui.Key)
@@ -456,41 +425,6 @@ update_mouse_events :: (io: *ImGui.IO)
 //     // right stick
 //     handle_gamepad_stick_event(io, .GAMEPAD_AXIS_RIGHT_X, ImGui.Key.ImGuiKey_GamepadRStickLeft, ImGui.Key.ImGuiKey_GamepadRStickRight);
 //     handle_gamepad_stick_event(io, .GAMEPAD_AXIS_RIGHT_Y, ImGui.Key.ImGuiKey_GamepadRStickUp, ImGui.Key.ImGuiKey_GamepadRStickDown);
-// }
-
-// render_triangles :: (count: int, start_index: int, indices: *ImGui.ImDrawIdx, vertices: *ImGui.ImDrawVert, texture_id: ImGui.ImTextureID)
-// {
-//     if count < 3 { return; }
-
-//     triangle_vertex :: (_vert: ImGui.ImDrawVert)
-//     {
-//         c: = cast(*Color)*_vert.col;
-//         Color4ub(c.r, c.g, c.b, c.a);
-//         TexCoord2f(_vert.uv.x, _vert.uv.y);
-//         Vertex2f(_vert.pos.x, _vert.pos.y);
-//     }
-
-//     Begin(RL_TRIANGLES);
-//     SetTexture(cast(u32)texture_id);
-
-//     i: int = 0;
-//     while i <= (count - 3)
-//     {
-//         index_A: = indices[start_index + i];
-//         index_B: = indices[start_index + i + 1];
-//         index_C: = indices[start_index + i + 2];
-
-//         vertex_A: = vertices[index_A];
-//         vertex_B: = vertices[index_B];
-//         vertex_C: = vertices[index_C];
-
-//         triangle_vertex(vertex_A);
-//         triangle_vertex(vertex_B);
-//         triangle_vertex(vertex_C);
-
-//         i += 3;
-//     }
-//     End();
 // }
 
 imgui_keymap: Table(Key_Code, ImGui.Key);

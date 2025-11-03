@@ -1,7 +1,7 @@
 WITH_EDITOR :: (OS != .WASM);
 // WITH_EDITOR :: false;
 FILE_WATCH_SUPPORTED :: (OS != .WASM);
-IMGUI_SUPPORTED :: (OS != .WASM);
+IMGUI_SUPPORTED :: WITH_EDITOR;
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 // #load "animation_player.jai";

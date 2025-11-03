@@ -59,6 +59,17 @@ update_input_events :: ()
     update_window_events();
 }
 
+// Clipboard
+get_clipboard_text :: () -> string
+{
+    return os_clipboard_get_text();
+}
+
+set_clipboard_text :: (text: string)
+{
+    os_clipboard_set_text(text);
+}
+
 // Time
 get_time :: () -> float64
 {
@@ -144,3 +155,4 @@ user32 :: #system_library "user32";
 File :: #import "File";
 File_Utilities :: #import "File_Utilities";
 #import "stb_image";
+#import "Clipboard";

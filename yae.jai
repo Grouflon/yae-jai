@@ -27,6 +27,7 @@ YAE :: struct
 };
 yae: YAE;
 
+// note: can we remove the compile time argument with a macro ?
 yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, title: string)
 {
     using yae;
@@ -111,8 +112,8 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
         editor_init();
     }
 
-    log_verbose("yae initialized.");
     log_unindent();
+    log_verbose("yae initialized.");
 }
 
 yae_shutdown :: ()
@@ -160,8 +161,8 @@ yae_shutdown :: ()
         }
     }
 
-    log_verbose("yae shut down.");
     log_unindent();
+    log_verbose("yae shut down.");
 }
 
 yae_loop :: (update_function: #type (dt: float), draw_function: #type ())

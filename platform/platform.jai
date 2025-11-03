@@ -26,6 +26,10 @@ get_mouse_position :: () -> Vector2 { return get_mouse_position(yae.window_handl
 set_mouse_position :: (position: Vector2) { set_mouse_position(yae.window_handle, position); }
 get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT
 
+// Clipboard
+// get_clipboard_text :: () -> string;
+// set_clipboard_text :: (text: string);
+
 // Time
 // get_time :: () -> float64;
 
