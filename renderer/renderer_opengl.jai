@@ -89,6 +89,18 @@ load_texture :: (image_data: ImageData, texture_params: TextureParameters = .{})
     texture.width = image_data.width;
     texture.height = image_data.height;
 
+    // OpenGL stores textures from bottom row to top row, therefore we have to reverse y data before loading.
+    reversed_data: *u8;
+    {
+        row_size: = image_data.width * image_data.channels;
+        push_allocator(temporary_allocator);
+        reversed_data = alloc(row_size * image_data.height);
+        for i: 0..image_data.height-1
+        {
+            memcpy(reversed_data + row_size * i, image_data.data + (image_data.height-1-i) * row_size, row_size);
+        }
+    }
+
     GL_VERIFY(glActiveTexture(GL_TEXTURE0));
     GL_VERIFY(glGenTextures(1, *texture.handle));
     GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture.handle));
@@ -127,7 +139,7 @@ load_texture :: (image_data: ImageData, texture_params: TextureParameters = .{})
         0,                // border, must be 0
         GL_RGBA,          // format
         GL_UNSIGNED_BYTE, // type
-        image_data.data
+        reversed_data
     ));
     return texture;
 }
