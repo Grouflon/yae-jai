@@ -20,6 +20,7 @@ OpenGLRenderer :: struct
 
     shader_stack: [..]ShaderProgram;
     camera_stack: [..]Camera;
+    transform_stack: [..]Matrix4;
 }
 
 renderer_init :: ()
@@ -38,6 +39,8 @@ renderer_init :: ()
     generic_shader = load_shader();
     assert(generic_shader.handle != RENDERER_INVALID_HANDLE);
     array_add(*shader_stack, generic_shader);
+
+    array_add(*transform_stack, Matrix4_Identity);
 
     // Vertex Buffer
     GL_VERIFY(glGenBuffers(1, *vbo));
@@ -185,36 +188,40 @@ unload_shader :: (program: ShaderProgram)
 
 begin_camera :: (camera: Camera)
 {
-    draw_all_commands();
-
     using yae.renderer;
+    assert(is_drawing);
+
+    draw_all_commands();
     array_add(*camera_stack, camera);
 }
 
 end_camera :: ()
 {
-    draw_all_commands();
-
     using yae.renderer;
+    assert(is_drawing);
     assert(camera_stack.count > 0);
+
+    draw_all_commands();
     pop(*camera_stack);
 }
 
 begin_shader :: (handle: ShaderProgramHandle)
 {
-    draw_all_commands();
-
     using yae.renderer;
+    assert(is_drawing);
     assert(handle != RENDERER_INVALID_HANDLE);
+
+    draw_all_commands();
     array_add(*shader_stack, handle);
 }
 
 end_shader :: ()
 {
-    draw_all_commands();
-
     using yae.renderer;
+    assert(is_drawing);
     assert(shader_stack.count > 1);
+
+    draw_all_commands();
     pop(*shader_stack);
 }
 
@@ -243,8 +250,48 @@ begin_draw :: ()
 end_draw :: ()
 {
     using yae.renderer;
+    assert(is_drawing);
+
     draw_all_commands();
     is_drawing = false;
+}
+
+begin_transform :: (m: Matrix4 = Matrix4_Identity)
+{
+    using yae.renderer;
+    assert(is_drawing);
+
+    array_add(*transform_stack, m);
+}
+
+end_transform :: ()
+{
+    using yae.renderer;
+    assert(is_drawing);
+    assert(transform_stack.count > 1);
+
+    pop(*transform_stack);
+}
+
+transform_translate :: (t: Vector3)
+{
+    using yae.renderer;
+    assert(is_drawing);
+    translate(array_back(transform_stack), t);
+}
+
+transform_rotate :: (r: Quaternion)
+{
+    using yae.renderer;
+    assert(is_drawing);
+    rotate(array_back(transform_stack), r);
+}
+
+transform_scale :: (s: Vector3)
+{
+    using yae.renderer;
+    assert(is_drawing);
+    scale(array_back(transform_stack), s);
 }
 
 clear_background :: (color: Color)
@@ -269,6 +316,7 @@ draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
     }
 
     array_add(*command_buffer, DrawCommand.{
+        transform = last(transform_stack),
         start_index = xx index_base,
         size = xx indices.count,
         texture = texture
@@ -510,14 +558,15 @@ draw_all_commands :: ()
     shader: = last(shader_stack);
     GL_VERIFY(glUseProgram(shader.handle));
 
-    mvp: = camera_to_vp_matrix(last(camera_stack));
-    GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
+    vp: = camera_to_vp_matrix(last(camera_stack));
 
     for command: command_buffer
     {
         GL_VERIFY(glActiveTexture(GL_TEXTURE0));
         GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
 
+        mvp: = vp * command.transform;
+        GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
         GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
 
         GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
