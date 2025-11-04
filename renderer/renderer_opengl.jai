@@ -396,7 +396,7 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
 
 GENERIC_VERTEX_SHADER_SRC :: #string END
 #version 300 es
-precision mediump float;
+precision highp float;
 
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec2 inTexCoord;
@@ -417,7 +417,7 @@ END
 
 GENERIC_FRAGMENT_SHADER_SRC :: #string END
 #version 300 es
-precision mediump float;
+precision highp float;
 
 in vec2 fragTexCoord;
 in vec4 fragColor;
