@@ -176,6 +176,13 @@ mem_swap :: (a: *void, b: *void, size: s64)
     memcpy(a, tmp, size);
 }
 
+swap :: (a: *$T, b: *T) #expand
+{
+    tmp: = <<a;
+    <<a = <<b;
+    <<b = tmp;
+}
+
 default_init :: (data: *void, info: *Type_Info)
 {
     if info.type == .STRUCT

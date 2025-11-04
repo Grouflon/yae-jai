@@ -29,23 +29,31 @@ draw_shutdown :: ()
 draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, draw_rect: Rect = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
     if texture.handle == RENDERER_INVALID_HANDLE return;
+    if texture.width == 0 || texture.height == 0 return;
 
+    texture_size: = Vector2.{xx texture.width, xx texture.height};
     _sprite_rect: = sprite_rect;
-    if _sprite_rect == Rect.{} _sprite_rect = .{0, 0, xx texture.width, xx texture.height};
-    _draw_rect: = sprite_rect;
+    if _sprite_rect == Rect.{} _sprite_rect = .{0, 0, texture_size.x, texture_size.y};
+    _draw_rect: = draw_rect;
     if _draw_rect == Rect.{} _draw_rect = .{0, 0, _sprite_rect.w, _sprite_rect.h};
 
-    min: Vector3 = position + .{draw_rect.x, draw_rect.y, 0};
-    max: Vector3 = min + .{draw_rect.w, draw_rect.y, 0};
+    min: Vector3 = position + .{_draw_rect.x, _draw_rect.y, 0};
+    max: Vector3 = min + .{_draw_rect.w, _draw_rect.h, 0};
+
+    min_uv: Vector2 = .{_sprite_rect.x, _sprite_rect.y} / texture_size;
+    max_uv: Vector2 = .{_sprite_rect.x + _sprite_rect.w, _sprite_rect.y + _sprite_rect.h} / texture_size;
+
+    if flip_x swap(*min_uv.x, *max_uv.x);
+    if flip_y swap(*min_uv.y, *max_uv.y);
 
     c: = color_to_normalized_vector4(tint);
     vertices: []Vertex = .[
-        .{ min, .{0,0}, c },
-        .{ .{min.x, max.y, position.z }, .{0,1}, c },
-        .{ max, .{1,1}, c },
-        .{ .{max.x, min.y, position.z }, .{1,0}, c },
+        .{ min, min_uv, c },
+        .{ .{min.x, max.y, position.z }, .{min_uv.x, max_uv.y}, c },
+        .{ max, max_uv, c },
+        .{ .{max.x, min.y, position.z }, .{max_uv.x, min_uv.y}, c },
     ];
-    indices: []u16 = .[0,1,2,1,3,2];
+    indices: []u16 = .[0,2,1,3,2,0];
     draw_command(vertices, indices, texture.handle);
 }
 
