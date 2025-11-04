@@ -358,7 +358,7 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
             v: = command_list.VtxBuffer.Data[j];
             array_add(*vertices, Vertex.{
                 .{v.pos.x, v.pos.y, 0},
-                .{v.uv.x, v.uv.y},
+                .{v.uv.x, 1 - v.uv.y},
                 color_to_normalized_vector4(v.col)
             });
         }
