@@ -283,7 +283,12 @@ write_entire_file :: (path: string, data: *void, count: int) -> bool #foreign;
 // But for now this approach is simpler architecturally
 // We can also maybe insert stuff in the modules at compile time. See the wasm example for that
 // System
-get_path_of_running_executable :: () -> string #foreign;
+_get_path_of_running_executable :: () -> *u8 #foreign;
+get_path_of_running_executable :: () -> string
+{
+    return to_string(_get_path_of_running_executable());
+}
+
 // Basic
 get_working_directory :: () -> string #foreign;
 set_working_directory :: (s: string) #foreign;

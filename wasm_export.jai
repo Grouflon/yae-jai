@@ -73,8 +73,8 @@ wasm_memcmp :: (a: *void, b: *void, size: s64) -> s16 #c_call
 {
     for i: 0..(size-1)
     {
-        a_value: s16 = xx <<cast(*u8)a;
-        b_value: s16 = xx <<cast(*u8)b;
+        a_value: s16 = xx (cast(*u8)a)[i];
+        b_value: s16 = xx (cast(*u8)b)[i];
         diff: = a_value - b_value;
         if diff != 0
         {

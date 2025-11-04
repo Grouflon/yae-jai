@@ -460,7 +460,7 @@ const backend_exports =
         }
     },
 
-    get_path_of_running_executable: () =>
+    _get_path_of_running_executable: () =>
     {
         return return_cstring(executable_path);
     },
@@ -556,7 +556,7 @@ const backend_exports =
             write_u64(out_data, dest_ptr);
             write_u64(out_size, BigInt(src.length));
 
-            return false;
+            return true;
         }
     },
 }
@@ -583,8 +583,8 @@ let asyncify_get_state;
 let main;
 
 // consts
-const RETURN_BUFFER_SIZE = 1024n
-const ASYNCIFY_DATA_SIZE = 2048n
+const RETURN_BUFFER_SIZE = 1024n;
+const ASYNCIFY_DATA_SIZE = 1024n * 4n;
 
 // Load the WASM file we compiled and run its main.
 function instantiate_yae(wasm_path, content_element)
