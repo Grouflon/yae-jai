@@ -12,15 +12,15 @@ AsepriteData :: struct
 
     // Frames
     frames: []AsepriteFrame;
-    name_to_frame: Table(string, s32);
+    name_to_frame: Table(StringHash, s32);
 
     // Tags
     frame_tags: []AsepriteFrameTag;
-    name_to_tag: Table(string, s32);
+    name_to_tag: Table(StringHash, s32);
 
     // Layers
     layers: []AsepriteLayer;
-    name_to_layer: Table(string, s32);
+    name_to_layer: Table(StringHash, s32);
 }
 
 AsepriteBox :: struct
@@ -81,13 +81,22 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 {
     assert(aseprite != null);
 
-    success, json_data: = json_parse_file(json_file_path);
-    defer json_free(json_data);
-
-    if !success
+    json_data: JSON_Value;
     {
-        log_error("Failed to load aseprite data \"%\"", json_file_path);
-        return false;
+        push_allocator(temporary_allocator);
+        content, success: = read_entire_file(json_file_path);
+        if !success
+        {
+            log_error("Failed to open aseprite data file \"%\"", json_file_path);
+            return false;
+        }
+        
+        success=, json_data = json_parse_string(content);
+        if !success
+        {
+            log_error("Failed to parse aseprite data \"%\"", json_file_path);
+            return false;
+        }
     }
 
     // Frames
@@ -179,17 +188,17 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
     // Build tables
     for frame, i : aseprite.frames
     {
-        table_set(*aseprite.name_to_frame, frame.name, cast(s32)i);
+        table_set(*aseprite.name_to_frame, string_hash(frame.name), cast(s32)i);
     }
 
     for tag, i : aseprite.frame_tags
     {
-        table_set(*aseprite.name_to_tag, tag.name, cast(s32)i);
+        table_set(*aseprite.name_to_tag, string_hash(tag.name), cast(s32)i);
     }
 
     for layer, i : aseprite.layers
     {
-        table_set(*aseprite.name_to_layer, layer.name, cast(s32)i);
+        table_set(*aseprite.name_to_layer, string_hash(layer.name), cast(s32)i);
     }
 
     return true;
@@ -228,12 +237,36 @@ aseprite_release_data :: (_data: *AsepriteData)
     <<_data = .{};
 }
 
-get_bounds :: inline (aseprite_box: AsepriteBox) -> Bounds
+to_bounds :: inline (aseprite_box: AsepriteBox) -> Bounds
 {
     return Bounds.{ 
         Vector2.{xx aseprite_box.x, xx aseprite_box.y },
         Vector2.{xx (aseprite_box.x + aseprite_box.w), xx (aseprite_box.y + aseprite_box.h) }
     };
+}
+
+to_rect :: inline (aseprite_box: AsepriteBox) -> Rect
+{
+    return Rect.{ 
+        xx aseprite_box.x,
+        xx aseprite_box.y,
+        xx aseprite_box.w,
+        xx aseprite_box.h
+    };
+}
+
+aseprite_get_tag :: (using data: *AsepriteData, name: StringHash) -> *AsepriteFrameTag
+{
+    assert(data != null);
+
+    found, tag_index: = table_find_new(*name_to_tag, name);
+    if !found return null;
+    return frame_tags.data + tag_index;
+}
+
+aseprite_get_tag :: (data: *AsepriteData, name: string) -> *AsepriteFrameTag
+{
+    return aseprite_get_tag(data, string_hash(name));
 }
 
 #scope_file

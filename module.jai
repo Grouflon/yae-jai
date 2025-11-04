@@ -5,6 +5,7 @@ IMGUI_SUPPORTED :: WITH_EDITOR;
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 // #load "animation_player.jai";
+#load "aseprite_animation_player.jai";
 #load "camera.jai";
 #load "color.jai";
 #load "compile_time.jai";
@@ -35,7 +36,7 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 #load "renderer/renderer.jai";
 
 // #load "resources/animation.jai";
-// #load "resources/aseprite_file.jai";
+#load "resources/aseprite_file.jai";
 // #load "resources/shader.jai";
 #load "resources/texture_file.jai";
 
