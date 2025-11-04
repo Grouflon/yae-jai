@@ -122,9 +122,9 @@ wasm_to_jai_mousebutton :: (button: u32) -> Key_Code
 {
     if button == 
     {
-        case 1; return Key_Code.MOUSE_BUTTON_LEFT;
+        case 0; return Key_Code.MOUSE_BUTTON_LEFT;
+        case 1; return Key_Code.MOUSE_BUTTON_MIDDLE;
         case 2; return Key_Code.MOUSE_BUTTON_RIGHT;
-        case 3; return Key_Code.MOUSE_BUTTON_MIDDLE;
         case; return Key_Code.UNKNOWN; 
     }
 }
@@ -154,7 +154,13 @@ read_and_decode_image :: (filename: string, allocator: *Allocator) -> ImageData
     return data;
 }
 read_and_decode_image :: (filename: string, allocator: *Allocator, out_image_data: *ImageData) #foreign;
-get_mouse_position :: (window_handle: *void) -> Vector2 #foreign;
+get_mouse_position :: (position: *Vector2) #foreign;
+get_mouse_position :: (window_handle: *void) -> Vector2
+{
+    v: Vector2;
+    get_mouse_position(*v);
+    return v;
+}
 
 init_opengl_context :: (window: *void)
 {

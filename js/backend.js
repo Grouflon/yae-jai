@@ -559,6 +559,14 @@ const backend_exports =
             return true;
         }
     },
+
+    get_mouse_position: (out) =>
+    {
+        var rect = canvas.getBoundingClientRect();
+
+        write_float32(out, mouseX - rect.left);
+        write_float32(out + 4n, mouseY - rect.top);
+    }
 }
 
 // Library
@@ -570,6 +578,8 @@ let canvas;
 let gl;
 let return_buffer_ptr;
 let asyncify_data_ptr;
+let mouseX = 0;
+let mouseY = 0;
 
 // functions
 let alloc;
@@ -630,6 +640,8 @@ function instantiate_yae(wasm_path, content_element)
             let _on_update = find_name_by_regexp(exports, "wasm_on_update");
             let _on_keydown = find_name_by_regexp(exports, "wasm_on_keydown");
             let _on_keyup = find_name_by_regexp(exports, "wasm_on_keyup");
+            let _on_mousedown = find_name_by_regexp(exports, "wasm_on_mousedown");
+            let _on_mouseup = find_name_by_regexp(exports, "wasm_on_mouseup");
 
             let _previous_timestamp = null;
 
@@ -658,6 +670,22 @@ function instantiate_yae(wasm_path, content_element)
             document.addEventListener('keyup', (e) =>
             {
                 _on_keyup(e.keyCode);
+            });
+
+            document.addEventListener('mousemove', function(e)
+            {
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            });
+
+            document.addEventListener('mousedown', function(e)
+            {
+                _on_mousedown(e.button);
+            });
+
+            document.addEventListener('mouseup', function(e)
+            {
+                _on_mouseup(e.button);
             });
 
             main();
@@ -777,7 +805,6 @@ function write_cstring(ptr, str)
 
 function write_float32(ptr, n)
 {
-    console.log(ptr, n);
     console.assert(typeof n == "number", "n is not a number", n);
     ptr = Number(ptr);
     const buffer = exports.memory.buffer;
