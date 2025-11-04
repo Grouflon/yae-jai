@@ -12,6 +12,7 @@ TextureFile :: struct
         origin: Vector2; @serialize @step(1)
     }
     sprites: [..]Sprite; @serialize
+    parameters: TextureParameters; @serialize
 
     texture: Texture;
     name_to_sprite_index: Table(StringHash, s64);
@@ -92,7 +93,7 @@ texture_load :: (resource: *Resource) -> bool
     image_data: = read_and_decode_image(path, *temporary_allocator);
     if image_data.data == null return false;
     
-    texture = load_texture(image_data);
+    texture = load_texture(image_data, parameters);
 
     for sprite, i: sprites
     {

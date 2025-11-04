@@ -111,11 +111,11 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
 
     ImGui.SameLine();
 
-    if selected_sprite_index >= 0
+    if ImGui.BeginChild("properties", .{RIGHT_COLUMN_SIZE, size_available.y}, child_flags = 0,  window_flags = .AlwaysVerticalScrollbar)
     {
-        selected_sprite: = *texture_file.sprites[selected_sprite_index];
-        if ImGui.BeginChild("properties", .{RIGHT_COLUMN_SIZE, size_available.y}, child_flags = 0,  window_flags = .AlwaysVerticalScrollbar)
+        if selected_sprite_index >= 0
         {
+            selected_sprite: = *texture_file.sprites[selected_sprite_index];
             ImGui.SeparatorText("Sprite Properties");
             modified = ImGui_EditValue("", selected_sprite) || modified;
 
@@ -128,8 +128,18 @@ texture_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> b
                 modified = true;
             }
         }
-        ImGui.EndChild();
+        else
+        {
+            if ImGui_EditStructMembers(*texture_file.parameters)
+            {
+                set_texture_parameters(texture_file.texture, texture_file.parameters);
+                modified = true;
+            }
+        }
     }
+    ImGui.EndChild();
+
+    
 
     if ImGui.IsWindowFocused(.RootAndChildWindows) && ImGui.IsKeyPressed(.Escape)
     {

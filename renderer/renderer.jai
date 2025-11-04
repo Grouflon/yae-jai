@@ -34,10 +34,10 @@ TextureWrap :: enum
 
 TextureParameters :: struct
 {
-    min_filter: TextureFilter = .LINEAR;
-    mag_filter: TextureFilter = .LINEAR;
-    wrap_s: TextureWrap = .REPEAT;
-    wrap_t: TextureWrap = .REPEAT;
+    min_filter: TextureFilter = .LINEAR; @serialize
+    mag_filter: TextureFilter = .LINEAR; @serialize
+    wrap_s: TextureWrap = .REPEAT; @serialize
+    wrap_t: TextureWrap = .REPEAT; @serialize
 }
 
 Vertex :: struct
@@ -49,9 +49,10 @@ Vertex :: struct
 
 DrawCommand :: struct
 {
+    transform: Matrix4;
+    texture: TextureHandle;
     start_index: u32;
     size: u32;
-    texture: TextureHandle;
 }
 
 #load "renderer_opengl.jai";

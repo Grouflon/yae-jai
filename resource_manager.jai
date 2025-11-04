@@ -99,7 +99,7 @@ register_resource :: (resource: *Resource)
 
     if resource.path.count > 0
     {
-        path_hash: = string_hash(resource.name);
+        path_hash: = string_hash(normalize_path(resource.path));
         assert(table_contains(*resource_by_path, path_hash) == false);
         table_add(*resource_by_path, path_hash, resource);
     }
@@ -179,7 +179,8 @@ get_resource_by_path :: (path: string) -> *Resource
 {
     using resource_manager;
 
-    found, resource: = table_find_new(*resource_by_path, string_hash(path));
+    _path: = normalize_path(path);
+    found, resource: = table_find_new(*resource_by_path, string_hash(_path));
     if !found return null;
     return resource;
 }
