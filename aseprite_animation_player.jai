@@ -27,6 +27,8 @@ animation_player_play :: (using player: *AsepriteAnimationPlayer, aseprite_file:
     assert(aseprite_file != null);
 
     hash: = string_hash(animation_name);
+    if aseprite_file == aseprite && hash == animation return true;
+
     tag: = aseprite_get_tag(*aseprite_file.data, hash);
     if tag == null return false;
 
