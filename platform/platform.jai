@@ -36,7 +36,7 @@ get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT
 // Rendering
 // init_opengl_context :: (window: *void);
 // swap_buffers :: (window: *void);
-// read_and_decode_image :: (filename: string) -> bool, ImageData;
+// read_and_decode_image :: (filename: string, allocator: *Allocator) -> ImageData;
 
 // Filesystem
 // file_exists :: (path: string) -> bool;

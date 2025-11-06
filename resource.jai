@@ -93,14 +93,16 @@ resource_data_path :: (resource: *Resource) -> string
     if resource == null return "";
     if resource.path.count == 0 return "";
 
+    path: string;
     if ends_with(resource.path, tprint(".%", RESOURCE_EXTENSION))
     {
-        return resource.path;
+        path = resource.path;
     }
     else
     {
-        return tprint("%.%", resource.path, RESOURCE_EXTENSION);
+        path = tprint("%.%", resource.path, RESOURCE_EXTENSION);
     }
+    return yae_resolve_path(path);
 }
 
 resource_save_to_disk :: (resource: *Resource) -> bool

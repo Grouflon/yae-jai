@@ -4,6 +4,11 @@ FILE_WATCH_SUPPORTED :: (OS != .WASM);
 IMGUI_SUPPORTED :: WITH_EDITOR;
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
+yae_resources: struct
+{
+    generic_shader: Shader = .{ vs_path = "yae_data://shaders/generic.vs", fs_path = "yae_data://shaders/generic.fs" };
+};
+
 // #load "animation_player.jai";
 #load "aseprite_animation_player.jai";
 #load "camera.jai";
@@ -37,7 +42,7 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 // #load "resources/animation.jai";
 #load "resources/aseprite_file.jai";
-// #load "resources/shader.jai";
+#load "resources/shader.jai";
 #load "resources/texture_file.jai";
 
 #load "platform/platform.jai";

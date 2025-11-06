@@ -147,10 +147,10 @@ load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config:
 
     for font_config: fonts_config
     {
-        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(font_config.path), font_config.size * scale, *font_config.config, font_config.range.data);
+        path: = yae_resolve_path(font_config.path);
+        font: = fonts.AddFontFromFileTTF(fonts, temp_c_string(path), font_config.size * scale, *font_config.config, font_config.range.data);
         assert(font != null);
     }
-
 
     pixels: *u8;
     width: s32;

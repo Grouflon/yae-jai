@@ -39,7 +39,7 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct)
         {
             log_error("Could not initialize watcher", section= *RESOURCE_LOG_SECTION);
         }
-        resource_folders: []string = .["data"];
+        resource_folders: []string = .[ yae_resolve_path("data://"), yae_resolve_path("yae_data://")];
         if !add_directories(*watcher, ..resource_folders)
         {
             log_error("Could not watch directories %", resource_folders, section= *RESOURCE_LOG_SECTION);
@@ -99,7 +99,7 @@ register_resource :: (resource: *Resource)
 
     if resource.path.count > 0
     {
-        path_hash: = string_hash(normalize_path(resource.path));
+        path_hash: = string_hash(yae_resolve_path(resource.path));
         assert(table_contains(*resource_by_path, path_hash) == false);
         table_add(*resource_by_path, path_hash, resource);
     }
@@ -117,27 +117,34 @@ register_resource :: (resource: *Resource)
     // Add filewatch
 }
 
-// Unregistering is unused and untested so far
+unregister_resources :: (resources: []*Resource)
+{
+    for resource: resources
+    {
+        unregister_resource(resource);
+    }
+}
+
 unregister_resource :: (resource: *Resource)
 {
     using resource_manager;
 
     assert(resource != null);
     assert(resource.type != null);
-    assert(array_find(*resources, resource) == true);
+    assert(array_find(resources, resource) == true);
 
     name_hash: = string_hash(resource.name);
     assert(table_contains(*resource_by_name, name_hash) == true);
     
     type_array: = table_find_pointer(*resources_by_type, resource.type);
     assert(type_array != null);
-    array_unordered_remove_by_value(*type_array, resource);
+    array_unordered_remove_by_value(type_array, resource);
 
     table_remove(*resource_by_name, name_hash);
     array_unordered_remove_by_value(*resources, resource);
 }
 
-register_resources :: (resources: *$T)
+register_resources :: (resources: *$T, out_resources: *[..]*Resource = null)
 {
     ti: = type_info(T);
     if ti.type != .STRUCT return;
@@ -150,6 +157,11 @@ register_resources :: (resources: *$T)
         resource: *Resource = xx ((cast(*void)resources) + member.offset_in_bytes);
         resource.name = member.name;
         register_resource(resource);
+
+        if out_resources != null
+        {
+            array_add(out_resources, resource);
+        }
     }
 }
 
@@ -179,7 +191,7 @@ get_resource_by_path :: (path: string) -> *Resource
 {
     using resource_manager;
 
-    _path: = normalize_path(path);
+    _path: = yae_resolve_path(path);
     found, resource: = table_find_new(*resource_by_path, string_hash(_path));
     if !found return null;
     return resource;
@@ -220,7 +232,7 @@ resource_add_file_watch :: (resource: *Resource, file_path: string)
     using resource_manager;
 
     assert(resource != null);
-    path: = normalize_path(file_path);
+    path: = yae_resolve_path(file_path);
     if !file_exists(path)
     {
         log_error("Can't add file watch: Incorrect path (%)", file_path, section= *RESOURCE_LOG_SECTION);
@@ -243,7 +255,7 @@ resource_remove_file_watch :: (resource: *Resource, file_path: string)
     using resource_manager;
 
     assert(resource != null);
-    path: = normalize_path(file_path);
+    path: = yae_resolve_path(file_path);
     if !file_exists(path)
     {
         log_error("Can't remove file watch: Incorrect path (%)", file_path, section= *RESOURCE_LOG_SECTION);
@@ -273,19 +285,26 @@ resource_manager_update :: ()
             continue;
         }
 
-        if resource.load_count == 0 { continue; }
+        load_count: = resource.load_count;
+        if load_count == 0 { continue; }
         log_verbose("Reloading \"%\"...", resource.name, section= *RESOURCE_LOG_SECTION);
-        resource_unload(resource);
-        resource_load(resource);
+
+        for 0..load_count-1
+        {
+            resource_unload(resource);
+        }
+        for 0..load_count-1
+        {
+            resource_load(resource);
+        }
+
         log("Reloaded \"%\"", resource.name, section= *RESOURCE_LOG_SECTION);
     }
     table_clear(*resources_to_reload);
 }
 
-load_all_resources :: ()
+load_resources :: (resources: []*Resource)
 {
-    using resource_manager;
-
     for resource: resources
     {
         data_path: = resource_data_path(resource);
@@ -299,15 +318,25 @@ load_all_resources :: ()
     }
 }
 
-unload_all_resources :: ()
+unload_resources :: (resources: []*Resource)
 {
-    using resource_manager;
     for resource: resources
     {
         resource_unload(resource);
     }
 }
 
+load_all_resources :: ()
+{
+    using resource_manager;
+    load_resources(resources);
+}
+
+unload_all_resources :: ()
+{
+    using resource_manager;
+    unload_resources(resources);
+}
 
 #scope_file
 

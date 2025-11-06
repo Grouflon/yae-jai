@@ -6,6 +6,8 @@ YAE :: struct
     console_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
     debugger_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
 
+    engine_resources: [..]*Resource;
+
     window_handle: *void;
     debugger_handle: *void;
     settings: Settings;
@@ -40,13 +42,14 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
 
     // Normalize working directory
     exe_directory: = path_strip_filename(get_path_of_running_executable());
-    root_directory = copy_string(normalize_path(tprint("%/..", exe_directory)));
-    set_working_directory(root_directory);
+    set_working_directory(tprint("%/..", exe_directory));
+    root_directory = copy_string(normalize_path(get_working_directory()));
     yae_directory = sprint("%/modules/yae", root_directory);
     log_verbose("working directory: %", root_directory);
     log_verbose("yae directory: %", yae_directory);
 
     // Init core stuff
+    register_resources(*yae_resources, *engine_resources);
     compile_time_registry_init(compile_time_info);
 
     time = get_time();
@@ -71,8 +74,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
             theme = .DARK,
             fonts = .[
                 .{
-                    // path = tprint("%/data/fonts/Font Awesome 6 Free-Regular-400.otf", yae_directory),
-                    path = tprint("%/data/fonts/Font Awesome 6 Free-Solid-900.otf", yae_directory),
+                    path = "yae_data://fonts/Font Awesome 6 Free-Solid-900.otf",
                     size = 14,
                     range = .[0xf000, 0xf2e0],
                     config = .{
@@ -112,6 +114,8 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
         editor_init();
     }
 
+    load_resources(engine_resources);
+
     log_unindent();
     log_verbose("yae initialized.");
 }
@@ -122,6 +126,8 @@ yae_shutdown :: ()
 
     log_verbose("shutting down yae...");
     log_indent();
+
+    unload_resources(engine_resources);
 
     #if WITH_EDITOR
     {
@@ -141,6 +147,8 @@ yae_shutdown :: ()
     resource_manager_shutdown();
     undo_redo_manager_shutdown();
     compile_time_registry_shutdown();
+    // No need to unregister resources, resource_manager clears everything
+    array_reset(*engine_resources);
 
     settings_shutdown();
 
@@ -234,6 +242,22 @@ yae_frame :: (dt: float)
     }
 
     settings_update();
+}
+
+yae_resolve_path :: (path: string) -> string
+{
+    push_allocator(temporary_allocator);
+
+    resolved_path: = path;
+    if begins_with(path, "data://")
+    {
+        resolved_path = replace(resolved_path, "data://", "./data/");
+    }
+    else if begins_with(path, "yae_data://")
+    {
+        resolved_path = replace(resolved_path, "yae_data://", tprint("%/data/", yae.yae_directory));
+    }
+    return normalize_path(resolved_path);
 }
 
 #scope_file

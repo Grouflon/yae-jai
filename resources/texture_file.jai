@@ -90,7 +90,7 @@ texture_load :: (resource: *Resource) -> bool
 {
     using t: = cast(*TextureFile) resource;
 
-    image_data: = read_and_decode_image(path, *temporary_allocator);
+    image_data: = read_and_decode_image(yae_resolve_path(path), *temporary_allocator);
     if image_data.data == null return false;
     
     texture = load_texture(image_data, parameters);

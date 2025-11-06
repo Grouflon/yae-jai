@@ -191,7 +191,7 @@ aseprite_file_load :: (resource: *Resource) -> bool
     defer if modified resource_save_to_disk(resource);
 
     // Load aseprite data
-    if (!aseprite_load_data(*data, path))
+    if (!aseprite_load_data(*data, yae_resolve_path(path)))
     {
         // log_error("Failed to load aseprite data file \"%\"", path);
         return false;

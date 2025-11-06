@@ -6,8 +6,6 @@ ShaderProgramHandle :: GLuint;
 
 OpenGLRenderer :: struct
 {
-    generic_shader: ShaderProgram;
-
     vao: GLuint;
     vbo: GLuint;
     ibo: GLuint;
@@ -35,10 +33,6 @@ renderer_init :: ()
     }
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
-
-    generic_shader = load_shader();
-    assert(generic_shader.handle != RENDERER_INVALID_HANDLE);
-    array_add(*shader_stack, generic_shader);
 
     array_add(*transform_stack, Matrix4_Identity);
 
@@ -69,7 +63,6 @@ renderer_shutdown :: ()
 {
     using yae.renderer;
 
-    unload_shader(generic_shader);
     array_reset(*vertex_buffer);
     array_reset(*index_buffer);
     array_reset(*command_buffer);
@@ -164,20 +157,14 @@ unload_texture :: (texture: Texture)
     GL_VERIFY(glDeleteTextures(1, *texture.handle));
 }
 
-load_shader :: (vs_text: string = "", fs_text: string = "") -> ShaderProgram, bool
+load_shader_program :: (vs_text: string, fs_text: string) -> ShaderProgram, bool
 {
-    _vs_text: = vs_text;
-    _fs_text: = fs_text;
-
-    if _vs_text.count == 0 _vs_text = GENERIC_VERTEX_SHADER_SRC;
-    if _fs_text.count == 0 _fs_text = GENERIC_FRAGMENT_SHADER_SRC;
-
     // Generic shader
     result: bool;
-    vertex_shader:, result = create_shader(GL_VERTEX_SHADER, .[_vs_text]);
+    vertex_shader:, result = create_shader(GL_VERTEX_SHADER, .[vs_text]);
     if !result return .{}, false;
     defer GL_VERIFY(glDeleteShader(vertex_shader));
-    fragment_shader:, result = create_shader(GL_FRAGMENT_SHADER, .[_fs_text]);
+    fragment_shader:, result = create_shader(GL_FRAGMENT_SHADER, .[fs_text]);
     if !result return .{}, false;
     defer GL_VERIFY(glDeleteShader(fragment_shader));
 
@@ -191,7 +178,7 @@ load_shader :: (vs_text: string = "", fs_text: string = "") -> ShaderProgram, bo
     }, true;
 }
 
-unload_shader :: (program: ShaderProgram)
+unload_shader_program :: (program: ShaderProgram)
 {
     if program.handle == RENDERER_INVALID_HANDLE return;
     GL_VERIFY(glDeleteProgram(program.handle));
@@ -216,21 +203,20 @@ end_camera :: ()
     pop(*camera_stack);
 }
 
-begin_shader :: (handle: ShaderProgramHandle)
+begin_shader :: (shader: ShaderProgram)
 {
     using yae.renderer;
     assert(is_drawing);
-    assert(handle != RENDERER_INVALID_HANDLE);
 
     draw_all_commands();
-    array_add(*shader_stack, handle);
+    array_add(*shader_stack, shader);
 }
 
 end_shader :: ()
 {
     using yae.renderer;
     assert(is_drawing);
-    assert(shader_stack.count > 1);
+    assert(shader_stack.count > 0);
 
     draw_all_commands();
     pop(*shader_stack);
@@ -240,9 +226,10 @@ begin_draw :: ()
 {
     using yae.renderer;
     assert(!is_drawing);
-    assert(shader_stack.count == 1);
+    is_drawing = true;
 
-    glUseProgram(shader_stack[0].handle);
+    begin_shader(yae_resources.generic_shader.program);
+
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -254,8 +241,6 @@ begin_draw :: ()
     width, height: = get_viewport_size(yae.window_handle);
     GL_VERIFY(glViewport(0, 0, xx width, xx height));
     GL_VERIFY(glScissor(0, 0, xx width, xx height));
-
-    is_drawing = true;
 }
 
 end_draw :: ()
@@ -263,7 +248,9 @@ end_draw :: ()
     using yae.renderer;
     assert(is_drawing);
 
-    draw_all_commands();
+    end_shader(); // This triggers a draw
+
+    assert(shader_stack.count == 0);
     is_drawing = false;
 }
 
@@ -397,9 +384,9 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
         .[ (R+L)/(L-R),  (T+B)/(B-T),  0.0,   1.0 ],
     ];
 
-    glUseProgram(generic_shader.handle);
-    glUniform1i(generic_shader.texture_uniform_location, 0);
-    glUniformMatrix4fv(generic_shader.mvp_uniform_location, 1, GL_FALSE, xx ortho_projection.data);
+    glUseProgram(yae_resources.generic_shader.program.handle);
+    glUniform1i(yae_resources.generic_shader.program.texture_uniform_location, 0);
+    glUniformMatrix4fv(yae_resources.generic_shader.program.mvp_uniform_location, 1, GL_FALSE, xx ortho_projection.data);
 
     clip_off: = draw_data.DisplayPos;         // (0,0) unless using multi-viewports
     clip_scale: = draw_data.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -452,44 +439,6 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
 }
 
 #scope_file
-
-GENERIC_VERTEX_SHADER_SRC :: #string END
-#version 300 es
-precision highp float;
-
-layout (location = 0) in vec3 inPosition;
-layout (location = 1) in vec2 inTexCoord;
-layout (location = 2) in vec4 inColor;
-
-out vec2 fragTexCoord;
-out vec4 fragColor;
-
-uniform mat4 uMvp;
-
-void main()
-{
-    gl_Position = uMvp * vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
-    fragTexCoord = inTexCoord;
-    fragColor = inColor;
-}
-END
-
-GENERIC_FRAGMENT_SHADER_SRC :: #string END
-#version 300 es
-precision highp float;
-
-in vec2 fragTexCoord;
-in vec4 fragColor;
-
-out vec4 outColor;
-
-uniform sampler2D uTexture;
-
-void main()
-{
-    outColor = fragColor * texture(uTexture, fragTexCoord);
-}
-END
 
 GL_VERIFY :: (c: Code) #expand #no_debug
 {
