@@ -306,16 +306,16 @@ draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
 {
     using yae.renderer;
 
-    index_base: = vertex_buffer.count;
-    array_add(*vertex_buffer, ..vertices);
+    start_index: = index_buffer.count;
     for i: indices
     {
-        array_add(*index_buffer, xx (index_base + i));
+        array_add(*index_buffer, xx (vertex_buffer.count + i));
     }
+    array_add(*vertex_buffer, ..vertices);
 
     array_add(*command_buffer, DrawCommand.{
         transform = last(transform_stack),
-        start_index = xx index_base,
+        start_index = xx start_index,
         size = xx indices.count,
         texture = texture
     });

@@ -292,4 +292,3 @@ get_path_of_running_executable :: () -> string
 // Basic
 get_working_directory :: () -> string { return "."; };
 set_working_directory :: (s: string) {}; // Do nothing
-
