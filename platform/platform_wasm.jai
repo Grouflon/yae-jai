@@ -265,13 +265,7 @@ _glBlendFuncSeparate :: (sfactorRGB: GLenum, dfactorRGB: GLenum, sfactorAlpha: G
 
 // Filesystem
 file_exists :: (path: string) -> bool #foreign;
-get_absolute_path :: (path: string) -> string, bool
-{
-    absolute_path: string;
-    success: = get_absolute_path(path, *absolute_path);
-    return absolute_path, success;
-}
-get_absolute_path :: (path: string, out_path: *string) -> bool #foreign;
+get_absolute_path :: (path: string) -> string, bool { return path, false; } // Do nothing
 make_directory_if_it_does_not_exist :: (name: string, recursive := false) -> directory_now_exists: bool #foreign;
 read_entire_file :: (path: string) -> string, bool
 {
@@ -296,6 +290,6 @@ get_path_of_running_executable :: () -> string
 }
 
 // Basic
-get_working_directory :: () -> string #foreign;
-set_working_directory :: (s: string) #foreign;
+get_working_directory :: () -> string { return "."; };
+set_working_directory :: (s: string) {}; // Do nothing
 

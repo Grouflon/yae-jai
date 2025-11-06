@@ -465,17 +465,6 @@ const backend_exports =
         return return_cstring(executable_path);
     },
 
-    get_absolute_path: (str) =>
-    {
-        // Do nothing
-        return false;
-    },
-
-    set_working_directory: (str) =>
-    {
-        // Do nothing
-    },
-
     get_time: () =>
     {
         return performance.now() / 1000.0;
@@ -680,12 +669,26 @@ function instantiate_yae(wasm_path, content_element)
 
             document.addEventListener('mousedown', function(e)
             {
-                _on_mousedown(e.button);
+                if (e.target == canvas)
+                {
+                    _on_mousedown(e.button);
+                    e.preventDefault();
+                }
             });
 
             document.addEventListener('mouseup', function(e)
             {
-                _on_mouseup(e.button);
+                if (e.target == canvas)
+                {
+                    _on_mouseup(e.button);
+                    e.preventDefault();
+                }
+            });
+
+            // @NOTE(remi): Not sure what we want to do about context menu, but looks annoying in any situation so far
+            document.addEventListener("contextmenu", function (e)
+            {
+                e.preventDefault(); 
             });
 
             main();
