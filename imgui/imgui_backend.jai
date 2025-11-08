@@ -209,11 +209,11 @@ update_mouse_events :: (io: *ImGui.IO)
     // Buttons
     handle_mouse_event :: (io: *ImGui.IO, key_code: Key_Code, imgui_mouse: ImGui.MouseButton)
     {
-        if is_pressed(key_code)
+        if is_pressed_raw(key_code)
         {
             io.AddMouseButtonEvent(io, xx imgui_mouse, true);
         }
-        else if is_released(key_code)
+        else if is_released_raw(key_code)
         {
             io.AddMouseButtonEvent(io, xx imgui_mouse, false);
         }
@@ -242,28 +242,28 @@ update_mouse_events :: (io: *ImGui.IO)
 update_keyboard_events :: (io: *ImGui.IO)
 {
     // Modifer Keys
-    ctrl_down: = is_down(.CTRL);
+    ctrl_down: = is_down_raw(.CTRL);
     if ctrl_down != backend_data.last_control_down
     {
         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Ctrl, ctrl_down);
         backend_data.last_control_down = ctrl_down;
     }
 
-    shift_down: = is_down(.SHIFT);
+    shift_down: = is_down_raw(.SHIFT);
     if shift_down != backend_data.last_shift_down
     {
         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Shift, shift_down);
         backend_data.last_shift_down = shift_down;
     }
 
-    alt_down: = is_down(.ALT);
+    alt_down: = is_down_raw(.ALT);
     if alt_down != backend_data.last_alt_down
     {
         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Alt, alt_down);
         backend_data.last_alt_down = alt_down;
     }
 
-    super_down: = is_down(.CMD);
+    super_down: = is_down_raw(.CMD);
     if super_down != backend_data.last_super_down
     {
         io.AddKeyEvent(io, ImGui.Key.ImGuiMod_Super, super_down);
@@ -276,11 +276,11 @@ update_keyboard_events :: (io: *ImGui.IO)
         found, imgui_key: = table_find_new(*imgui_keymap, xx key_code);
         if !found { continue; }
 
-        if is_pressed(xx key_code)
+        if is_pressed_raw(xx key_code)
         {
             io.AddKeyEvent(io, imgui_key, true);
         }
-        if is_released(xx key_code)
+        if is_released_raw(xx key_code)
         {
             io.AddKeyEvent(io, imgui_key, false);
         }
