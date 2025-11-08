@@ -76,14 +76,15 @@ clamp :: inline (_value: Vector2, min: float, max: float) -> Vector2
 
 signed_angle_between :: (a: Vector2, b: Vector2) -> float
 {
-    angle_sign: = -sign(a.x * a.y - a.y * b.x);
-    return angle_sign * acos(dot(normalize(a), normalize(b)));
+    return -sign(cross(a, b)) * acos(dot(a, b) / (length(a) * length(b)));
 }
 
 cross_product :: inline (a: Vector2, b: Vector2) -> float
 {
     return a.x * b.y - a.y * b.x;
 }
+
+cross :: cross_product;
 
 bezier_cubic_interpolation :: (points: []$T, t: float) -> T
 {

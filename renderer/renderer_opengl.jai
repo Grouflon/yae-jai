@@ -282,7 +282,7 @@ transform_rotate :: (r: Quaternion)
 {
     using yae.renderer;
     assert(is_drawing);
-    rotate(array_back(transform_stack), r);
+    <<array_back(transform_stack) = rotate(array_back(transform_stack), r);
 }
 
 transform_scale :: (s: Vector3)
