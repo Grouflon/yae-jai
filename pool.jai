@@ -93,6 +93,12 @@ pool_add :: (using pool: *Pool($T), $initialize:=true) -> PoolID(T), *T
         }
     }
 
+    // log("add % (% % %)", id.index, first_used, last_used, first_unused);
+    // for *item, i: items
+    // {
+    //     log("% % %", i, item.previous, item.next);
+    // }
+
     return id, *item.data;
 }
 
@@ -117,12 +123,33 @@ pool_remove :: (using pool: *Pool($T), id: PoolID(T))
         assert(found);
     }
 
-    item: = items[id.index];
+    item: = *items[id.index];
     assert(item.generation == id.generation);
+    if id.index == last_used
+    {
+        last_used = item.previous;
+    }
+    if id.index == first_unused
+    {
+        first_used = -1;
+    }
+
     if item.previous >= 0 { items[item.previous].next = item.next; }
+    if item.next >= 0 { items[item.next].previous = item.previous; }
+    item.previous = -1;
     item.next = first_unused;
     item.generation += 1;
+    if first_unused >= 0
+    {
+        items[first_unused].previous = id.index;
+    }
     first_unused = id.index;
+
+    // log("rem % (% % %)", id.index, first_used, last_used, first_unused);
+    // for *item, i: items
+    // {
+    //     log("% % %", i, item.previous, item.next);
+    // }
 }
 
 get :: (id: PoolID($T), $do_checks: = true) -> *T
@@ -166,7 +193,7 @@ for_expansion :: (pool: Pool, body: Code, flags: For_Flags) #expand
             index = item.next;
         i += 1;
 
-        #insert body;       // The user's code goes here.
+        #insert (remove=#assert(false)) body;
     }
 }
 
@@ -187,6 +214,7 @@ pool_grow :: (using pool: *Pool($T), new_size: s64)
         items[i].previous = xx(i-1);
         items[i].next = xx(i+1);
     }
+    items[prev_size].previous = -1;
     items[items.count-1].next = -1;
 }
 
