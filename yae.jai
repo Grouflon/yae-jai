@@ -55,7 +55,6 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     time = get_time();
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
-    physics_init();
 
     // Init Window
     window_handle = create_window(width, height, title);
@@ -143,7 +142,6 @@ yae_shutdown :: ()
     renderer_shutdown();
     destroy_window(window_handle);
 
-    physics_shutdown();
     resource_manager_shutdown();
     undo_redo_manager_shutdown();
     compile_time_registry_shutdown();

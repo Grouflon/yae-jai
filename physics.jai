@@ -33,7 +33,7 @@ physics_init :: ()
 {
     using physics;
 
-    pool_init(*colliders, 512, false);
+    pool_init(*colliders, 512, true);
 }
 
 physics_shutdown :: ()
@@ -150,7 +150,7 @@ collider_get_bounds :: (using collider: *Collider) -> Bounds
     return make_bounds(pos, pos + .{collider.rect.w, collider.rect.h});
 }
 
-physics_layer_to_color :: (layer: u32) -> Color
+physics_layer_to_color :: (layer: u8) -> Color
 {
     if layer ==
     {
