@@ -199,6 +199,11 @@ end_camera :: ()
     assert(is_drawing);
     assert(camera_stack.count > 0);
 
+    #if WITH_EDITOR
+    {
+        editor_draw();
+    }
+
     draw_all_commands();
     pop(*camera_stack);
 }
@@ -352,6 +357,55 @@ renderer_destroy_texture :: (handle: TextureHandle)
     GL_VERIFY(glDeleteTextures(1, *handle));
 }
 
+draw_all_commands :: ()
+{
+    using yae.renderer;
+    assert(is_drawing);
+
+    if command_buffer.count == 0 return;
+
+    GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
+    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
+
+    shader: = last(shader_stack);
+    GL_VERIFY(glUseProgram(shader.handle));
+
+    vp: = camera_to_vp_matrix(last(camera_stack));
+
+    for command: command_buffer
+    {
+        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
+        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
+
+        mvp: = vp * command.transform;
+        GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
+        GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
+
+        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
+    }
+
+    command_buffer.count = 0;
+    vertex_buffer.count = 0;
+    index_buffer.count = 0;
+}
+
+set_depth_test_enabled :: (value: bool)
+{
+    if value
+    {
+        glEnable(GL_DEPTH_TEST);
+    }
+    else
+    {
+        glDisable(GL_DEPTH_TEST);
+    }
+}
+
+is_depth_test_enabled :: () -> bool
+{
+    return glGet(GL_DEPTH_TEST);
+}
+
 #if IMGUI_SUPPORTED
 {
 draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
@@ -503,38 +557,6 @@ create_shader_program :: (shaders: []GLuint) -> GLuint, bool
         return RENDERER_INVALID_HANDLE, false;
     }
     return shader_program, true;
-}
-
-draw_all_commands :: ()
-{
-    using yae.renderer;
-    assert(is_drawing);
-
-    if command_buffer.count == 0 return;
-
-    GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
-    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
-
-    shader: = last(shader_stack);
-    GL_VERIFY(glUseProgram(shader.handle));
-
-    vp: = camera_to_vp_matrix(last(camera_stack));
-
-    for command: command_buffer
-    {
-        GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-        GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
-
-        mvp: = vp * command.transform;
-        GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
-        GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
-
-        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
-    }
-
-    command_buffer.count = 0;
-    vertex_buffer.count = 0;
-    index_buffer.count = 0;
 }
 
 #import "GL"(DUMP_GL_ERRORS = true);

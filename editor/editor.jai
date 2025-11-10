@@ -169,10 +169,17 @@ editor_draw :: ()
 {
     using yae.editor;
 
+    draw_all_commands();
+    set_depth_test_enabled(false);
+
     if display_colliders
     {
         physics_draw_colliders();
     }
+
+    draw_all_commands();
+    set_depth_test_enabled(true);
+
 }
 
 // @NOTE(remi): This pointer comes from a linear array. Do not store it
