@@ -106,6 +106,12 @@ pool_remove :: (using pool: *Pool($T), id: PoolID(T))
 {
     assert(pool != null);
     assert(id.pool == pool);
+
+    // log("rem % (% % %)", id.index, first_used, last_used, first_unused);
+    // for *item, i: items
+    // {
+    //     log("% % %", i, item.previous, item.next);
+    // }
     
     #if POOL_CHECK_ERRORS
     {
@@ -125,6 +131,10 @@ pool_remove :: (using pool: *Pool($T), id: PoolID(T))
 
     item: = *items[id.index];
     assert(item.generation == id.generation);
+    if id.index == first_used
+    {
+        first_used = item.next;
+    }
     if id.index == last_used
     {
         last_used = item.previous;
@@ -144,12 +154,6 @@ pool_remove :: (using pool: *Pool($T), id: PoolID(T))
         items[first_unused].previous = id.index;
     }
     first_unused = id.index;
-
-    // log("rem % (% % %)", id.index, first_used, last_used, first_unused);
-    // for *item, i: items
-    // {
-    //     log("% % %", i, item.previous, item.next);
-    // }
 }
 
 get :: (id: PoolID($T), $do_checks: = true) -> *T
