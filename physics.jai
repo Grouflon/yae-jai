@@ -13,9 +13,10 @@ physics: PhysicsManager;
 Collider :: struct
 {
     id: PoolID(Collider);
-    parent: *Entity;
+    parent: *Entity; // This will get fucked up when the pool of entity grows
     rect: Rect;
-    enabled: bool;
+    static: bool = true;
+    enabled: bool = true;
 
     frame_collisions: [..]PoolID(Collider);
     frame_overlaps: [..]PoolID(Collider);
@@ -33,7 +34,7 @@ physics_init :: ()
 {
     using physics;
 
-    pool_init(*colliders, 512, true);
+    pool_init(*colliders, 8, true);
 }
 
 physics_shutdown :: ()
@@ -74,7 +75,7 @@ physics_draw_colliders :: ()
         color: = physics_layer_to_color(collider._layer);
         position: = ifx collider.parent != null then collider.parent.position else Vector3.{};
 
-        draw_outlined_rect(position.xy + collider.rect, color);
+        draw_rectangle(position, collider.rect, color);
     }
 }
 
@@ -105,7 +106,7 @@ physics_remove_collider :: (id: PoolID(Collider))
     {
         if c == id
         {
-            array_unordered_remove_by_index(*colliders_by_layer[collider._layer], i);
+            array_unordered_remove_by_index(*colliders_by_layer[collider._layer], i); // Not sure unordered can cause determinism issues. If this function is not called in parallel, I don't think so, and I don't think it ever should be
             found = true;
             break;
         }
@@ -115,7 +116,6 @@ physics_remove_collider :: (id: PoolID(Collider))
     array_free(collider.frame_collisions);
     array_free(collider.frame_overlaps);
     
-    // array_unordered_remove_by_value(*colliders_by_layer[collider._layer], id); // Not sure unordered can cause determinism issues. If this function is not called in parallel, I don't think so, and I don't think it ever should be
     pool_remove(*colliders, id);
 }
 
@@ -212,8 +212,25 @@ solve_collisions :: ()
 
                     if (response == .COLLIDE)
                     {
-                        a_push: = compute_push(a_bounds, b_bounds) * 0.5;
-                        b_push: = compute_push(b_bounds, a_bounds) * 0.5;
+                        a_factor: float = 0.0;
+                        b_factor: float = 0.0;
+                        if a.static == b.static
+                        {
+                            a_factor = 0.5;
+                            b_factor = 0.5;
+                        }
+                        else if a.static
+                        {
+                            a_factor = 0.0;
+                            b_factor = 1.0;
+                        }
+                        else
+                        {
+                            a_factor = 1.0;
+                            b_factor = 0.0;
+                        }
+                        a_push: = compute_push(a_bounds, b_bounds) * a_factor;
+                        b_push: = compute_push(b_bounds, a_bounds) * b_factor;
 
                         a.parent.position += .{a_push.x, a_push.y, 0};
                         b.parent.position += .{b_push.x, b_push.y, 0};
