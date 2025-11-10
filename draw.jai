@@ -2,7 +2,7 @@
 // dash_stroke_shader_uniforms : [3]s32;
 
 // antialiased_circle_shader: rl.Shader;
-// texture_1px_white: rl.Texture2D;
+texture_1px_white: Texture;
 
 draw_init :: ()
 {
@@ -11,9 +11,9 @@ draw_init :: ()
     // dash_stroke_shader_uniforms[1] = GetShaderLocation(dash_stroke_shader, "dashSize");
     // dash_stroke_shader_uniforms[2] = GetShaderLocation(dash_stroke_shader, "dashOffset");
 
-    // image: = rl.GenImageColor(1, 1, rl.WHITE);
-    // texture_1px_white = rl.LoadTextureFromImage(image);
-    // rl.UnloadImage(image);
+    texture_data: u32 = 0xffffffff;
+    image_data: = ImageData.{ cast(*u8)*texture_data, 1, 1, 4 };
+    texture_1px_white = load_texture(image_data);
 
     // antialiased_circle_shader = rl.LoadShader(null, temp_c_string(tprint("%/data/shaders/antialiased_circle.fs", yae.yae_directory)));
 }
@@ -23,7 +23,8 @@ draw_shutdown :: ()
     // UnloadShader(dash_stroke_shader);
     // rl.UnloadShader(antialiased_circle_shader);
 
-    // rl.UnloadTexture(texture_1px_white);
+    unload_texture(texture_1px_white);
+    texture_1px_white = .{};
 }
 
 draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, draw_rect: Rect = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
@@ -46,17 +47,17 @@ draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, dr
     if flip_x swap(*min_uv.x, *max_uv.x);
     if flip_y swap(*min_uv.y, *max_uv.y);
 
-    c: = color_to_normalized_vector4(tint);
-    vertices: []Vertex = .[
-        .{ min, min_uv, c },
-        .{ .{min.x, max.y, position.z }, .{min_uv.x, max_uv.y}, c },
-        .{ max, max_uv, c },
-        .{ .{max.x, min.y, position.z }, .{max_uv.x, min_uv.y}, c },
-    ];
-    indices: []u16 = .[0,2,1,3,2,0];
+    vertices, indices: = make_quad(.[min, max], .[min_uv, max_uv], tint);
     draw_command(vertices, indices, texture.handle);
 }
 
+draw_rectangle :: (position: Vector3, rect: Rect, color: Color = RED)
+{
+    bounds: = make_bounds(position + .{rect.x, rect.y, 0}, position + .{rect.x + rect.w, rect.y + rect.h, 0});
+
+    vertices, indices: = make_quad(.[bounds.min, bounds.max], .[.{0,0}, .{1,1}], color);
+    draw_command(vertices, indices, texture_1px_white.handle);
+}
 
 // draw_antialiased_circle :: (center: Vector2, radius: float, color: Color = rl.WHITE)
 // {
@@ -204,3 +205,35 @@ draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, dr
 // }
 
 #scope_file
+
+make_quad :: (min_max: [2]Vector3, uv: [2]Vector2, color: Color) -> [4]Vertex, [6]u16 #expand
+{
+    // Not sure what to do with z. The interface is probably not great
+    v, i: = make_quad(.[
+        min_max[0],
+        .{min_max[0].x, min_max[1].y, min_max[1].z},
+        min_max[1],
+        .{min_max[1].x, min_max[0].y, min_max[0].z}
+    ],
+    .[
+        uv[0],
+        .{uv[0].x, uv[1].y},
+        uv[1],
+        .{uv[1].x, uv[0].y},
+    ],
+    color);
+    return v,i;
+}
+
+make_quad :: (vertices: [4]Vector3, uv: [4]Vector2, color: Color) -> [4]Vertex, [6]u16 #expand
+{
+    c: = color_to_normalized_vector4(color);
+    v: [4]Vertex = .[
+        .{ vertices[0], uv[0], c },
+        .{ vertices[1], uv[1], c },
+        .{ vertices[2], uv[2], c },
+        .{ vertices[3], uv[3], c },
+    ];
+    i: [6]u16 = .[0,2,1,3,2,0];
+    return v, i;
+}

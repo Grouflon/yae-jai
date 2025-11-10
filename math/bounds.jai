@@ -7,7 +7,7 @@ BoundsBase :: struct(vector_type: Type)
 Bounds :: BoundsBase(Vector2);
 Bounds3D :: BoundsBase(Vector3);
 
-make_bounds :: (points: ..$T) -> Bounds
+make_bounds :: (points: ..$T) -> BoundsBase(T)
 {
     bounds: BoundsBase(T) = .{
         points[0],
