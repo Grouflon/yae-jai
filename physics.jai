@@ -5,21 +5,21 @@ PhysicsManager :: struct
 {
     colliders: Pool(Collider);
 
-    colliders_by_layer: [LAYER_COUNT][..]PoolID(Collider);
+    colliders_by_layer: [LAYER_COUNT][..]*Collider;
     layers_response: [LAYER_COUNT]u64;
 }
 physics: PhysicsManager;
 
 Collider :: struct
 {
-    id: PoolID(Collider);
+    id: ID(Collider);
     parent: *Entity; // This will get fucked up when the pool of entity grows
     rect: Rect;
     static: bool = true;
     enabled: bool = true;
 
-    frame_collisions: [..]PoolID(Collider);
-    frame_overlaps: [..]PoolID(Collider);
+    frame_collisions: [..]*Collider;
+    frame_overlaps: [..]*Collider;
     _layer: u8;
 }
 
@@ -34,7 +34,7 @@ physics_init :: ()
 {
     using physics;
 
-    pool_init(*colliders, 8, true);
+    pool_init(*colliders, 1024 * 32);
 }
 
 physics_shutdown :: ()
@@ -79,44 +79,35 @@ physics_draw_colliders :: ()
     }
 }
 
-physics_add_collider :: (parent: *Entity, layer: u8) -> PoolID(Collider)
+physics_add_collider :: (parent: *Entity, layer: u8) -> *Collider
 {
     using physics;
 
-    id, collider: = pool_add(*colliders);
+    collider, id: = pool_add(*colliders);
 
     collider.id = id;
     collider.parent = parent;
     collider._layer = layer;
 
-    array_add(*colliders_by_layer[layer], id);
+    array_add(*colliders_by_layer[layer], collider);
 
-    return id;
+    return collider;
 }
 
-physics_remove_collider :: (id: PoolID(Collider))
+physics_remove_collider :: (collider: *Collider)
 {
     using physics;
 
-    collider: = get(id);
     assert(collider != null);
 
-    found: = false;
-    for c, i: colliders_by_layer[collider._layer]
-    {
-        if c == id
-        {
-            array_unordered_remove_by_index(*colliders_by_layer[collider._layer], i); // Not sure unordered can cause determinism issues. If this function is not called in parallel, I don't think so, and I don't think it ever should be
-            found = true;
-            break;
-        }
-    }
+    // Not sure unordered can cause determinism issues. If this function is not called in parallel, I don't think so, and I don't think it ever should be
+    found: = array_ordered_remove_by_value(*colliders_by_layer[collider._layer], collider);
     assert(found);
 
     array_free(collider.frame_collisions);
     array_free(collider.frame_overlaps);
     
-    pool_remove(*colliders, id);
+    pool_remove(*colliders, collider);
 }
 
 physics_set_layer_response :: (layer1: u8, layer2: u8, response: CollisionResponse)
@@ -182,33 +173,21 @@ solve_collisions :: ()
             // Skip layer if response is 0
             if response == .NONE { continue; }
 
-            for collider_a: colliders_by_layer[i]
+            for a: colliders_by_layer[i]
             {
-                a: = get(collider_a, false);
                 if !a.enabled continue;
 
                 a_bounds: = collider_get_bounds(a);
 
-                for collider_b: colliders_by_layer[j]
+                for b: colliders_by_layer[j]
                 {
-                    if collider_a == collider_b continue;
-                    b: = get(collider_b, false);
+                    if a == b continue;
                     if !b.enabled continue;
                     if a.parent == b.parent continue;
 
                     b_bounds: = collider_get_bounds(b);
 
                     if !collision_bounds_bounds(a_bounds, b_bounds) continue;
-
-                    add_unique :: (array: *[..]PoolID(Collider), new_id: PoolID(Collider))
-                    {
-                        found: = false;
-                        for id: <<array
-                        {
-                            if id == new_id { found = true; return; }
-                        }
-                        if !found { array_add(array, new_id); }
-                    }
 
                     if (response == .COLLIDE)
                     {
@@ -235,13 +214,13 @@ solve_collisions :: ()
                         a.parent.position += .{a_push.x, a_push.y, 0};
                         b.parent.position += .{b_push.x, b_push.y, 0};
 
-                        add_unique(*a.frame_collisions, b.id);
-                        add_unique(*b.frame_collisions, a.id);
+                        array_add_if_unique(*a.frame_collisions, b);
+                        array_add_if_unique(*b.frame_collisions, a);
                     }
                     else if (response == .OVERLAP)
                     {
-                        add_unique(*a.frame_overlaps, b.id);
-                        add_unique(*b.frame_overlaps, a.id);
+                        array_add_if_unique(*a.frame_overlaps, b);
+                        array_add_if_unique(*b.frame_overlaps, a);
                         // solve_overlap(collider_a, collider_b);
                     }
                 }   
