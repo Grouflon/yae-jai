@@ -212,7 +212,7 @@ yae_frame :: (dt: float)
 
         for events_this_frame
         {
-            if it.type == .QUIT then should_close = true;
+            if it.type == .QUIT then yae_request_close();
         }
 
         if update_function != null { update_function(dt); }
@@ -256,6 +256,12 @@ yae_resolve_path :: (path: string) -> string
         resolved_path = replace(resolved_path, "yae_data://", tprint("%/data/", yae.yae_directory));
     }
     return normalize_path(resolved_path);
+}
+
+yae_request_close :: ()
+{
+    using yae;
+    should_close = true;
 }
 
 #scope_file
