@@ -36,7 +36,7 @@ physics_init :: ()
 {
     using physics;
 
-    pool_init(*colliders, 1024 * 32);
+    pool_init(*colliders);
 }
 
 physics_shutdown :: ()

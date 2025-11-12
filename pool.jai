@@ -33,7 +33,7 @@ operator == :: inline (a: BaseID, b: BaseID) -> bool
     return a.pool == b.pool && a.index == b.index && a.generation == b.generation;
 }
 
-pool_init :: (pool: *Pool, page_size: s32)
+pool_init :: (pool: *Pool, page_size: s32 = 32 * 1024)
 {
     assert(pool != null);
 
