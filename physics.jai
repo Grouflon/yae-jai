@@ -13,13 +13,15 @@ physics: PhysicsManager;
 Collider :: struct
 {
     id: ID(Collider);
-    parent: *Entity; // This will get fucked up when the pool of entity grows
+    parent: *Entity;
     rect: Rect;
     static: bool = true;
     enabled: bool = true;
 
     frame_collisions: [..]*Collider;
     frame_overlaps: [..]*Collider;
+
+    _previous_center: Vector2;
     _layer: u8;
 }
 
@@ -61,6 +63,11 @@ physics_update :: (dt: float)
     for i: 0..SOLVING_ITERATIONS-1
     {
         solve_collisions();
+    }
+
+    for *collider: colliders
+    {
+        collider._previous_center = center(collider_get_bounds(collider));
     }
 }
 
@@ -208,8 +215,8 @@ solve_collisions :: ()
                             a_factor = 1.0;
                             b_factor = 0.0;
                         }
-                        a_push: = compute_push(a_bounds, b_bounds) * a_factor;
-                        b_push: = compute_push(b_bounds, a_bounds) * b_factor;
+                        a_push: = compute_push(a._previous_center, a_bounds, b_bounds) * a_factor;
+                        b_push: = compute_push(b._previous_center, b_bounds, a_bounds) * b_factor;
 
                         a.parent.position += .{a_push.x, a_push.y, 0};
                         b.parent.position += .{b_push.x, b_push.y, 0};
@@ -229,33 +236,44 @@ solve_collisions :: ()
     }
 }
 
-compute_push :: (a_bounds: Bounds, b_bounds: Bounds) -> Vector2
+compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds) -> Vector2
 {
     a_center: = center(a_bounds);
     b_center: = center(b_bounds);
-    bary_0: = b_center;
-    bary_1: = b_bounds.max;
-    bary_2: = Vector2.{b_bounds.max.x, b_bounds.min.y};
 
-    bary_coords: = barycentric_coordinates(a_center, bary_0, bary_1, bary_2);
+    movement: = a_center - a_previous_center;
+    a_solving_bounds: = a_bounds - movement;
 
-    push: Vector2;
-    if (bary_coords.y > 0 && bary_coords.z > 0) // push right
+    x_move :: (a_bounds: *Bounds, b_bounds: Bounds, movement: Vector2)
     {
-        push = .{ b_bounds.max.x - a_bounds.min.x, 0.0 };
-    }
-    else if (bary_coords.y > 0 && bary_coords.z <= 0) // push down
-    {
-        push = .{ 0.0,  b_bounds.max.y - a_bounds.min.y };
-    }
-    else if (bary_coords.y <= 0 && bary_coords.z <= 0) // push left
-    {
-        push = .{b_bounds.min.x - a_bounds.max.x,  0.0 };
-    }
-    else if (bary_coords.y <= 0 && bary_coords.z > 0) // push up
-    {
-        push = .{ 0.0, b_bounds.min.y - a_bounds.max.y };
+        a_bounds += Vector2.{movement.x, 0};
+        if collision_bounds_bounds(a_bounds, b_bounds)
+        {
+            if movement.x >= 0 { <<a_bounds += Vector2.{b_bounds.min.x - a_bounds.max.x, 0}; }
+            else { <<a_bounds += Vector2.{b_bounds.max.x - a_bounds.min.x, 0}; }
+        }
     }
 
-    return push;
+    y_move :: (a_bounds: *Bounds, b_bounds: Bounds, movement: Vector2)
+    {
+        a_bounds += Vector2.{0, movement.y};
+        if collision_bounds_bounds(a_bounds, b_bounds)
+        {
+            if movement.y >= 0 { <<a_bounds += Vector2.{0, b_bounds.min.y - a_bounds.max.y}; }
+            else { <<a_bounds += Vector2.{0, b_bounds.max.y - a_bounds.min.y}; }
+        }
+    }
+
+    if abs(movement.x) > abs(movement.y)
+    {
+        x_move(*a_solving_bounds, b_bounds, movement);
+        y_move(*a_solving_bounds, b_bounds, movement);
+    }
+    else
+    {
+        y_move(*a_solving_bounds, b_bounds, movement);
+        x_move(*a_solving_bounds, b_bounds, movement);
+    }
+
+    return center(a_solving_bounds) - a_center;
 }

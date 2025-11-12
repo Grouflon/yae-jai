@@ -105,14 +105,15 @@ operator == :: (a: $T/BoundsBase, b: T) -> bool
     return a.min == b.min && a.max == b.max;
 }
 
-operator + :: (a: BoundsBase($T), b: T) -> BoundsBase(T)
+operator + :: (a: BoundsBase($T), b: T) -> BoundsBase(T) #symmetric
 {
     return .{a.min + b, a.max + b};
 }
 
-operator + :: (a: T, b: BoundsBase($T)) -> BoundsBase(T)
+operator += :: (a: *BoundsBase($T), b: T)
 {
-    return b + a;
+    a.min += b;
+    a.max += b;
 }
 
 operator - :: (a: BoundsBase($T), b: T) -> BoundsBase(T)
@@ -123,6 +124,12 @@ operator - :: (a: BoundsBase($T), b: T) -> BoundsBase(T)
 operator - :: (a: T, b: BoundsBase($T)) -> BoundsBase(T)
 {
     return .{b - a.min, b - a.max};
+}
+
+operator -= :: (a: *BoundsBase($T), b: T)
+{
+    a.min -= b;
+    a.max -= b;
 }
 
 to_rect :: (bounds: Bounds) -> Rect
