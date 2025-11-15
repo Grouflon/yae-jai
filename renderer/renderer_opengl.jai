@@ -315,6 +315,14 @@ clear_background :: (color: Color)
     GL_VERIFY(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 }
 
+clear_depth_buffer :: ()
+{
+    using yae.renderer;
+    assert(is_drawing);
+    
+    GL_VERIFY(glClear(GL_DEPTH_BUFFER_BIT));
+}
+
 // NOTE: this actually queue commands instead of drawing them instantly.
 draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, texture: TextureHandle = 0, line_width: float = 0)
 {

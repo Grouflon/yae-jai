@@ -10,8 +10,6 @@ draw_init :: ()
     // dash_stroke_shader_uniforms[1] = GetShaderLocation(dash_stroke_shader, "dashSize");
     // dash_stroke_shader_uniforms[2] = GetShaderLocation(dash_stroke_shader, "dashOffset");
 
-
-
     // antialiased_circle_shader = rl.LoadShader(null, temp_c_string(tprint("%/data/shaders/antialiased_circle.fs", yae.yae_directory)));
 }
 
