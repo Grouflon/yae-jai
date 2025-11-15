@@ -19,6 +19,8 @@ OpenGLRenderer :: struct
     shader_stack: [..]ShaderProgram;
     camera_stack: [..]Camera;
     transform_stack: [..]Matrix4;
+
+    texture_1px_white: Texture;
 }
 
 renderer_init :: ()
@@ -33,6 +35,10 @@ renderer_init :: ()
     }
     gl_version: = glGetString(GL_VERSION);
     log(tprint("OpenGL Version: %", to_string(gl_version)));
+
+    texture_data: u32 = 0xffffffff;
+    image_data: = ImageData.{ cast(*u8)*texture_data, 1, 1, 4 };
+    texture_1px_white = load_texture(image_data);
 
     array_add(*transform_stack, Matrix4_Identity);
 
@@ -68,6 +74,9 @@ renderer_shutdown :: ()
     array_reset(*command_buffer);
     array_reset(*shader_stack);
     array_reset(*camera_stack);
+
+    unload_texture(texture_1px_white);
+    texture_1px_white = .{};
 
     // no need to destroy context apparently
 }
@@ -307,7 +316,7 @@ clear_background :: (color: Color)
 }
 
 // NOTE: this actually queue commands instead of drawing them instantly.
-draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
+draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, texture: TextureHandle = 0, line_width: float = 0)
 {
     using yae.renderer;
 
@@ -319,10 +328,12 @@ draw_command :: (vertices: []Vertex, indices: []u16, texture: TextureHandle)
     array_add(*vertex_buffer, ..vertices);
 
     array_add(*command_buffer, DrawCommand.{
+        type = type,
         transform = last(transform_stack),
         start_index = xx start_index,
         size = xx indices.count,
-        texture = texture
+        texture = ifx texture != 0 then texture else texture_1px_white.handle,
+        line_width = line_width,
     });
 }
 
@@ -381,7 +392,8 @@ draw_all_commands :: ()
         GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
         GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
 
-        GL_VERIFY(glDrawElements(GL_TRIANGLES, xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
+        GL_VERIFY(glLineWidth(command.line_width));
+        GL_VERIFY(glDrawElements(draw_command_type_to_gl(command.type), xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
     }
 
     command_buffer.count = 0;
@@ -557,6 +569,16 @@ create_shader_program :: (shaders: []GLuint) -> GLuint, bool
         return RENDERER_INVALID_HANDLE, false;
     }
     return shader_program, true;
+}
+
+draw_command_type_to_gl :: (type: DrawCommandType) -> GLenum #expand #no_debug
+{
+    if type ==
+    {
+        case .TRIANGLES; return GL_TRIANGLES;
+        case .LINES; return GL_LINES;
+        case .LINE_STRIP; return GL_LINE_STRIP;
+    }
 }
 
 #import "GL"(DUMP_GL_ERRORS = true);

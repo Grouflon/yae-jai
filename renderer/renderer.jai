@@ -47,11 +47,20 @@ Vertex :: struct
     color: Vector4;
 }
 
+DrawCommandType :: enum
+{
+    TRIANGLES;
+    LINES;
+    LINE_STRIP;
+}
+
 DrawCommand :: struct
 {
+    type: DrawCommandType;
     transform: Matrix4;
     texture: TextureHandle;
     start_index: u32;
+    line_width: float;
     size: u32;
 }
 

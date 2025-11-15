@@ -2,7 +2,6 @@
 // dash_stroke_shader_uniforms : [3]s32;
 
 // antialiased_circle_shader: rl.Shader;
-texture_1px_white: Texture;
 
 draw_init :: ()
 {
@@ -11,9 +10,7 @@ draw_init :: ()
     // dash_stroke_shader_uniforms[1] = GetShaderLocation(dash_stroke_shader, "dashSize");
     // dash_stroke_shader_uniforms[2] = GetShaderLocation(dash_stroke_shader, "dashOffset");
 
-    texture_data: u32 = 0xffffffff;
-    image_data: = ImageData.{ cast(*u8)*texture_data, 1, 1, 4 };
-    texture_1px_white = load_texture(image_data);
+
 
     // antialiased_circle_shader = rl.LoadShader(null, temp_c_string(tprint("%/data/shaders/antialiased_circle.fs", yae.yae_directory)));
 }
@@ -22,9 +19,6 @@ draw_shutdown :: ()
 {
     // UnloadShader(dash_stroke_shader);
     // rl.UnloadShader(antialiased_circle_shader);
-
-    unload_texture(texture_1px_white);
-    texture_1px_white = .{};
 }
 
 draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, draw_rect: Rect = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
@@ -48,15 +42,27 @@ draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, dr
     if flip_y swap(*min_uv.y, *max_uv.y);
 
     vertices, indices: = make_quad(.[min, max], .[min_uv, max_uv], tint);
-    draw_command(vertices, indices, texture.handle);
+    draw_command(.TRIANGLES, vertices, indices, texture.handle);
 }
 
-draw_rectangle :: (position: Vector3, rect: Rect, color: Color = RED)
+draw_rectangle :: (position: Vector3, rect: Rect, color: Color = WHITE)
 {
     bounds: = make_bounds(position + .{rect.x, rect.y, 0}, position + .{rect.x + rect.w, rect.y + rect.h, 0});
 
     vertices, indices: = make_quad(.[bounds.min, bounds.max], .[.{0,0}, .{1,1}], color);
-    draw_command(vertices, indices, texture_1px_white.handle);
+    draw_command(.TRIANGLES, vertices, indices);
+}
+
+draw_line :: (begin: Vector3, end: Vector3, width: float = 1.0, color: Color = WHITE)
+{
+    c: = color_to_normalized_vector4(color);
+    vertices: = Vertex.[
+        .{ begin, .{0,0}, c },
+        .{ end, .{1,1}, c },
+    ];
+    indices: = u16.[0,1];
+    
+    draw_command(.LINES, vertices, indices, line_width = width);
 }
 
 // draw_antialiased_circle :: (center: Vector2, radius: float, color: Color = rl.WHITE)
