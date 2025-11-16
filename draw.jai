@@ -45,7 +45,7 @@ draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Bounds = .{}, 
 
 draw_rectangle :: (position: Vector3, rect: Bounds, color: Color = WHITE)
 {
-    vertices, indices: = make_quad(.[xyz(rect.min, 0), xyz(rect.max, 0)], .[.{0,0}, .{1,1}], color);
+    vertices, indices: = make_quad(.[position + xyz(rect.min, 0), position + xyz(rect.max, 0)], .[.{0,0}, .{1,1}], color);
     draw_command(.TRIANGLES, vertices, indices);
 }
 
