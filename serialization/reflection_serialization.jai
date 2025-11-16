@@ -89,6 +89,19 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         {
             if info ==
             {
+                case type_info(IntVector2);
+                {
+                    vector: *s32 = data;
+                    size: s64 = 2;
+                    if !serializer_begin_array(serializer, *size, key) return false;
+                    if size != 2 return false;
+                    verify(serializer_set_array_index(serializer, 0));
+                    verify(serialize(serializer, vector));
+                    verify(serializer_set_array_index(serializer, 1));
+                    verify(serialize(serializer, vector+1));
+                    verify(serializer_end_array(serializer));
+                    return true;
+                }
                 case type_info(Vector2);
                 {
                     vector: *float = data;

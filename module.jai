@@ -34,8 +34,8 @@ yae_resources: struct
 #load "math/collision.jai";
 #load "math/curve.jai";
 #load "math/ease.jai";
+#load "math/int_vector.jai";
 #load "math/math.jai";
-#load "math/rect.jai";
 // #load "math/spline.jai";
 
 #load "renderer/renderer.jai";

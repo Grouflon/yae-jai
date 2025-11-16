@@ -20,7 +20,7 @@ PhysicsShape :: struct
 {
     type: PhysicsShapeType;
     union {
-        box: Rect;
+        box: Bounds;
         circle: struct {
             center: Vector2;
             radius: float;
@@ -206,7 +206,7 @@ shape_get_bounds :: (using shape: PhysicsShape) -> Bounds
 {
     if type ==
     {
-        case .BOX; return make_bounds(Vector2.{box.x, box.y}, Vector2.{box.x + box.w, box.y + box.h});
+        case .BOX; return box;
         case; assert(false);
     }
      return .{};
@@ -343,13 +343,21 @@ compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds)
 
 collision_shape_shape :: (a_position: Vector2, a_shape: PhysicsShape, b_position: Vector2, b_shape: PhysicsShape) -> bool
 {
+    if a_shape.type == b_shape.type
+    {
+        if a_shape.type ==
+        {
+            case .BOX; return collision_bounds_bounds(a_shape.box + a_position, b_shape.box + b_position);
+            case; assert(false);
+        }
+    }
+
     if a_shape.type ==
     {
         case .BOX;
         {
             if b_shape.type ==
             {
-                case .BOX; return false;
                 case .CIRCLE; return false;
             }
         }
@@ -359,7 +367,6 @@ collision_shape_shape :: (a_position: Vector2, a_shape: PhysicsShape, b_position
             if b_shape.type ==
             {
                 case .BOX; return false;
-                case .CIRCLE; return false;
             }
         }
 

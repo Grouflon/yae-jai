@@ -19,22 +19,22 @@ draw_shutdown :: ()
     // rl.UnloadShader(antialiased_circle_shader);
 }
 
-draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, draw_rect: Rect = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
+draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Bounds = .{}, draw_rect: Bounds = .{}, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
     if texture.handle == RENDERER_INVALID_HANDLE return;
     if texture.width == 0 || texture.height == 0 return;
 
     texture_size: = Vector2.{xx texture.width, xx texture.height};
     _sprite_rect: = sprite_rect;
-    if _sprite_rect == Rect.{} _sprite_rect = .{0, 0, texture_size.x, texture_size.y};
+    if _sprite_rect == Bounds.{} _sprite_rect = .{.{0, 0}, .{texture_size.x, texture_size.y}};
     _draw_rect: = draw_rect;
-    if _draw_rect == Rect.{} _draw_rect = .{0, 0, _sprite_rect.w, _sprite_rect.h};
+    if _draw_rect == Bounds.{} _draw_rect = .{.{0, 0}, .{width(_sprite_rect), height(_sprite_rect)}};
 
-    min: Vector3 = position + .{_draw_rect.x, _draw_rect.y, 0};
-    max: Vector3 = min + .{_draw_rect.w, _draw_rect.h, 0};
+    min: = position + xyz(_draw_rect.min, 0);
+    max: = position + xyz(_draw_rect.max, 0);
 
-    min_uv: Vector2 = .{_sprite_rect.x, _sprite_rect.y} / texture_size;
-    max_uv: Vector2 = .{_sprite_rect.x + _sprite_rect.w, _sprite_rect.y + _sprite_rect.h} / texture_size;
+    min_uv: Vector2 = _sprite_rect.min / texture_size;
+    max_uv: Vector2 = _sprite_rect.max / texture_size;
 
     if flip_x swap(*min_uv.x, *max_uv.x);
     if flip_y swap(*min_uv.y, *max_uv.y);
@@ -43,11 +43,9 @@ draw_sprite :: (position: Vector3, texture: Texture, sprite_rect: Rect = .{}, dr
     draw_command(.TRIANGLES, vertices, indices, texture.handle);
 }
 
-draw_rectangle :: (position: Vector3, rect: Rect, color: Color = WHITE)
+draw_rectangle :: (position: Vector3, rect: Bounds, color: Color = WHITE)
 {
-    bounds: = make_bounds(position + .{rect.x, rect.y, 0}, position + .{rect.x + rect.w, rect.y + rect.h, 0});
-
-    vertices, indices: = make_quad(.[bounds.min, bounds.max], .[.{0,0}, .{1,1}], color);
+    vertices, indices: = make_quad(.[xyz(rect.min, 0), xyz(rect.max, 0)], .[.{0,0}, .{1,1}], color);
     draw_command(.TRIANGLES, vertices, indices);
 }
 

@@ -4,6 +4,7 @@ BoundsBase :: struct(vector_type: Type)
     max: vector_type; @serialize
 }
 
+IntBounds :: BoundsBase(IntVector2);
 Bounds :: BoundsBase(Vector2);
 Bounds3D :: BoundsBase(Vector3);
 
@@ -21,39 +22,23 @@ make_bounds :: (points: ..$T) -> BoundsBase(T)
     return bounds;
 }
 
-left :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return min.x;
-}
+left :: inline (using bounds: Bounds) -> float {return min.x; }
+right :: inline (using bounds: Bounds) -> float {return max.x; }
+top :: inline (using bounds: Bounds) -> float {return max.y; }
+bottom :: inline (using bounds: Bounds) -> float {return min.y; }
+width :: inline (using bounds: Bounds) -> float {return max.x - min.x; }
+height :: inline (using bounds: Bounds) -> float {return max.y - min.y; }
 
-right :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return max.x;
-}
-
-top :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return max.y;
-}
-
-bottom :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return min.y;
-}
+left :: inline (using bounds: IntBounds) -> s32 {return min.x; }
+right :: inline (using bounds: IntBounds) -> s32 {return max.x; }
+top :: inline (using bounds: IntBounds) -> s32 {return max.y; }
+bottom :: inline (using bounds: IntBounds) -> s32 {return min.y; }
+width :: inline (using bounds: IntBounds) -> s32 {return max.x - min.x; }
+height :: inline (using bounds: IntBounds) -> s32 {return max.y - min.y; }
 
 center :: inline (using bounds: $T/BoundsBase) -> T.vector_type
 {
     return (min + max) * 0.5;
-}
-
-width :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return max.x - min.x;
-}
-
-height :: inline (using bounds: $T/BoundsBase) -> float
-{
-    return max.y - min.y;
 }
 
 size :: inline  (using bounds: $T/BoundsBase) -> T.vector_type
@@ -130,16 +115,6 @@ operator -= :: (a: *BoundsBase($T), b: T)
 {
     a.min -= b;
     a.max -= b;
-}
-
-to_rect :: (bounds: Bounds) -> Rect
-{
-    return .{
-        bounds.min.x,
-        bounds.min.y,
-        bounds.max.x - bounds.min.x,
-        bounds.max.y - bounds.min.y,
-    };
 }
 
 #scope_file

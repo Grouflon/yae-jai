@@ -280,21 +280,19 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                     }
                 }
 
-                case type_info(Rect);
+                case type_info(Bounds);
                 {
                     if ImGui.TreeNodeEx(c_label, .DefaultOpen)
                     {
                         defer ImGui.TreePop();
 
-                        rect_ptr: = cast(*Rect)value;
-                        origin: = Vector2.{rect_ptr.x, rect_ptr.y};
-                        size: = Vector2.{rect_ptr.w, rect_ptr.h};
-                        modified = ImGui_EditValue("origin", *origin) || modified;
-                        modified = ImGui_EditValue("size", *size) || modified;
-                        rect_ptr.x = origin.x;
-                        rect_ptr.y = origin.y;
-                        rect_ptr.w = size.x;
-                        rect_ptr.h = size.y;
+                        bounds_ptr: = cast(*Bounds)value;
+                        min: = bounds_ptr.min;
+                        max: = bounds_ptr.max;
+                        modified = ImGui_EditValue("min", *min) || modified;
+                        modified = ImGui_EditValue("max", *max) || modified;
+                        bounds_ptr.min = min;
+                        bounds_ptr.max = max;
                     }
                 }
 

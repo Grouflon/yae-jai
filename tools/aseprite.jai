@@ -239,20 +239,10 @@ aseprite_release_data :: (_data: *AsepriteData)
 
 to_bounds :: inline (aseprite_box: AsepriteBox) -> Bounds
 {
-    return Bounds.{ 
+    return make_bounds(
         Vector2.{xx aseprite_box.x, xx aseprite_box.y },
-        Vector2.{xx (aseprite_box.x + aseprite_box.w), xx (aseprite_box.y + aseprite_box.h) }
-    };
-}
-
-to_rect :: inline (aseprite_box: AsepriteBox) -> Rect
-{
-    return Rect.{ 
-        xx aseprite_box.x,
-        xx aseprite_box.y,
-        xx aseprite_box.w,
-        xx aseprite_box.h
-    };
+        Vector2.{xx (aseprite_box.x + aseprite_box.w), xx (aseprite_box.y + aseprite_box.h)}
+    );
 }
 
 aseprite_get_tag :: (using data: *AsepriteData, name: StringHash) -> *AsepriteFrameTag

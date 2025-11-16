@@ -1,6 +1,6 @@
 
 
-gizmo_rect :: (rect: *Rect, color: Color) -> bool
+gizmo_rect :: (rect: *Bounds, color: Color) -> bool
 {
     assert(rendered_viewport != null);
 

@@ -2,9 +2,9 @@ RAYLIB_LOG_SECTION :: Log_Section.{ "Raylib" };
 
 YAE :: struct
 {
-    app_window_rect: IntRect = .{0, 30, 800, 600}; @serialize
-    console_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
-    debugger_window_rect: IntRect = .{50, 80, 800, 600}; @serialize
+    app_window_rect: IntBounds = .{.{0, 30}, .{800, 630}}; @serialize
+    console_window_rect: IntBounds = .{.{50, 80}, .{850, 680}}; @serialize
+    debugger_window_rect: IntBounds = .{.{50, 80}, .{850, 680}}; @serialize
 
     engine_resources: [..]*Resource;
 
@@ -96,9 +96,9 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     register_settings_section("app", *yae, null, (data: *void)
     {
         using t: *YAE = xx data;
-        if debugger_window_rect != IntRect.{} { set_window_rect(debugger_handle, debugger_window_rect); }
-        if console_window_rect != IntRect.{} { set_window_rect(get_console_window_handle(), console_window_rect); }
-        if app_window_rect != IntRect.{} { set_window_rect(window_handle, app_window_rect); }
+        if debugger_window_rect != IntBounds.{} { set_window_rect(debugger_handle, debugger_window_rect); }
+        if console_window_rect != IntBounds.{} { set_window_rect(get_console_window_handle(), console_window_rect); }
+        if app_window_rect != IntBounds.{} { set_window_rect(window_handle, app_window_rect); }
     });
     #if WITH_EDITOR
     {

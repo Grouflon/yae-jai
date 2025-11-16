@@ -102,7 +102,7 @@ kill_process_by_path :: (path: string) -> bool
     }
 }
 
-get_window_rect :: (handle: *void) -> bool, IntRect
+get_window_rect :: (handle: *void) -> bool, IntBounds
 {
     if handle == null { return false, .{}; }
 
@@ -113,10 +113,8 @@ get_window_rect :: (handle: *void) -> bool, IntRect
         if rect.left == 0 && rect.top == 0 && rect.right == 0 && rect.bottom == 0 { return false, .{}; };
 
         return true, .{
-            x = rect.left,
-            y = rect.top,
-            w = rect.right - rect.left,
-            h = rect.bottom - rect.top
+            .{rect.left, rect.top},
+            .{rect.right, rect.bottom}
         };
     }
     else
@@ -125,13 +123,13 @@ get_window_rect :: (handle: *void) -> bool, IntRect
     }
 }
 
-set_window_rect :: (handle: *void, rect: IntRect)
+set_window_rect :: (handle: *void, rect: IntBounds)
 {
     if handle == null { return; }
 
     #if OS == .WINDOWS
     {
-        Windows.SetWindowPos(handle, null, rect.x, rect.y, rect.w, rect.h, 0);
+        Windows.SetWindowPos(handle, null, rect.min.x, rect.min.y, width(rect), height(rect), 0);
     }
     else
     {

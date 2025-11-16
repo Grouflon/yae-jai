@@ -82,8 +82,8 @@ animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vect
     draw_sprite(
         position,
         aseprite.texture.texture,
-        to_rect(aseprite_frame.frame),
-        to_rect(aseprite_frame.sprite_source_size),
+        to_bounds(aseprite_frame.frame),
+        to_bounds(aseprite_frame.sprite_source_size),
         flip_x,
         flip_y,
         tint
