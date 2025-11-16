@@ -3,6 +3,7 @@ Renderer :: OpenGLRenderer;
 RENDERER_INVALID_HANDLE :: 0;
 TextureHandle :: GLuint;
 ShaderProgramHandle :: GLuint;
+RenderTextureHandle :: GLuint;
 
 OpenGLRenderer :: struct
 {
@@ -19,6 +20,7 @@ OpenGLRenderer :: struct
     shader_stack: [..]ShaderProgram;
     camera_stack: [..]Camera;
     transform_stack: [..]Matrix4;
+    render_texture_stack: [..]RenderTexture;
 
     texture_1px_white: Texture;
 }
@@ -81,9 +83,73 @@ renderer_shutdown :: ()
     // no need to destroy context apparently
 }
 
+load_render_texture :: (width: u32, height: u32) -> RenderTexture
+{
+    if width == 0 || height == 0 return .{};
+
+    target: RenderTexture;
+    GL_VERIFY(glGenFramebuffers(1, *target.handle));
+    assert(target.handle != RENDERER_INVALID_HANDLE);
+
+    GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, target.handle));
+
+    // Create color texture (default to RGBA)
+    target.texture = load_texture(.{null, width, height, 4});
+
+    // Create depth renderbuffer/texture
+    target.depth = load_depth_texture(width, height);
+
+    // Attach color texture and depth renderbuffer/texture to FBO
+    GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture.handle, 0));
+    GL_VERIFY(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, target.depth.handle));
+    // glFramebufferAttach(target.id, target.texture.id, GL_ATTACHMENT_COLOR_CHANNEL0, GL_ATTACHMENT_TEXTURE2D, 0);
+    // glFramebufferAttach(target.id, target.depth.id, GL_ATTACHMENT_DEPTH, GL_ATTACHMENT_RENDERBUFFER, 0);
+
+    // Check if fbo is complete with attachments (valid)
+    // if (rlFramebufferComplete(target.id)) TRACELOG(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", target.id);
+    status: = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if status != GL_FRAMEBUFFER_COMPLETE
+    {
+        if status ==
+        {
+            case GL_FRAMEBUFFER_UNSUPPORTED; log_error("FBO: [ID %] Framebuffer is unsupported", target.handle);
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT; log_error("FBO: [ID %] Framebuffer has incomplete attachment", target.handle);
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT; log_error("FBO: [ID %] Framebuffer has a missing attachment", target.handle);
+            case; log_error("FBO: [ID %] Framebuffer has an unknown status", target.handle);
+
+            // #if defined(GRAPHICS_API_OPENGL_ES2)
+            //             case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS: TRACELOG(RL_LOG_WARNING, "FBO: [ID %i] Framebuffer has incomplete dimensions", id); break;
+            // #endif
+        }
+    }
+
+    GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+
+    return target;
+}
+
+unload_render_texture :: (render_texture: RenderTexture)
+{
+    if render_texture.handle == RENDERER_INVALID_HANDLE return;
+
+    unload_texture(render_texture.texture);
+    unload_depth_texture(render_texture.depth);
+    GL_VERIFY(glDeleteFramebuffers(1, *render_texture.handle));
+}
+
+resize_render_texture :: (render_texture: *RenderTexture, width: u32, height: u32) -> bool
+{
+    assert(render_texture != null);
+    if width == render_texture.texture.width && height == render_texture.texture.height return false;
+
+    unload_render_texture(<<render_texture);
+    <<render_texture = load_render_texture(width, height);
+    return true;
+}
+
 load_texture :: (image_data: ImageData, parameters: TextureParameters = .{}) -> Texture
 {
-    if image_data.data == null return .{};
     if image_data.channels != 4
     {
         log_error("only rgba8 images is supported for now");
@@ -96,6 +162,7 @@ load_texture :: (image_data: ImageData, parameters: TextureParameters = .{}) -> 
 
     // OpenGL stores textures from bottom row to top row, therefore we have to reverse y data before loading.
     reversed_data: *u8;
+    if image_data.data != null
     {
         row_size: = image_data.width * image_data.channels;
         push_allocator(temporary_allocator);
@@ -166,6 +233,25 @@ unload_texture :: (texture: Texture)
     GL_VERIFY(glDeleteTextures(1, *texture.handle));
 }
 
+load_depth_texture :: (width: u32, height: u32) -> Texture
+{
+    texture: Texture = .{width, height, 0};
+    glGenRenderbuffers(1, *texture.handle);
+    assert(texture.handle != RENDERER_INVALID_HANDLE);
+
+    GL_VERIFY(glBindRenderbuffer(GL_RENDERBUFFER, texture.handle));
+    GL_VERIFY(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height));
+    GL_VERIFY(glBindRenderbuffer(GL_RENDERBUFFER, 0));
+
+    return texture;
+}
+
+unload_depth_texture :: (texture: Texture)
+{
+    if texture.handle == RENDERER_INVALID_HANDLE return;
+    GL_VERIFY(glDeleteRenderbuffers(1, *texture.handle));
+}
+
 load_shader_program :: (vs_text: string, fs_text: string) -> ShaderProgram, bool
 {
     // Generic shader
@@ -207,11 +293,6 @@ end_camera :: ()
     using yae.renderer;
     assert(is_drawing);
     assert(camera_stack.count > 0);
-
-    #if WITH_EDITOR
-    {
-        editor_draw();
-    }
 
     draw_all_commands();
     pop(*camera_stack);
@@ -268,6 +349,28 @@ end_draw :: ()
     is_drawing = false;
 }
 
+begin_render_texture :: (render_texture: RenderTexture)
+{
+    using yae.renderer;
+    assert(is_drawing);
+
+    draw_all_commands();
+    array_add(*render_texture_stack, render_texture);
+    GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, render_texture.handle));
+}
+
+end_render_texture :: ()
+{
+    using yae.renderer;
+    assert(is_drawing);
+
+    draw_all_commands();
+    pop(*render_texture_stack);
+
+    fbo_id: = ifx render_texture_stack.count > 0 then last(render_texture_stack).handle else 0;
+    GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, fbo_id));
+}
+
 begin_transform :: (m: Matrix4 = Matrix4_Identity)
 {
     using yae.renderer;
@@ -306,7 +409,7 @@ transform_scale :: (s: Vector3)
     scale(array_back(transform_stack), s);
 }
 
-clear_background :: (color: Color)
+clear_background :: (color: Color = .{})
 {
     using yae.renderer;
     assert(is_drawing);
@@ -343,37 +446,6 @@ draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, text
         texture = ifx texture != 0 then texture else texture_1px_white.handle,
         line_width = line_width,
     });
-}
-
-renderer_create_texture :: (width: u32, height: u32, data: *u8) -> TextureHandle
-{
-    assert(data != null);
-
-    texture: GLuint;
-    GL_VERIFY(glActiveTexture(GL_TEXTURE0));
-    GL_VERIFY(glGenTextures(1, *texture));
-    GL_VERIFY(glBindTexture(GL_TEXTURE_2D, texture));
-    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GL_VERIFY(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-    GL_VERIFY(glTexImage2D(
-        GL_TEXTURE_2D,    // target
-        0,                // level
-        GL_RGBA8,         // internal format
-        width,           // width
-        height,          // height
-        0,                // border, must be 0
-        GL_RGBA,          // format
-        GL_UNSIGNED_BYTE, // type
-        data
-    ));
-    return texture;
-}
-
-renderer_destroy_texture :: (handle: TextureHandle)
-{
-    assert(handle != 0);
-
-    GL_VERIFY(glDeleteTextures(1, *handle));
 }
 
 draw_all_commands :: ()

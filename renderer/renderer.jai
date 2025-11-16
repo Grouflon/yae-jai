@@ -2,12 +2,20 @@
 // RENDERER_INVALID_HANDLE :: 0;
 // TextureHandle :: GLuint;
 // ShaderProgramHandle :: GLuint;
+// RenderTextureHandle :: GLuint;
 
 Texture :: struct
 {
     width: u32;
     height: u32;
     handle: TextureHandle;
+}
+
+RenderTexture :: struct
+{
+    handle: RenderTextureHandle;
+    texture: Texture;
+    depth: Texture;
 }
 
 ShaderProgram :: struct

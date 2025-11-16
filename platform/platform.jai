@@ -11,17 +11,17 @@ ImageData :: struct
 }
 
 // Window
-// create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void;
+// create_window :: (width: s32, height: s32, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void;
 // destroy_window :: (window_handle: *void);
-// get_window_size :: (window_handle: *void) -> int, int;
-// get_viewport_size :: (window_handle: *void) -> int, int;
-// get_window_position :: (window_handle: *void) -> int, int;
+// get_window_size :: (window_handle: *void) -> s32, s32;
+// get_viewport_size :: (window_handle: *void) -> s32, s32;
+// get_window_position :: (window_handle: *void) -> s32, s32;
 // get_mouse_position :: (window_handle: *void) -> Vector2;
 // set_mouse_position :: (window_handle: *void, position: Vector2);
 // update_input_events :: ();
 // is_window_focused :: () -> bool;
-get_window_size :: () -> int, int { w, h: = get_window_size(yae.window_handle); return w, h; }
-get_viewport_size :: () -> int, int { w, h: = get_viewport_size(yae.window_handle); return w, h; }
+get_window_size :: () -> s32, s32 { w, h: = get_window_size(yae.window_handle); return w, h; }
+get_viewport_size :: () -> s32, s32 { w, h: = get_viewport_size(yae.window_handle); return w, h; }
 get_mouse_position :: () -> Vector2 { return get_mouse_position(yae.window_handle); }
 set_mouse_position :: (position: Vector2) { set_mouse_position(yae.window_handle, position); }
 get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT

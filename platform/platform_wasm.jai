@@ -1,7 +1,7 @@
 #scope_export
 
 // Window
-create_window :: (width: int, height: int, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void #foreign;
+create_window :: (width: s32, height: s32, window_name: string, background_color: Color = DEFAULT_WINDOW_CREATION_COLOR) -> *void #foreign;
 destroy_window :: (window_handle: *void) #foreign;
 get_canvas_width :: () -> s32 #foreign;
 get_canvas_height :: () -> s32 #foreign;
@@ -11,17 +11,17 @@ get_console_window_handle :: () -> *void
     return null;
 }
 
-get_window_position :: (window_handle: *void) -> width: int, height: int
+get_window_position :: (window_handle: *void) -> width: s32, height: s32
 {
     return 0, 0;
 }
 
-get_window_size :: (window_handle: *void) -> width: int, height: int
+get_window_size :: (window_handle: *void) -> width: s32, height: s32
 {
     return get_canvas_width(), get_canvas_height();
 }
 
-get_viewport_size :: (window_handle: *void) -> int, int
+get_viewport_size :: (window_handle: *void) -> s32, s32
 {
     return get_canvas_width(), get_canvas_height();
 }

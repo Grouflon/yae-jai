@@ -1,5 +1,5 @@
 // Window
-create_window :: (width: int, height: int, window_name: string, background_color: Color) -> *void
+create_window :: (width: s32, height: s32, window_name: string, background_color: Color) -> *void
 {
     return create_window(width, height, window_name, background_color.rgb);
 }
@@ -14,21 +14,21 @@ get_console_window_handle :: () -> *void
     return GetConsoleWindow();
 }
 
-get_window_position :: (window_handle: *void) -> width: int, height: int
+get_window_position :: (window_handle: *void) -> width: s32, height: s32
 {
     rect: Windows.RECT;
     Windows.GetWindowRect(window_handle, *rect);
     return rect.left, rect.top;
 }
 
-get_window_size :: (window_handle: *void) -> width: int, height: int
+get_window_size :: (window_handle: *void) -> width: s32, height: s32
 {
     rect: Windows.RECT;
     Windows.GetWindowRect(window_handle, *rect);
     return rect.right - rect.left, rect.bottom - rect.top;
 }
 
-get_viewport_size :: (window_handle: *void) -> width: int, height: int
+get_viewport_size :: (window_handle: *void) -> width: s32, height: s32
 {
     rect: Windows.RECT;
     Windows.GetClientRect(window_handle, *rect);
