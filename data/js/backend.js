@@ -324,7 +324,7 @@ const gl_exports =
         pixel_data = null;
         if (pixels > 0n)
         {
-            pixels_data = new Uint8Array(buffer, Number(pixels), width * height * 4);
+            pixel_data = new Uint8Array(buffer, Number(pixels), width * height * 4);
         }
         gl.texImage2D(target, level, internalformat, width, height, border, format, type, pixel_data);
     },
