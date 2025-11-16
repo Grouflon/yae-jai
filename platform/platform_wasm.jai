@@ -56,6 +56,9 @@ update_input_events :: ()
 
     array_add(*events_this_frame, ..pending_events);
     pending_events.count = 0;
+
+    mouse_delta_z = mouse_wheel_delta;
+    mouse_wheel_delta = 0;
 }
 
 on_key_event :: (key_code: u32, pressed: bool)
@@ -75,6 +78,12 @@ on_key_event :: (key_code: u32, pressed: bool)
 on_mousebutton_event :: (button: u32, pressed: bool)
 {
     on_key_event(xx wasm_to_jai_mousebutton(button), pressed);
+}
+
+mouse_wheel_delta: int;
+on_mousewheel_event :: (x: float, y: float, z: float)
+{
+    mouse_wheel_delta += xx -y;
 }
 
 #scope_file

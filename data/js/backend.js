@@ -761,6 +761,7 @@ function instantiate_yae(wasm_path, content_element)
             let _on_keyup = find_name_by_regexp(exports, "wasm_on_keyup");
             let _on_mousedown = find_name_by_regexp(exports, "wasm_on_mousedown");
             let _on_mouseup = find_name_by_regexp(exports, "wasm_on_mouseup");
+            let _on_mousewheel = find_name_by_regexp(exports, "wasm_on_mousewheel");
 
             let _previous_timestamp = null;
 
@@ -812,6 +813,14 @@ function instantiate_yae(wasm_path, content_element)
                 {
                     _on_mouseup(e.button);
                     e.preventDefault();
+                }
+            });
+
+            document.addEventListener('wheel', function(e)
+            {
+                if (e.target == canvas)
+                {
+                    _on_mousewheel(e.deltaX, e.deltaY, e.deltaZ);
                 }
             });
 

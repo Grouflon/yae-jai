@@ -48,6 +48,14 @@ wasm_on_mouseup :: (button: u32) #c_call
     }
 }
 
+wasm_on_mousewheel :: (x: float, y: float, z: float) #c_call
+{
+    push_context
+    {
+        on_mousewheel_event(x, y, z);
+    }
+}
+
 wasm_alloc :: (size: s64, allocator: *Allocator) -> *void #c_call
 {
     push_context
