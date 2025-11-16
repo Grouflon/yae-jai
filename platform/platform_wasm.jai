@@ -217,6 +217,17 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glDisable = _glDisable;
     procs.glBlendEquation = _glBlendEquation;
     procs.glBlendFuncSeparate = _glBlendFuncSeparate;
+    procs.glGenRenderbuffers = _glGenRenderbuffers;
+    procs.glDeleteRenderbuffers = _glDeleteRenderbuffers;
+    procs.glBindRenderbuffer = _glBindRenderbuffer;
+    procs.glRenderbufferStorage = _glRenderbufferStorage;
+    procs.glGenFramebuffers = _glGenFramebuffers;
+    procs.glDeleteFramebuffers = _glDeleteFramebuffers;
+    procs.glBindFramebuffer = _glBindFramebuffer;
+    procs.glFramebufferTexture2D = _glFramebufferTexture2D;
+    procs.glFramebufferRenderbuffer = _glFramebufferRenderbuffer;
+    procs.glCheckFramebufferStatus = _glCheckFramebufferStatus;
+    procs.glLineWidth = _glLineWidth;
 }
 
 _glGetString :: (pname: GLenum) -> *GLubyte #foreign;
@@ -259,6 +270,17 @@ _glEnable :: (cap: GLenum) -> void #foreign;
 _glDisable :: (cap: GLenum) -> void #foreign;
 _glBlendEquation :: (mode: GLenum) -> void #foreign;
 _glBlendFuncSeparate :: (sfactorRGB: GLenum, dfactorRGB: GLenum, sfactorAlpha: GLenum, dfactorAlpha: GLenum) -> void #foreign;
+_glGenRenderbuffers :: (n: GLsizei, renderbuffers: *GLuint) -> void #foreign;
+_glDeleteRenderbuffers :: (n: GLsizei, renderbuffers: *GLuint) -> void #foreign;
+_glBindRenderbuffer :: (target: GLenum, renderbuffer: GLuint) -> void #foreign;
+_glRenderbufferStorage :: (target: GLenum, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void #foreign;
+_glGenFramebuffers :: (n: GLsizei, framebuffers: *GLuint) -> void #foreign;
+_glDeleteFramebuffers :: (n: GLsizei, framebuffers: *GLuint) -> void #foreign;
+_glBindFramebuffer :: (target: GLenum, framebuffer: GLuint) -> void #foreign;
+_glFramebufferTexture2D :: (target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint) -> void #foreign;
+_glFramebufferRenderbuffer :: (target: GLenum, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint) -> void #foreign;
+_glCheckFramebufferStatus :: (target: GLenum) -> GLenum #foreign;
+_glLineWidth :: (width: GLfloat) -> void #foreign;
 
 #import "GL"(DUMP_GL_ERRORS = true);
 #scope_export

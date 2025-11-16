@@ -85,6 +85,28 @@ const gl_exports =
             console.assert(location, "undefined location %d", location_index);
             return location;
         }
+
+        gl.renderbuffers = new Array();
+        gl.renderbuffers.push(null); // dummy 0 element
+        gl.get_renderbuffer = (renderbuffer_index) =>
+        {
+            renderbuffer_index = Number(renderbuffer_index);
+            console.assert(renderbuffer_index >= 0 && renderbuffer_index < gl.renderbuffers.length, "undefined renderbuffer %d", renderbuffer_index);
+
+            let renderbuffer = gl.renderbuffers[renderbuffer_index];
+            return renderbuffer;
+        }
+
+        gl.framebuffers = new Array();
+        gl.framebuffers.push(null); // dummy 0 element
+        gl.get_framebuffer = (framebuffer_index) =>
+        {
+            framebuffer_index = Number(framebuffer_index);
+            console.assert(framebuffer_index >= 0 && framebuffer_index < gl.framebuffers.length, "undefined framebuffer %d", framebuffer_index);
+
+            let framebuffer = gl.framebuffers[framebuffer_index];
+            return framebuffer;
+        }
     },
 
     _glGetString: (pname) =>
@@ -299,7 +321,11 @@ const gl_exports =
         console.assert(format == gl.RGBA, "only RGBA format supported so far");
 
         const buffer = exports.memory.buffer;
-        pixel_data = new Uint8Array(buffer, Number(pixels), width * height * 4);
+        pixel_data = null;
+        if (pixels > 0n)
+        {
+            pixels_data = new Uint8Array(buffer, Number(pixels), width * height * 4);
+        }
         gl.texImage2D(target, level, internalformat, width, height, border, format, type, pixel_data);
     },
 
@@ -354,6 +380,110 @@ const gl_exports =
     {
         gl.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
     },
+
+    _glGenRenderbuffers: (n, renderbuffers) =>
+    {
+        for (i = 0; i < n; ++i)
+        {
+            let added = false;
+            for (j = 1; j < gl.renderbuffers.length; ++j)
+            {
+                if (gl.renderbuffers[j] == null)
+                {
+                    gl.renderbuffers[j] = gl.createRenderbuffer();
+                    write_u32(Number(renderbuffers) + i, j);
+                    added = true;
+                    break;
+                }
+            }
+            if (!added)
+            {
+                gl.renderbuffers.push(gl.createRenderbuffer());
+                write_u32(Number(renderbuffers) + i, gl.renderbuffers.length - 1);
+            }
+        }
+    },
+
+    _glDeleteRenderbuffers: (n, renderbuffers) =>
+    {
+        for (i = 1; i < n; ++i)
+        {
+            let index = read_u32(Number(renderbuffers) + i);
+            gl.deleteRenderBuffer(gl.get_renderbuffer(index));
+            gl.renderbuffers[index] = null;
+        }
+    },
+
+    _glBindRenderbuffer: (target, renderbuffer) =>
+    {
+        gl.bindRenderbuffer(target, gl.get_renderbuffer(renderbuffer));
+    },
+
+    _glRenderbufferStorage: (target, internalformat, width, height) =>
+    {
+        if (internalformat == 0x1902) internalformat = gl.DEPTH_COMPONENT16 // GL_DEPTH_COMPONENT
+        gl.renderbufferStorage(target, internalformat, width, height);
+    },
+
+    _glGenFramebuffers: (n, framebuffers) =>
+    {
+        for (i = 0; i < n; ++i)
+        {
+            let added = false;
+            for (j = 1; j < gl.framebuffers.length; ++j)
+            {
+                if (gl.framebuffers[j] == null)
+                {
+                    gl.framebuffers[j] = gl.createFramebuffer();
+                    write_u32(Number(framebuffers) + i, j);
+                    added = true;
+                    break;
+                }
+            }
+            if (!added)
+            {
+                gl.framebuffers.push(gl.createFramebuffer());
+                write_u32(Number(framebuffers) + i, gl.framebuffers.length - 1);
+            }
+        }
+    },
+
+    _glDeleteFramebuffers: (n, framebuffers) =>
+    {
+        for (i = 1; i < n; ++i)
+        {
+            let index = read_u32(Number(framebuffers) + i);
+            gl.deleteFrameBuffer(gl.get_framebuffer(index));
+            gl.framebuffers[index] = null;
+        }
+    },
+
+    _glBindFramebuffer: (target, framebuffer) =>
+    {
+        gl.bindFramebuffer(target, gl.get_framebuffer(framebuffer));
+    },
+
+    _glFramebufferTexture2D: (target, attachment, textarget, texture, level) =>
+    {
+        gl.framebufferTexture2D(target, attachment, textarget, gl.get_texture(texture), level);
+    },
+
+    _glFramebufferRenderbuffer: (target, attachment, renderbuffertarget, renderbuffer) =>
+    {
+        gl.framebufferRenderbuffer(target, attachment, renderbuffertarget, gl.get_renderbuffer(renderbuffer));
+    },
+
+    _glCheckFramebufferStatus: (target) =>
+    {
+        return gl.checkFramebufferStatus(target);
+    },
+
+    _glLineWidth: (width) =>
+    {
+        if (width == 0) return;
+        gl.lineWidth(width);
+    },
+
 }
 
 let image_data = null;
