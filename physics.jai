@@ -10,11 +10,29 @@ PhysicsManager :: struct
 }
 physics: PhysicsManager;
 
+PhysicsShapeType :: enum
+{
+    BOX;
+    CIRCLE; // NOT IMPLEMENTED YET
+}
+
+PhysicsShape :: struct
+{
+    type: PhysicsShapeType;
+    union {
+        box: Rect;
+        circle: struct {
+            center: Vector2;
+            radius: float;
+        }
+    }
+}
+
 Collider :: struct
 {
     id: ID(Collider);
     parent: *Entity;
-    rect: Rect;
+    shape: PhysicsShape;
     static: bool = true;
     enabled: bool = true;
 
@@ -82,7 +100,10 @@ physics_draw_colliders :: ()
         color: = physics_layer_to_color(collider._layer);
         position: = ifx collider.parent != null then collider.parent.position else Vector3.{};
 
-        draw_rectangle(position, collider.rect, color);
+        if collider.shape.type ==
+        {
+            case .BOX; draw_rectangle(position, collider.shape.box, color);
+        }
     }
 }
 
@@ -141,11 +162,54 @@ physics_set_layer_response :: (layer1: u8, layer2: u8, response: CollisionRespon
     layers_response[layer2] = process_response(layers_response[layer2], layer2, layer1, response);
 }
 
+physics_get_layer_response :: (layer1: u8, layer2: u8) -> CollisionResponse
+{
+    using physics;
+
+    mask: u64 = (cast(u64)0b11) << cast(u64)(layer2 * 2);
+    return xx((layers_response[layer1] & mask) >> cast(u64)(layer2 * 2));
+}
+
+physics_cast :: (position: Vector2, shape: PhysicsShape, target_layers: []u8) -> []*Collider
+{
+    using physics;
+
+    result: [..]*Collider;
+    result.allocator = temporary_allocator;
+
+    for i: target_layers
+    {
+        for b: colliders_by_layer[i]
+        {
+            if !b.enabled continue;
+            b_position: = b.parent.position.xy;
+
+            if !collision_shape_shape(position, shape, b_position, b.shape) continue;
+
+            array_add(*result, b);
+        }
+    }
+
+    return result;
+}
+
 collider_get_bounds :: (using collider: *Collider) -> Bounds
 {
+    assert(collider != null);
+
     pos: = ifx collider.parent != null then collider.parent.position.xy else Vector2.{};
-    pos += .{collider.rect.x, collider.rect.y};
-    return make_bounds(pos, pos + .{collider.rect.w, collider.rect.h});
+
+    return pos + shape_get_bounds(collider.shape);
+}
+
+shape_get_bounds :: (using shape: PhysicsShape) -> Bounds
+{
+    if type ==
+    {
+        case .BOX; return make_bounds(Vector2.{box.x, box.y}, Vector2.{box.x + box.w, box.y + box.h});
+        case; assert(false);
+    }
+     return .{};
 }
 
 physics_layer_to_color :: (layer: u8) -> Color
@@ -173,9 +237,7 @@ solve_collisions :: ()
 
         for j: i..LAYER_COUNT-1
         {
-            // Find collision response
-            mask: u64 = (cast(u64)0b11) << cast(u64)(j * 2);
-            response: CollisionResponse = xx((layers_response[i] & mask) >> cast(u64)(j * 2));
+            response: = physics_get_layer_response(xx i, xx j);
 
             // Skip layer if response is 0
             if response == .NONE { continue; }
@@ -183,7 +245,7 @@ solve_collisions :: ()
             for a: colliders_by_layer[i]
             {
                 if !a.enabled continue;
-
+                a_position: = a.parent.position.xy;
                 a_bounds: = collider_get_bounds(a);
 
                 for b: colliders_by_layer[j]
@@ -192,9 +254,10 @@ solve_collisions :: ()
                     if !b.enabled continue;
                     if a.parent == b.parent continue;
 
+                    b_position: = b.parent.position.xy;
                     b_bounds: = collider_get_bounds(b);
 
-                    if !collision_bounds_bounds(a_bounds, b_bounds) continue;
+                    if !collision_shape_shape(a_position, a.shape, b_position, b.shape) continue;
 
                     if (response == .COLLIDE)
                     {
@@ -276,4 +339,32 @@ compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds)
     }
 
     return center(a_solving_bounds) - a_center;
+}
+
+collision_shape_shape :: (a_position: Vector2, a_shape: PhysicsShape, b_position: Vector2, b_shape: PhysicsShape) -> bool
+{
+    if a_shape.type ==
+    {
+        case .BOX;
+        {
+            if b_shape.type ==
+            {
+                case .BOX; return false;
+                case .CIRCLE; return false;
+            }
+        }
+
+        case .CIRCLE;
+        {
+            if b_shape.type ==
+            {
+                case .BOX; return false;
+                case .CIRCLE; return false;
+            }
+        }
+
+        case; assert(false);
+    }
+
+    return false;
 }
