@@ -12,8 +12,8 @@ physics: PhysicsManager;
 
 PhysicsShapeType :: enum
 {
-    BOX;
-    CIRCLE; // NOT IMPLEMENTED YET
+    BOX :: 0;
+    CIRCLE :: 1; // NOT FULLY IMPLEMENTED YET
 }
 
 PhysicsShape :: struct
@@ -343,22 +343,14 @@ compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds)
 
 collision_shape_shape :: (a_position: Vector2, a_shape: PhysicsShape, b_position: Vector2, b_shape: PhysicsShape) -> bool
 {
-    if a_shape.type == b_shape.type
-    {
-        if a_shape.type ==
-        {
-            case .BOX; return collision_bounds_bounds(a_shape.box + a_position, b_shape.box + b_position);
-            case; assert(false);
-        }
-    }
-
     if a_shape.type ==
     {
         case .BOX;
         {
             if b_shape.type ==
             {
-                case .CIRCLE; return false;
+                case .BOX; return collision_bounds_bounds(a_position + a_shape.box, b_position + b_shape.box);
+                case .CIRCLE; return collision_circle_bounds(b_position + b_shape.circle.center, b_shape.circle.radius, a_position + a_shape.box);
             }
         }
 
@@ -366,7 +358,8 @@ collision_shape_shape :: (a_position: Vector2, a_shape: PhysicsShape, b_position
         {
             if b_shape.type ==
             {
-                case .BOX; return false;
+                case .BOX; return collision_circle_bounds(a_position + a_shape.circle.center, a_shape.circle.radius, b_position + b_shape.box);
+                case .CIRCLE; return collision_circle_circle(a_position + a_shape.circle.center, a_shape.circle.radius, b_position + b_shape.circle.center, b_shape.circle.radius);
             }
         }
 
