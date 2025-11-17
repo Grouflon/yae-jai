@@ -1,8 +1,9 @@
 AsepriteAnimationPlayer :: struct
 {
     play_rate: float = 1.0;
-    frames_per_second: float = 10.0;
     current_time: float = 0.0;
+    is_playing: bool;
+    is_looping: bool;
 
     aseprite: *AsepriteFile;
     animation: StringHash;
@@ -43,7 +44,19 @@ animation_player_update :: (using player: *AsepriteAnimationPlayer, dt: float)
 
     frame_count: = (tag.end_frame+1) - tag.start_frame;
     current_time += dt * play_rate;
-    current_time = positive_mod(current_time, (cast(float)frame_count) / frames_per_second);
+
+    animation_duration: = (frame_count.(float)) / get_frames_per_second(player);
+    if current_time > animation_duration
+    {
+        if is_looping
+        {
+            current_time = positive_mod(current_time, animation_duration);
+        }
+        else
+        {
+            animation_player_stop(player);
+        }
+    } 
 }
 
 animation_player_play :: (using player: *AsepriteAnimationPlayer, animation_handle: AsepriteAnimationHandle, loop: bool = true)
@@ -65,7 +78,20 @@ animation_player_play :: (using player: *AsepriteAnimationPlayer, aseprite_file:
     current_time = 0;
     aseprite = aseprite_file;
     animation = animation_hash;
+    is_looping = loop;
+    is_playing = true;
 }
+
+animation_player_stop :: (using player: *AsepriteAnimationPlayer)
+{
+    assert(player != null);
+
+    current_time = 0;
+    aseprite = null;
+    animation = .{};
+    is_playing = false;
+}
+
 
 animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vector3, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
 {
@@ -76,7 +102,7 @@ animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vect
     tag: = aseprite_get_tag(*aseprite.data, animation);
     if tag == null return;
 
-    current_frame: = floor_to_s32(current_time * frames_per_second);
+    current_frame: = floor_to_s32(current_time * get_frames_per_second(player));
     aseprite_frame: = aseprite.data.frames[tag.start_frame + current_frame];
 
     draw_sprite(
@@ -88,4 +114,14 @@ animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vect
         flip_y,
         tint
     );
+}
+
+#scope_file
+
+get_frames_per_second :: (using player: *AsepriteAnimationPlayer) -> float
+{
+    if aseprite == null || aseprite.data.frames.count == 0 return 10.0;
+
+    // @NOTE(remi): We assume that all frames have the same duration
+    return 1000 / aseprite.data.frames[0].duration_in_ms.(float);
 }
