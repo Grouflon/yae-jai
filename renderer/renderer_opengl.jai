@@ -102,8 +102,6 @@ load_render_texture :: (width: u32, height: u32) -> RenderTexture
     // Attach color texture and depth renderbuffer/texture to FBO
     GL_VERIFY(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture.handle, 0));
     GL_VERIFY(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, target.depth.handle));
-    // glFramebufferAttach(target.id, target.texture.id, GL_ATTACHMENT_COLOR_CHANNEL0, GL_ATTACHMENT_TEXTURE2D, 0);
-    // glFramebufferAttach(target.id, target.depth.id, GL_ATTACHMENT_DEPTH, GL_ATTACHMENT_RENDERBUFFER, 0);
 
     // Check if fbo is complete with attachments (valid)
     // if (rlFramebufferComplete(target.id)) TRACELOG(LOG_INFO, "FBO: [ID %i] Framebuffer object created successfully", target.id);
@@ -123,6 +121,10 @@ load_render_texture :: (width: u32, height: u32) -> RenderTexture
             // #endif
         }
     }
+
+    // Initially clear the texture
+    GL_VERIFY(glClearColor(0,0,0,0));
+    GL_VERIFY(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 
     GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
