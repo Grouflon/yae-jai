@@ -279,14 +279,41 @@ solve_collisions :: ()
                             b_factor = 0.0;
                         }
 
-                        a_moving: = center(a_bounds) != a._previous_center;
-                        b_moving: = center(b_bounds) != b._previous_center;
+                        a_center: = center(a_bounds);
+                        b_center: = center(b_bounds);
+                        a_moving: = a_center != a._previous_center;
+                        b_moving: = b_center != b._previous_center;
                         a_push: Vector2;
                         b_push: Vector2;
-                        if a_moving && b_moving
+
+                        if a_moving == b_moving
                         {
-                            a_push = compute_push(a._previous_center, a_bounds, b_bounds);
-                            b_push = compute_push(b._previous_center, b_bounds, a_bounds);
+                            intersection: = intersect(a_bounds, b_bounds);
+                            intersection_size: = size(intersection);
+                            a_to_b: = b_center - a_center;
+                            if intersection_size.x < intersection_size.y
+                            {
+                                if a_to_b.x > 0
+                                {
+                                    a_push = .{-intersection_size.x, 0};
+                                }
+                                else
+                                {
+                                    a_push = .{intersection_size.x, 0};
+                                }
+                            }
+                            else
+                            {
+                                if a_to_b.y > 0
+                                {
+                                    a_push = .{0, -intersection_size.y};
+                                }
+                                else
+                                {
+                                    a_push = .{0, intersection_size.y};
+                                }
+                            }
+                            b_push = -a_push;
                         }
                         else if a_moving
                         {
@@ -298,11 +325,8 @@ solve_collisions :: ()
                             b_push = compute_push(b._previous_center, b_bounds, a_bounds);
                             a_push = -b_push;
                         }
-                        else
-                        {
-                            intersection: = intersect(a_bounds, b_bounds);
-                            // What do we do here ?
-                        }
+
+                        // log("(%) % %: % %", yae.frame, a.id.index, b.id.index, a_push, b_push);
 
                         PRECISION_FIX_FACTOR :: 1.001;
                         a.parent.position += xyz(a_push,0) * a_factor * PRECISION_FIX_FACTOR;
