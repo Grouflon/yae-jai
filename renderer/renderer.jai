@@ -23,6 +23,35 @@ ShaderProgram :: struct
     handle: ShaderProgramHandle;
     mvp_uniform_location: s32;
     texture_uniform_location: s32;
+    time_uniform_location: s32;
+}
+
+ShaderInstance :: struct
+{
+    program: ShaderProgram;
+    uniforms: [..]ShaderUniform;
+}
+
+ShaderUniformType :: enum
+{
+    INT;
+    FLOAT;
+    VECTOR2;
+    VECTOR3;
+    VECTOR4;
+}
+
+ShaderUniform :: struct
+{
+    name: *u8; // only accept string literals for now
+    type: ShaderUniformType;
+    union {
+        int_: s32;
+        float_: float;
+        vector2_: Vector2;
+        vector3_: Vector3;
+        vector4_: Vector4;
+    }
 }
 
 TextureFilter :: enum

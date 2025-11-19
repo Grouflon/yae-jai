@@ -17,7 +17,7 @@ OpenGLRenderer :: struct
     index_buffer: [..]u16;
     command_buffer: [..]DrawCommand;
 
-    shader_stack: [..]ShaderProgram;
+    shader_stack: [..]ShaderInstance;
     camera_stack: [..]Camera;
     transform_stack: [..]Matrix4;
     render_texture_stack: [..]RenderTexture;
@@ -272,6 +272,7 @@ load_shader_program :: (vs_text: string, fs_text: string) -> ShaderProgram, bool
         handle = program,
         mvp_uniform_location = glGetUniformLocation(program, "uMvp"),
         texture_uniform_location = glGetUniformLocation(program, "uTexture"),
+        time_uniform_location = glGetUniformLocation(program, "uTime"),
     }, true;
 }
 
@@ -300,13 +301,16 @@ end_camera :: ()
     pop(*camera_stack);
 }
 
-begin_shader :: (shader: ShaderProgram)
+begin_shader :: (shader: ShaderProgram) -> *ShaderInstance
 {
     using yae.renderer;
     assert(is_drawing);
 
     draw_all_commands();
-    array_add(*shader_stack, shader);
+    array_add(*shader_stack, .{program = shader});
+    instance: = array_back(shader_stack);
+    instance.uniforms.allocator = temporary_allocator;
+    return instance;
 }
 
 end_shader :: ()
@@ -317,6 +321,51 @@ end_shader :: ()
 
     draw_all_commands();
     pop(*shader_stack);
+}
+
+shader_instance_set_uniform :: (instance: *ShaderInstance, name: *u8, value: s32)
+{
+    array_add(*instance.uniforms, ShaderUniform.{
+        name = name,
+        type = .INT,
+        int_ = value,
+    });
+}
+
+shader_instance_set_uniform :: (instance: *ShaderInstance, name: *u8, value: float)
+{
+    array_add(*instance.uniforms, ShaderUniform.{
+        name = name,
+        type = .FLOAT,
+        float_ = value,
+    });
+}
+
+shader_instance_set_uniform :: (instance: *ShaderInstance, name: *u8, value: Vector2)
+{
+    array_add(*instance.uniforms, ShaderUniform.{
+        name = name,
+        type = .VECTOR2,
+        vector2_ = value,
+    });
+}
+
+shader_instance_set_uniform :: (instance: *ShaderInstance, name: *u8, value: Vector3)
+{
+    array_add(*instance.uniforms, ShaderUniform.{
+        name = name,
+        type = .VECTOR3,
+        vector3_ = value,
+    });
+}
+
+shader_instance_set_uniform :: (instance: *ShaderInstance, name: *u8, value: Vector4)
+{
+    array_add(*instance.uniforms, ShaderUniform.{
+        name = name,
+        type = .VECTOR4,
+        vector4_ = value,
+    });
 }
 
 begin_draw :: ()
@@ -457,13 +506,32 @@ draw_all_commands :: ()
 
     if command_buffer.count == 0 return;
 
+    vp: = camera_to_vp_matrix(last(camera_stack));
+    time: float = xx get_time();
+
     GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
     GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
 
-    shader: = last(shader_stack);
-    GL_VERIFY(glUseProgram(shader.handle));
+    shader_instance: = last(shader_stack);
+    GL_VERIFY(glUseProgram(shader_instance.program.handle));
 
-    vp: = camera_to_vp_matrix(last(camera_stack));
+    // Set uniforms
+    GL_VERIFY(glUniform1i(shader_instance.program.texture_uniform_location, 0));
+    GL_VERIFY(glUniform1f(shader_instance.program.time_uniform_location, time));
+    for uniform: shader_instance.uniforms
+    {
+        location: = glGetUniformLocation(shader_instance.program.handle, uniform.name);
+        if location == GL_INVALID_VALUE || location == GL_INVALID_OPERATION continue;
+
+        if uniform.type ==
+        {
+            case .INT; glUniform1i(location, uniform.int_);
+            case .FLOAT; glUniform1f(location, uniform.float_);
+            case .VECTOR2; glUniform2f(location, uniform.vector2_.x, uniform.vector2_.y);
+            case .VECTOR3; glUniform3f(location, uniform.vector3_.x, uniform.vector3_.y, uniform.vector3_.z);
+            case .VECTOR4; glUniform4f(location, uniform.vector4_.x, uniform.vector4_.y, uniform.vector4_.z, uniform.vector4_.w);
+        }
+    }
 
     for command: command_buffer
     {
@@ -471,8 +539,7 @@ draw_all_commands :: ()
         GL_VERIFY(glBindTexture(GL_TEXTURE_2D, command.texture));
 
         mvp: = vp * command.transform;
-        GL_VERIFY(glUniformMatrix4fv(shader.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
-        GL_VERIFY(glUniform1i(shader.texture_uniform_location, 0));
+        GL_VERIFY(glUniformMatrix4fv(shader_instance.program.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
 
         GL_VERIFY(glLineWidth(command.line_width));
         GL_VERIFY(glDrawElements(draw_command_type_to_gl(command.type), xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
