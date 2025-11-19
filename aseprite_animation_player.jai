@@ -4,6 +4,9 @@ AsepriteAnimationPlayer :: struct
     current_time: float = 0.0;
     is_playing: bool;
     is_looping: bool;
+    flip_x: bool;
+    flip_y: bool;
+    tint: Color = WHITE;
 
     aseprite: *AsepriteFile;
     animation: StringHash;
@@ -93,7 +96,7 @@ animation_player_stop :: (using player: *AsepriteAnimationPlayer)
 }
 
 
-animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vector3, flip_x: bool = false, flip_y: bool = false, tint: Color = WHITE)
+animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vector3)
 {
     assert(player != null);
     if aseprite == null || !aseprite.is_loaded_without_errors return;
