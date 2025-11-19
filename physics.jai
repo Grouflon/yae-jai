@@ -278,11 +278,35 @@ solve_collisions :: ()
                             a_factor = 1.0;
                             b_factor = 0.0;
                         }
-                        a_push: = compute_push(a._previous_center, a_bounds, b_bounds) * a_factor;
-                        b_push: = compute_push(b._previous_center, b_bounds, a_bounds) * b_factor;
 
-                        a.parent.position += .{a_push.x, a_push.y, 0};
-                        b.parent.position += .{b_push.x, b_push.y, 0};
+                        a_moving: = center(a_bounds) != a._previous_center;
+                        b_moving: = center(b_bounds) != b._previous_center;
+                        a_push: Vector2;
+                        b_push: Vector2;
+                        if a_moving && b_moving
+                        {
+                            a_push = compute_push(a._previous_center, a_bounds, b_bounds);
+                            b_push = compute_push(b._previous_center, b_bounds, a_bounds);
+                        }
+                        else if a_moving
+                        {
+                            a_push = compute_push(a._previous_center, a_bounds, b_bounds);
+                            b_push = -a_push;
+                        }
+                        else if b_moving
+                        {
+                            b_push = compute_push(b._previous_center, b_bounds, a_bounds);
+                            a_push = -b_push;
+                        }
+                        else
+                        {
+                            intersection: = intersect(a_bounds, b_bounds);
+                            // What do we do here ?
+                        }
+
+                        PRECISION_FIX_FACTOR :: 1.001;
+                        a.parent.position += xyz(a_push,0) * a_factor * PRECISION_FIX_FACTOR;
+                        b.parent.position += xyz(b_push,0) * b_factor * PRECISION_FIX_FACTOR;
 
                         array_add_if_unique(*a.frame_collisions, b);
                         array_add_if_unique(*b.frame_collisions, a);

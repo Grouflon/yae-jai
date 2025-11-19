@@ -85,6 +85,14 @@ combine :: (a: $T/BoundsBase, bounds: ..T) -> T
     return final_bounds;
 }
 
+intersect :: (a: $T/BoundsBase, b: T) -> T
+{
+    return .{
+        max(a.min, b.min),
+        min(a.max, b.max)
+    };
+}
+
 operator == :: (a: $T/BoundsBase, b: T) -> bool
 {
     return a.min == b.min && a.max == b.max;
