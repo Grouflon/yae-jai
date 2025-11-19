@@ -21,6 +21,7 @@ YAE :: struct
     root_directory: string;
     yae_directory: string;
 
+    frame: s64;
     time: float64;
     should_close: bool;
 
@@ -60,6 +61,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     time = get_time();
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
+    frame = 0;
 
     // Init Window
     window_handle = create_window(width, height, title);
@@ -198,6 +200,7 @@ yae_frame :: (dt: float)
     using yae;
 
     reset_temporary_storage();
+    frame += 1;
     // time += dt;
 
     // Update Windows rects
