@@ -221,6 +221,20 @@ compare :: (a: $T, b: T) -> s64 {
     return 0;
 }
 
+random_get_array_item :: (state: *Random_State, array: []$T) -> bool, T
+{
+    result: T;
+    if array.count <= 0 return false, result;
+    index: s32 = clamp(floor_to_s32(random_get_within_range(0, xx array.count)), 0, xx (array.count-1));
+    return true, array[index];
+}
+
+random_get_array_item :: (array: []$T) -> bool, T
+{
+    found, item: = random_get_array_item(*context.random_state, array);
+    return found, item;
+}
+
 // resize_render_texture :: (render_texture: *rl.RenderTexture2D, size: Vector2) -> bool
 // {
 //     assert(render_texture != null);
@@ -241,4 +255,5 @@ compare :: (a: $T, b: T) -> s64 {
 #scope_file
 vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s32 #foreign;
 
+#import "Random";
 // rl :: #import "raylib";
