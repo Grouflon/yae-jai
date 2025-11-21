@@ -12,15 +12,19 @@ AsepriteData :: struct
 
     // Frames
     frames: []AsepriteFrame;
-    name_to_frame: Table(StringHash, s32);
+    name_to_frame: Table(StringHash, *AsepriteFrame);
 
     // Tags
     frame_tags: []AsepriteFrameTag;
-    name_to_tag: Table(StringHash, s32);
+    name_to_tag: Table(StringHash, *AsepriteFrameTag);
 
     // Layers
     layers: []AsepriteLayer;
-    name_to_layer: Table(StringHash, s32);
+    name_to_layer: Table(StringHash, *AsepriteLayer);
+
+    // Slices
+    slices: []AsepriteSlice;
+    name_to_slice: Table(StringHash, *AsepriteSlice);
 }
 
 AsepriteBox :: struct
@@ -58,6 +62,18 @@ AsepriteLayer :: struct
     name: string;
     opacity: float32;
     blend_mode: AsepriteBlendMode;
+}
+
+AsepriteSlice :: struct
+{
+    name: string;
+    color: u32;
+    keys: []AsepriteSliceKey;
+}
+
+AsepriteSliceKey :: struct
+{
+    bounds: AsepriteBox;
 }
 
 AsepriteImageFormat :: enum
@@ -183,22 +199,40 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
                 }
             }
         }
+
+        // Layers
+        {
+            found, json_slices: = table_find_new(meta.object, "slices");
+            if found
+            {
+                array_resize(*aseprite.slices, json_slices.array.count);
+                for json_slice, i : json_slices.array
+                {
+                    aseprite.slices[i] = parse_slice(json_slice, aseprite.frames.count);
+                }
+            }
+        }
     }
 
     // Build tables
-    for frame, i : aseprite.frames
+    for *frame, i : aseprite.frames
     {
-        table_set(*aseprite.name_to_frame, string_hash(frame.name), cast(s32)i);
+        table_set(*aseprite.name_to_frame, string_hash(frame.name), frame);
     }
 
-    for tag, i : aseprite.frame_tags
+    for *tag, i : aseprite.frame_tags
     {
-        table_set(*aseprite.name_to_tag, string_hash(tag.name), cast(s32)i);
+        table_set(*aseprite.name_to_tag, string_hash(tag.name), tag);
     }
 
-    for layer, i : aseprite.layers
+    for *layer, i : aseprite.layers
     {
-        table_set(*aseprite.name_to_layer, string_hash(layer.name), cast(s32)i);
+        table_set(*aseprite.name_to_layer, string_hash(layer.name), layer);
+    }
+
+    for *slice, i : aseprite.slices
+    {
+        table_set(*aseprite.name_to_slice, string_hash(slice.name), slice);
     }
 
     return true;
@@ -234,6 +268,14 @@ aseprite_release_data :: (_data: *AsepriteData)
     array_free(_data.layers);
     deinit(*_data.name_to_layer);
 
+    for slice : _data.slices
+    {
+        free(slice.name);
+        array_free(slice.keys);
+    }
+    array_free(_data.slices);
+    deinit(*_data.name_to_slice);
+
     <<_data = .{};
 }
 
@@ -249,14 +291,41 @@ aseprite_get_tag :: (using data: *AsepriteData, name: StringHash) -> *AsepriteFr
 {
     assert(data != null);
 
-    found, tag_index: = table_find_new(*name_to_tag, name);
+    found, tag: = table_find_new(*name_to_tag, name);
     if !found return null;
-    return frame_tags.data + tag_index;
+    return tag;
 }
 
 aseprite_get_tag :: (data: *AsepriteData, name: string) -> *AsepriteFrameTag
 {
     return aseprite_get_tag(data, string_hash(name));
+}
+
+aseprite_get_slice :: (data: *AsepriteData, name: string, frame: s32, reverse_y: bool = false) -> bool, Bounds
+{
+    found, slice: = aseprite_get_slice(data, string_hash(name), frame, reverse_y);
+    return found, slice;
+}
+
+aseprite_get_slice :: (data: *AsepriteData, name: StringHash, frame: s32, reverse_y: bool = false) -> bool, Bounds
+{
+    if data == null return false, .{};
+
+    found, slice: = table_find_new(*data.name_to_slice, name);
+    if !found return false, .{};
+
+    if frame < 0 || frame >= slice.keys.count return false, .{};
+
+    slice_bounds: = to_bounds(slice.keys[frame].bounds);
+    if reverse_y
+    {
+        h: float = xx data.frames[frame].frame.h;
+        slice_bounds = make_bounds(
+            Vector2.{slice_bounds.min.x, h-slice_bounds.min.y},
+            Vector2.{slice_bounds.max.x, h-slice_bounds.max.y}
+        );
+    }
+    return true, slice_bounds;
 }
 
 #scope_file
@@ -324,6 +393,50 @@ parse_layer :: (_value: JSON_Value) -> AsepriteLayer
     layer.opacity = cast(float)(json_get(_value, "opacity", .NUMBER).number / 255.0);
     layer.blend_mode = enum_name_to_value(AsepriteBlendMode, json_get(_value, "blendMode", .STRING).str);
     return layer;
+}
+
+parse_slice :: (_value: JSON_Value, frame_count: s64) -> AsepriteSlice
+{
+    _slice: AsepriteSlice;
+    _slice.name = copy_string(json_get(_value, "name", .STRING).str);
+    _slice.color = string_to_int(slice(json_get(_value, "color", .STRING).str, 1, 8), 16, u32);
+
+    array_resize(*_slice.keys, frame_count);
+    found, json_keys: = table_find_new(_value.object, "keys");
+    if found && json_keys.array.count > 0
+    {
+        previous_frame: s32 = -1;
+        previous_bounds: AsepriteBox;
+        for i: 0..json_keys.array.count-1
+        {
+            json_key: = json_keys.array[i];
+            frame: s32 = xx json_get(json_key, "frame", .NUMBER).number;
+            bounds: = parse_box(json_get(json_key, "bounds", .OBJECT));
+
+            // Everything before first key is set to the first key
+            if previous_frame < 0
+            {
+                previous_frame = 0;
+                previous_bounds = bounds;
+            }
+
+            for j: previous_frame..frame-1
+            {
+                _slice.keys[j].bounds = previous_bounds;
+            }
+
+            previous_frame = frame;
+            previous_bounds = bounds;
+        }
+
+        // Everything after last key is set to the last key
+        for i: previous_frame..frame_count-1
+        {
+            _slice.keys[i].bounds = previous_bounds;
+        }
+    }
+
+    return _slice;
 }
 
 #import "Basic";

@@ -2,6 +2,8 @@ AsepriteAnimationPlayer :: struct
 {
     play_rate: float = 1.0;
     current_time: float = 0.0;
+    current_frame: s32 = -1;
+    current_aseprite_frame: s32 = -1;
     is_playing: bool;
     is_looping: bool;
     flip_x: bool;
@@ -45,20 +47,21 @@ animation_player_update :: (using player: *AsepriteAnimationPlayer, dt: float)
     tag: = aseprite_get_tag(*aseprite.data, animation);
     if tag == null return;
 
+    fps: = get_frames_per_second(player);
     frame_count: = (tag.end_frame+1) - tag.start_frame;
-    current_time += dt * play_rate;
+    animation_duration: = (frame_count.(float)) / fps;
 
-    animation_duration: = (frame_count.(float)) / get_frames_per_second(player);
+    current_time += dt * play_rate;
+    if is_looping
+    {
+        current_time = positive_mod(current_time, animation_duration);
+    }
+    current_frame = floor_to_s32(current_time * fps);
+    current_aseprite_frame = tag.start_frame + current_frame;
+
     if current_time > animation_duration
     {
-        if is_looping
-        {
-            current_time = positive_mod(current_time, animation_duration);
-        }
-        else
-        {
-            animation_player_stop(player);
-        }
+        animation_player_stop(player);
     } 
 }
 
@@ -83,6 +86,8 @@ animation_player_play :: (using player: *AsepriteAnimationPlayer, aseprite_file:
     animation = animation_hash;
     is_looping = loop;
     is_playing = true;
+
+    animation_player_update(player, 0);
 }
 
 animation_player_stop :: (using player: *AsepriteAnimationPlayer)
@@ -90,6 +95,8 @@ animation_player_stop :: (using player: *AsepriteAnimationPlayer)
     assert(player != null);
 
     current_time = 0;
+    current_frame = -1;
+    current_aseprite_frame = -1;
     aseprite = null;
     animation = .{};
     is_playing = false;
@@ -102,11 +109,7 @@ animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vect
     if aseprite == null || !aseprite.is_loaded_without_errors return;
     if aseprite.texture == null || !aseprite.texture.is_loaded_without_errors return;
 
-    tag: = aseprite_get_tag(*aseprite.data, animation);
-    if tag == null return;
-
-    current_frame: = floor_to_s32(current_time * get_frames_per_second(player));
-    aseprite_frame: = aseprite.data.frames[tag.start_frame + current_frame];
+    aseprite_frame: = aseprite.data.frames[current_aseprite_frame];
 
     draw_sprite(
         position,
