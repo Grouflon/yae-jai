@@ -65,6 +65,18 @@ animation_player_update :: (using player: *AsepriteAnimationPlayer, dt: float)
     } 
 }
 
+animation_player_play :: (using player: *AsepriteAnimationPlayer, _animation: AsepriteAnimation, loop: bool = true)
+{
+    found, handle: = get_animation_handle(_animation);
+    if !found
+    {
+        animation_player_stop(player);
+        return;
+    }
+
+    animation_player_play(player, handle, loop);
+}
+
 animation_player_play :: (using player: *AsepriteAnimationPlayer, animation_handle: AsepriteAnimationHandle, loop: bool = true)
 {
     animation_player_play(player, animation_handle.aseprite, animation_handle.animation, loop);
