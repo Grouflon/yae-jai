@@ -21,7 +21,17 @@ ImageData :: struct
 // update_input_events :: ();
 // is_window_focused :: () -> bool;
 get_window_size :: () -> s32, s32 { w, h: = get_window_size(yae.window_handle); return w, h; }
+get_window_width :: (window_handle: *void) -> s32 { w, _: = get_window_size(window_handle); return w; }
+get_window_height :: (window_handle: *void) -> s32 { _, h: = get_window_size(window_handle); return h; }
+get_window_width :: () -> s32 { return get_window_width(yae.window_handle); }
+get_window_height :: () -> s32 { return get_window_height(yae.window_handle); }
+
 get_viewport_size :: () -> s32, s32 { w, h: = get_viewport_size(yae.window_handle); return w, h; }
+get_viewport_width :: (window_handle: *void) -> s32 { w, _: = get_viewport_size(window_handle); return w; }
+get_viewport_width :: () -> s32 { return get_viewport_width(yae.window_handle); }
+get_viewport_height :: (window_handle: *void) -> s32 { _, h: = get_viewport_size(window_handle); return h; }
+get_viewport_height :: () -> s32 { return get_viewport_height(yae.window_handle); }
+
 get_mouse_position :: () -> Vector2 { return get_mouse_position(yae.window_handle); }
 set_mouse_position :: (position: Vector2) { set_mouse_position(yae.window_handle, position); }
 get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT

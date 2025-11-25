@@ -383,10 +383,6 @@ begin_draw :: ()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_SCISSOR_TEST);
-
-    width, height: = get_viewport_size(yae.window_handle);
-    GL_VERIFY(glViewport(0, 0, xx width, xx height));
-    GL_VERIFY(glScissor(0, 0, xx width, xx height));
 }
 
 end_draw :: ()
@@ -408,6 +404,10 @@ begin_render_texture :: (render_texture: RenderTexture)
     draw_all_commands();
     array_add(*render_texture_stack, render_texture);
     GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, render_texture.handle));
+
+    w, h: = render_texture.texture.width, xx render_texture.texture.height;
+    GL_VERIFY(glViewport(0, 0, w, h));
+    GL_VERIFY(glScissor(0, 0, w, h));
 }
 
 end_render_texture :: ()
@@ -418,8 +418,19 @@ end_render_texture :: ()
     draw_all_commands();
     pop(*render_texture_stack);
 
-    fbo_id: = ifx render_texture_stack.count > 0 then last(render_texture_stack).handle else 0;
+    fbo_id: u32 = 0;
+    w: = get_viewport_width(yae.window_handle).(u32);
+    h: = get_viewport_height(yae.window_handle).(u32);
+    if render_texture_stack.count > 0
+    {
+        render_texture: = last(render_texture_stack);
+        fbo_id = render_texture.handle;
+        w = xx render_texture.texture.width;
+        h = xx render_texture.texture.height;
+    }
     GL_VERIFY(glBindFramebuffer(GL_FRAMEBUFFER, fbo_id));
+    GL_VERIFY(glViewport(0, 0, w, h));
+    GL_VERIFY(glScissor(0, 0, w, h));
 }
 
 begin_transform :: (m: Matrix4 = Matrix4_Identity)
