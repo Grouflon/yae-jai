@@ -61,21 +61,56 @@ draw_line :: (begin: Vector3, end: Vector3, width: float = 1.0, color: Color = W
     draw_command(.LINES, vertices, indices, line_width = width);
 }
 
-// draw_antialiased_circle :: (center: Vector2, radius: float, color: Color = rl.WHITE)
-// {
-//     // rl.PushMatrix();
-//     // defer rl.PopMatrix();
-//     // rl.Translatef(center.x, center.y ,-0.5);
-//     // rl.Rotatef(-90, 1,0,0);
+draw_circle :: (center: Vector3, radius: float, color: Color = WHITE, $segments: u16 = 64)
+{
+    vertices: [segments+1]Vertex;
+    indices: [segments*3]u16;
 
-//     BeginShaderMode(antialiased_circle_shader);
-//     defer EndShaderMode();
+    c: = color_to_normalized_vector4(color);
 
-//     rl.DrawTexturePro(texture_1px_white, .{0,0,1,1}, .{center.x-radius, center.y-radius, radius*2, radius*2}, .{}, 0, color);
+    vertices[0] = .{center, .{0.5,0.5}, c};
+    step: = PI*2 / segments.(float);
+    for i: 0..segments-1
+    {
+        angle: float = i.(float) * step;
+        v: = center + xyz(rotate(Vector2.{radius, 0}, angle), 0);
+        uv: = (Vector2.{cos(angle), sin(angle)} + Vector2.{1.0,1.0}) * 0.5;
+        vertices[i+1] = .{v, uv, c};
 
-//     // rl.DrawLine3D(.{0,0,0}, .{10,7,0}, color);
-//     // rl.DrawPlane(.{}, .{radius, radius} * 2, color);
-// }
+        indices[i*3+0] = 0;
+        indices[i*3+1] = 1+i.(u16);
+        indices[i*3+2] = 1+(i.(u16)+1)%segments;
+    }
+
+    draw_command(.TRIANGLES, vertices, indices);
+}
+
+OutlineMode :: enum
+{
+    INSIDE;
+    CENTERED;
+    OUTSIDE;
+}
+
+draw_circle_outline :: (center: Vector3, radius: float, thickness: float = 1.0, color: Color = WHITE, mode: OutlineMode = .OUTSIDE, $segments: s32 = 32)
+{
+    vertices: [segments]Vertex;
+    indices: [segments]u16;
+
+    c: = color_to_normalized_vector4(color);
+
+    step: = PI*2 / segments.(float);
+    for i: 0..segments-1
+    {
+        angle: float = i.(float) * step;
+        v: = center + xyz(rotate(Vector2.{radius, 0}, angle), 0);
+        uv: = (Vector2.{cos(angle), sin(angle)} + Vector2.{1.0,1.0}) * 0.5;
+        vertices[i] = .{v, uv, c};
+        indices[i] = i.(u16);
+    }
+
+    draw_command(.LINE_LOOP, vertices, indices, line_width = thickness);
+}
 
 // // draw_dashed_line :: (_startPos: Vector2, _endPos: Vector2, _color: Color, _dash_size: float = 4.0, _dash_offset: float = 0.0)
 // // {

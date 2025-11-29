@@ -89,6 +89,7 @@ DrawCommandType :: enum
     TRIANGLES;
     LINES;
     LINE_STRIP;
+    LINE_LOOP;
 }
 
 DrawCommand :: struct

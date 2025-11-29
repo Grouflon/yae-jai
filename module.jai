@@ -7,6 +7,8 @@ YAE_DEBUG_MEMORY :: (OS != .WASM);
 yae_resources: struct
 {
     generic_shader: Shader = .{ vs_path = "yae_data://shaders/generic.vs", fs_path = "yae_data://shaders/generic.fs" };
+    circle_shader: Shader = .{ fs_path = "yae_data://shaders/circle.fs" };
+    circle_outline_shader: Shader = .{ fs_path = "yae_data://shaders/circle_outline.fs" };
 };
 
 // #load "animation_player.jai";

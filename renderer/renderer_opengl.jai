@@ -738,6 +738,7 @@ draw_command_type_to_gl :: (type: DrawCommandType) -> GLenum #expand #no_debug
         case .TRIANGLES; return GL_TRIANGLES;
         case .LINES; return GL_LINES;
         case .LINE_STRIP; return GL_LINE_STRIP;
+        case .LINE_LOOP; return GL_LINE_LOOP;
     }
 }
 
