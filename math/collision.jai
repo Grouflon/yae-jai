@@ -19,9 +19,14 @@ collision_circle_bounds :: inline (a_center: Vector2, a_radius: float, b: Bounds
     return distance_point_bounds(a_center, b) <= a_radius;
 }
 
+distance_squared_point_bounds :: inline (a: Vector2, b: Bounds) -> float
+{
+    dx: = max(b.min.x - a.x, 0, a.x - b.max.x);
+    dy: = max(b.min.y - a.y, 0, a.y - b.max.y);
+    return dx*dx + dy*dy;
+}
+
 distance_point_bounds :: inline (a: Vector2, b: Bounds) -> float
 {
-  dx: = max(b.min.x - a.x, 0, a.x - b.max.x);
-  dy: = max(b.min.y - a.y, 0, a.y - b.max.y);
-  return sqrt(dx*dx + dy*dy);
+    return sqrt(distance_squared_point_bounds(a, b));
 }

@@ -14,6 +14,7 @@ PhysicsShapeType :: enum
 {
     BOX :: 0;
     CIRCLE :: 1; // NOT FULLY IMPLEMENTED YET
+    RAY :: 2; // NOT FULLY IMPLEMENTED YET
 }
 
 PhysicsShape :: struct
@@ -24,6 +25,11 @@ PhysicsShape :: struct
         circle: struct {
             center: Vector2;
             radius: float;
+        }
+        ray: struct {
+            origin: Vector2;
+            direction: Vector2;
+            length: float;
         }
     }
 }
@@ -168,6 +174,16 @@ physics_get_layer_response :: (layer1: u8, layer2: u8) -> CollisionResponse
 
     mask: u64 = (cast(u64)0b11) << cast(u64)(layer2 * 2);
     return xx((layers_response[layer1] & mask) >> cast(u64)(layer2 * 2));
+}
+
+physics_cast_circle :: (position: Vector2, radius: float, target_layers: []u8) -> []*Collider
+{
+    return physics_cast(position, .{ type = .CIRCLE, circle = .{.{}, radius} }, target_layers);
+}
+
+physics_cast_rectangle :: (position: Vector2, _box: Bounds, target_layers: []u8) -> []*Collider
+{
+    return physics_cast(position, .{ type = .BOX, box = _box }, target_layers);
 }
 
 physics_cast :: (position: Vector2, shape: PhysicsShape, target_layers: []u8) -> []*Collider

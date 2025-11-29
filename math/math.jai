@@ -74,9 +74,14 @@ clamp :: inline (_value: Vector2, min: float, max: float) -> Vector2
     };
 }
 
-signed_angle_between :: (a: Vector2, b: Vector2) -> float
+angle_between :: inline (a: Vector2, b: Vector2) -> float
 {
-    return -sign(cross(a, b)) * acos(dot(a, b) / (length(a) * length(b)));
+    return acos(dot(a, b) / (length(a) * length(b)));
+}
+
+signed_angle_between :: inline (a: Vector2, b: Vector2) -> float
+{
+    return -sign(cross(a, b)) * angle_between(a, b);
 }
 
 cross_product :: inline (a: Vector2, b: Vector2) -> float
