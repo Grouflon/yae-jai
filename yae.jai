@@ -66,6 +66,8 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     // Init Window
     window_handle = create_window(width, height, title);
     renderer_init();
+    init_gamepad();
+
     // window_flags: rl.ConfigFlags;
     // window_flags |= .FLAG_WINDOW_RESIZABLE;
     // rl.InitWindow(width, height, temp_c_string(title));
@@ -211,6 +213,8 @@ yae_frame :: (dt: float)
     // Update
     {
         update_input_events();
+        update_gamepad();
+        
         resource_manager_update();
 
         #if IMGUI_SUPPORTED
@@ -272,6 +276,11 @@ yae_request_close :: ()
     should_close = true;
 }
 
+yae_refresh_gamepads :: ()
+{
+    init_gamepad();
+}
+
 #scope_file
 
 // tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
@@ -310,5 +319,6 @@ yae_request_close :: ()
 
 #import "System";
 #import "Input";
+#import "Gamepad";
 
 // rl :: #import "raylib";

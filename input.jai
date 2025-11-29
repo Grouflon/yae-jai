@@ -1,22 +1,19 @@
 is_pressed :: (key: Key_Code) -> bool
 {
     if !is_valid_game_input(key) return false;
-
-    return (input_button_states[sanitize_key_code(key)] & .START) != 0;
+    return is_pressed_raw(key);
 }
 
 is_down :: (key: Key_Code) -> bool
 {
     if !is_valid_game_input(key) return false;
-
-    return (input_button_states[sanitize_key_code(key)] & .DOWN) != 0;
+    return is_down_raw(key);
 }
 
 is_released :: (key: Key_Code) -> bool
 {
     if !is_valid_game_input(key) return false;
-
-    return (input_button_states[sanitize_key_code(key)] & .END) != 0;
+    return is_released_raw(key);
 }
 
 is_pressed_raw :: (key: Key_Code) -> bool
@@ -72,6 +69,39 @@ is_keyboard_key :: (key: Key_Code) -> bool
         case .TOUCH; return false;
         case; return true;
     }
+}
+
+is_gamepad_pressed :: (button: Gamepad_Code) -> bool
+{
+    return is_gamepad_pressed(gamepad, button);
+}
+
+is_gamepad_pressed :: (gamepad: *Gamepad, button: Gamepad_Code) -> bool
+{
+    if gamepad == null return false;
+    return (gamepad.buttons[button] & .START) != 0;
+}
+
+is_gamepad_down :: (button: Gamepad_Code) -> bool
+{
+    return is_gamepad_down(gamepad, button);
+}
+
+is_gamepad_down :: (gamepad: *Gamepad, button: Gamepad_Code) -> bool
+{
+    if gamepad == null return false;
+    return (gamepad.buttons[button] & .DOWN) != 0;
+}
+
+is_gamepad_released :: (button: Gamepad_Code) -> bool
+{
+    return is_gamepad_released(gamepad, button);
+}
+
+is_gamepad_released :: (gamepad: *Gamepad, button: Gamepad_Code) -> bool
+{
+    if gamepad == null return false;
+    return (gamepad.buttons[button] & .END) != 0;
 }
 
 #scope_file
