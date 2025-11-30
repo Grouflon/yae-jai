@@ -26,6 +26,19 @@ distance_squared_point_bounds :: inline (a: Vector2, b: Bounds) -> float
     return dx*dx + dy*dy;
 }
 
+closest_point_on_bounds :: inline (a: Vector2, b: Bounds) -> Vector2
+{
+    dx1: = b.min.x - a.x;
+    dx2: = a.x - b.max.x;
+    dx: float = (ifx dx2 > 0 && dx2 > dx1 then -1 else 1) * max(dx1, 0, dx2);
+
+    dy1: = b.min.y - a.y;
+    dy2: = a.y - b.max.y;
+    dy: float = (ifx dy2 > 0 && dy2 > dy1 then -1 else 1) * max(dy1, 0, dy2);
+
+    return a + .{dx, dy};
+}
+
 distance_point_bounds :: inline (a: Vector2, b: Bounds) -> float
 {
     return sqrt(distance_squared_point_bounds(a, b));
