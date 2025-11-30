@@ -277,19 +277,19 @@ solve_collisions :: ()
 
                     if (response == .COLLIDE)
                     {
-                        a_factor: float = 0.0;
-                        b_factor: float = 0.0;
-                        if a.static == b.static
+                        a_factor: float = 0.5;
+                        b_factor: float = 0.5;
+                        if a.static && b.static
                         {
-                            a_factor = 0.5;
-                            b_factor = 0.5;
+                            a_factor = 0.0;
+                            b_factor = 0.0;
                         }
                         else if a.static
                         {
                             a_factor = 0.0;
                             b_factor = 1.0;
                         }
-                        else
+                        else if b.static
                         {
                             a_factor = 1.0;
                             b_factor = 0.0;
