@@ -235,6 +235,35 @@ random_get_array_item :: (array: []$T) -> bool, T
     return found, item;
 }
 
+// array procedures duplicate to deal with our custom types until we find a solution for poking several operator == in the same module
+yae_array_unordered_remove_by_value :: inline (array: *[] $T, item: T, $stop_after_first := false) -> s64 {
+    // Probably want to say something to debug memory trackers here.
+    // Need to make sure it doesn't cost anything in Release.
+    removed := 0;
+    for array.*  if it == item {
+        removed += 1;
+        remove it;
+
+        #if stop_after_first  break;   // Early-out optimization.
+    }
+
+    return removed;
+}
+
+yae_array_find :: (array: [] $T, item: T) -> bool, s64 {
+    for array if it == item return true, it_index;
+    return false, -1;  // Not found.
+}
+
+yae_array_add_if_unique :: (array: *[..] $T, item: T) -> bool, s64 {   // Return true if newly added; also return index.
+    // @Compiler: We should not need explicit dereference here, but auto-dereference doesn't work in some cases.
+    found, index := yae_array_find(array.*, item);   
+    if found return false, index;
+
+    array_add(array, item);
+    return true, array.count-1;
+}
+
 // resize_render_texture :: (render_texture: *rl.RenderTexture2D, size: Vector2) -> bool
 // {
 //     assert(render_texture != null);
