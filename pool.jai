@@ -199,7 +199,7 @@ get :: ($T: Type, id: BaseID, $do_checks: = true) -> *T
     }
 }
 
-for_expansion :: (pool: Pool, body: Code, flags: For_Flags) #expand
+for_expansion :: (pool: *Pool, body: Code, flags: For_Flags) #expand
 {
     i: = 0;
 
@@ -210,7 +210,7 @@ for_expansion :: (pool: Pool, body: Code, flags: For_Flags) #expand
 
     while index >= 0
     {
-        item: = pool_index_to_ptr(*pool, index);
+        item: = pool_index_to_ptr(pool, index);
 
         `it_index: = i;     // The backtick will export it_index to the caller.
 
