@@ -221,6 +221,14 @@ compare :: (a: $T, b: T) -> s64 {
     return 0;
 }
 
+random_get_array_item :: (seed: u64, array: []$T) -> bool, T
+{
+    state: Random_State;
+    random_seed(*state, seed);
+    found, item: = random_get_array_item(*state, array);
+    return found, item;
+}
+
 random_get_array_item :: (state: *Random_State, array: []$T) -> bool, T
 {
     result: T;
