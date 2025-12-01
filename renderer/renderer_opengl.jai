@@ -575,7 +575,28 @@ set_depth_test_enabled :: (value: bool)
 
 is_depth_test_enabled :: () -> bool
 {
-    return glGet(GL_DEPTH_TEST);
+    value: bool;
+    glGetBooleanv(GL_DEPTH_TEST, *value);
+    return value;
+}
+
+set_depth_write_enabled :: (value: bool)
+{
+    if value
+    {
+        glDepthMask(GL_TRUE);
+    }
+    else
+    {
+        glDepthMask(GL_FALSE);
+    }
+}
+
+is_depth_write_enabled :: () -> bool
+{
+    value: bool;
+    glGetBooleanv(GL_DEPTH_WRITEMASK, *value);
+    return value;
 }
 
 #if IMGUI_SUPPORTED
