@@ -111,6 +111,7 @@ get_window_rect :: (handle: *void) -> bool, IntBounds
         rect: Windows.RECT;
         Windows.GetWindowRect(handle, *rect);
         if rect.left == 0 && rect.top == 0 && rect.right == 0 && rect.bottom == 0 { return false, .{}; };
+        if rect.left < -2000 || rect.top < -2000 || rect.right < -2000 || rect.bottom < -2000 { return false, .{}; }; // Try to catch fucked up window that we sometimes get
 
         return true, .{
             .{rect.left, rect.top},

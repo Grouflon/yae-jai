@@ -206,9 +206,9 @@ yae_frame :: (dt: float)
     // time += dt;
 
     // Update Windows rects
-    { success, rect: = get_window_rect(debugger_handle);                if success && size(rect).x != 0 && size(rect).y != 0 yae.debugger_window_rect = rect; }
-    { success, rect: = get_window_rect(get_console_window_handle());    if success && size(rect).x != 0 && size(rect).y != 0 yae.console_window_rect = rect; }
-    { success, rect: = get_window_rect(window_handle);                  if success && size(rect).x != 0 && size(rect).y != 0 yae.app_window_rect = rect; }
+    { success, rect: = get_window_rect(debugger_handle);                if success yae.debugger_window_rect = rect; }
+    { success, rect: = get_window_rect(get_console_window_handle());    if success yae.console_window_rect = rect; }
+    { success, rect: = get_window_rect(window_handle);                  if success yae.app_window_rect = rect; }
     
     // Update
     {
