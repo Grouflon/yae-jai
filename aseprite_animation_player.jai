@@ -137,6 +137,8 @@ animation_player_draw :: (using player: *AsepriteAnimationPlayer, position: Vect
 animation_get_current_slice :: (using player: *AsepriteAnimationPlayer, slice_name: string) -> bool, Bounds
 {
     found, bounds: = aseprite_get_slice(*aseprite.data, slice_name, current_aseprite_frame, true);
+    if !found return false, .{};
+
     if flip_x
     {
         w: float = xx aseprite.data.frames[current_aseprite_frame].frame.w;
