@@ -243,6 +243,26 @@ random_get_array_item :: (array: []$T) -> bool, T
     return found, item;
 }
 
+random_range :: (state: *Random_State, min: $T, max_inclusive: T) -> T
+{
+    return min + ((max_inclusive - min).(float) * random_get_zero_to_one(state)).(T);
+}
+
+random_range :: (min: $T, max_inclusive: T) -> T
+{
+    return random_range(*context.random_state, min, max_inclusive);
+}
+
+random_bool :: (state: *Random_State) -> bool
+{
+    return ifx random_get_zero_to_one(state) > 0.5 then true else false;
+}
+
+random_bool :: () -> bool
+{
+    return random_bool(*context.random_state);
+}
+
 // array procedures duplicate to deal with our custom types until we find a solution for poking several operator == in the same module
 yae_array_unordered_remove_by_value :: inline (array: *[] $T, item: T, $stop_after_first := false) -> s64 {
     // Probably want to say something to debug memory trackers here.
