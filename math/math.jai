@@ -49,6 +49,16 @@ round :: inline (value: float) -> float
         return floor(value + 0.5);
 }
 
+round :: inline (value: Vector2) -> Vector2
+{
+    return .{round(value.x), round(value.y)};
+}
+
+round :: inline (value: Vector3) -> Vector3
+{
+    return .{round(value.x), round(value.y), round(value.z)};
+}
+
 round_to_s32 :: inline (value: float) -> s32
 {
     return xx round(value);
