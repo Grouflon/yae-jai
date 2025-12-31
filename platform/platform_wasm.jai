@@ -152,7 +152,13 @@ using Input;
 #scope_export
 
 // Time
-get_time :: () -> float64 #foreign;
+get_time_since_startup :: () -> float64 #foreign;
+_get_date_time :: () -> s64 #foreign;
+get_current_appolo_time :: () -> Apollo_Time
+{
+    t: = to_apollo(_get_date_time().(float64) * 1000);
+    return t;
+}
 
 // Rendering
 create_opengl_context :: () #foreign;
@@ -216,11 +222,13 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glDrawElements = _glDrawElements;
     procs.glActiveTexture = _glActiveTexture;
     procs.glGenTextures = _glGenTextures;
+    procs.glDeleteTextures = _glDeleteTextures;
     procs.glBindTexture = _glBindTexture;
     procs.glTexParameteri = _glTexParameteri;
     procs.glTexImage2D = _glTexImage2D;
     procs.glGetUniformLocation = _glGetUniformLocation;
     procs.glUniform1i = _glUniform1i;
+    procs.glUniform1f = _glUniform1f;
     procs.glUniformMatrix4fv = _glUniformMatrix4fv;
     procs.glEnable = _glEnable;
     procs.glDisable = _glDisable;
@@ -237,6 +245,8 @@ gl_load_wasm :: (procs: *GL_Procedures)
     procs.glFramebufferRenderbuffer = _glFramebufferRenderbuffer;
     procs.glCheckFramebufferStatus = _glCheckFramebufferStatus;
     procs.glLineWidth = _glLineWidth;
+    procs.glGetBooleanv = _glGetBooleanv;
+    procs.glDepthMask = _glDepthMask;
 }
 
 _glGetString :: (pname: GLenum) -> *GLubyte #foreign;
@@ -269,11 +279,13 @@ _glDrawArrays :: (mode: GLenum, first: GLint, count: GLsizei) #foreign;
 _glDrawElements :: (mode: GLenum, count: GLsizei, type: GLenum, offset: *void) #foreign;
 _glActiveTexture :: (texture: GLenum) #foreign;
 _glGenTextures :: (n: GLsizei, textures: *GLuint) #foreign;
+_glDeleteTextures :: (n: GLsizei, textures: *GLuint) #foreign;
 _glBindTexture :: (target: GLenum, texture: GLuint) #foreign;
 _glTexParameteri :: (target: GLenum, pname: GLenum, param: GLint) #foreign;
 _glTexImage2D :: (target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, type: GLenum, pixels: *void) #foreign;
 _glGetUniformLocation :: (program: GLuint, name: *GLchar) -> GLint #foreign;
 _glUniform1i :: (location: GLint, v0: GLint) #foreign;
+_glUniform1f :: (location: GLint, v0: GLfloat) #foreign;
 _glUniformMatrix4fv :: (location: GLint, count: GLsizei, transpose: GLboolean, value: *GLfloat) #foreign;
 _glEnable :: (cap: GLenum) -> void #foreign;
 _glDisable :: (cap: GLenum) -> void #foreign;
@@ -290,6 +302,9 @@ _glFramebufferTexture2D :: (target: GLenum, attachment: GLenum, textarget: GLenu
 _glFramebufferRenderbuffer :: (target: GLenum, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint) -> void #foreign;
 _glCheckFramebufferStatus :: (target: GLenum) -> GLenum #foreign;
 _glLineWidth :: (width: GLfloat) -> void #foreign;
+_glGetBooleanv :: (pname: GLenum, data: *GLboolean) -> void #foreign;
+_glDepthMask :: (flag: GLboolean) -> void #foreign;
+
 
 #import "GL"(DUMP_GL_ERRORS = true);
 #scope_export

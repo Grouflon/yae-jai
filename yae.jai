@@ -58,7 +58,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     register_resources(*yae_resources, *engine_resources);
     compile_time_registry_init(compile_time_info);
 
-    time = get_time();
+    time = get_time_since_startup();
     undo_redo_manager_init();
     resource_manager_init(compile_time_info.resource_types);
     frame = 0;
@@ -190,7 +190,7 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
     while !yae.should_close
     {
         previous_time: = yae.time;
-        yae.time = get_time();
+        yae.time = get_time_since_startup();
         dt: = yae.time - previous_time;
 
         yae_frame(xx dt);
@@ -317,7 +317,6 @@ yae_refresh_gamepads :: ()
 // }
 
 
-#import "System";
 #import "Input";
 #import "Gamepad";
 

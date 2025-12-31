@@ -518,7 +518,7 @@ draw_all_commands :: ()
     if command_buffer.count == 0 return;
 
     vp: = camera_to_vp_matrix(last(camera_stack));
-    time: float = xx get_time();
+    time: float = xx get_time_since_startup();
 
     GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
     GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));

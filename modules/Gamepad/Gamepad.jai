@@ -944,3 +944,21 @@ update_button_state :: (gamepad: *Gamepad, pressed: bool, code: Gamepad_Code) {
         // ...
     }
 }
+
+// YAE
+#if OS == .WASM {
+
+    Gamepad_OS :: struct {
+        // ...
+    }
+    
+    
+    os_init_gamepad :: () {
+        // ...
+    }
+    
+    
+    os_update_gamepad :: () {
+        // ...
+    }
+}

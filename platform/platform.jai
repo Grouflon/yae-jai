@@ -41,7 +41,8 @@ get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT
 // set_clipboard_text :: (text: string);
 
 // Time
-// get_time :: () -> float64;
+// get_time_since_startup :: () -> float64;
+// get_current_appolo_time :: () -> Apollo_Time;
 
 // Rendering
 // init_opengl_context :: (window: *void);
@@ -55,6 +56,9 @@ get_window_scale_dpi :: () -> Vector2 { return .{1,1}; } // TO IMPLEMENT
 // read_entire_file :: (path: string) -> string, bool;
 // write_entire_file :: (path: string, data: *void, count: int) -> bool;
 write_entire_file :: (path: string, data: string) -> bool { return write_entire_file(path, data.data, data.count); }
+
+// System
+// get_path_of_running_executable :: () -> string;
 
 // FileWatch
 //FileWatcher :: struct {}

@@ -75,6 +75,28 @@ const gl_exports =
             console.assert(texture, "undefined texture %d", texture_index);
             return texture;
         }
+        gl.new_texture = () =>
+        {
+            for (i = 1; i < gl.textures.length; ++i)
+            {
+                // Use first empty slot
+                if (gl.textures[i] == null)
+                {
+                    gl.textures[i] = gl.createTexture();
+                    return i;
+                }
+            }
+
+            // No empty slot, add one
+            gl.textures.push(gl.createTexture());
+            return gl.textures.length - 1;
+        }
+        gl.delete_texture = (texture_index) =>
+        {
+            let texture = gl.get_texture(texture_index);
+            gl.deleteTexture(texture);
+            gl.textures[texture_index] = null;
+        }
 
         gl.locations = new Array();
         gl.locations_map = new Object();
@@ -300,8 +322,16 @@ const gl_exports =
     {
         for (i = 0; i < n; ++i)
         {
-            gl.textures.push(gl.createTexture());
-            write_u32(Number(textures) + i, gl.textures.length - 1);
+            write_u32(Number(textures) + i, gl.new_texture());
+        }
+    },
+
+    _glDeleteTextures: (n, textures) =>
+    {
+        for (i = 0; i < n; ++i)
+        {
+            let texture_index = read_u32(Number(textures) + i);
+            gl.delete_texture(texture_index);
         }
     },
 
@@ -351,11 +381,19 @@ const gl_exports =
 
     _glUniform1i: (location_index, v0) =>
     {
+        if (location_index < 0) return;
         gl.uniform1i(gl.get_location(location_index), v0);
+    },
+
+    _glUniform1f: (location_index, v0) =>
+    {
+        if (location_index < 0) return;
+        gl.uniform1f(gl.get_location(location_index), v0);
     },
 
     _glUniformMatrix4fv: (location_index, count, transpose, value) =>
     {
+        if (location_index < 0) return;
         console.assert(count == 1, "only 1 matrix at a time supported so far");
         matrix = new Float32Array(exports.memory.buffer, Number(value), 16);
         gl.uniformMatrix4fv(gl.get_location(location_index), transpose, matrix);
@@ -484,6 +522,17 @@ const gl_exports =
         gl.lineWidth(width);
     },
 
+    _glGetBooleanv: (pname, data) =>
+    {
+        const param = gl.getParameter(pname);
+        console.assert(typeof param == "boolean");
+        write_u8(data, param ? 1 : 0);
+    },
+
+    _glDepthMask: (flag) =>
+    {
+        gl.depthMask(flag);
+    },
 }
 
 let image_data = null;
@@ -529,6 +578,10 @@ const backend_exports =
                 ctx.drawImage(img, 0, 0);
                 image_data = ctx.getImageData(0, 0, img.width, img.height);
                 
+                asyncify_start_rewind(asyncify_data_ptr);
+                main();
+            }).catch((err) => {
+                console.error(err);
                 asyncify_start_rewind(asyncify_data_ptr);
                 main();
             });
@@ -595,10 +648,14 @@ const backend_exports =
         return return_cstring(executable_path);
     },
 
-    get_time: () =>
+    get_time_since_startup: () =>
     {
         return performance.now() / 1000.0;
-        // return return_float32(0);
+    },
+
+    _get_date_time: () =>
+    {
+        return BigInt(Date.now());
     },
 
     get_canvas_width: () =>
@@ -963,6 +1020,16 @@ function write_u32(ptr, n)
     const bytes = new Uint8Array(buffer);
     const n_bytes = number_to_ubytes(n).slice(0,4);
     bytes.set(n_bytes, ptr);
+}
+
+function write_u8(ptr, n)
+{
+    console.assert(typeof n == "number", "n is not a number", n);
+    console.assert(n >= 0, "%f is not an unsigned number", n);
+    ptr = Number(ptr);
+    const buffer = exports.memory.buffer;
+    const bytes = new Uint8Array(buffer);
+    bytes.set(n, ptr);
 }
 
 function write_u64(ptr, n)

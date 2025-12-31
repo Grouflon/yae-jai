@@ -71,9 +71,14 @@ set_clipboard_text :: (text: string)
 }
 
 // Time
-get_time :: () -> float64
+get_time_since_startup :: () -> float64
 {
     return seconds_since_init();
+}
+
+get_current_appolo_time :: () -> Apollo_Time
+{
+    return current_time_consensus();
 }
 
 init_opengl_context :: (window: *void)
@@ -138,6 +143,13 @@ write_entire_file :: (path: string, data: *void, count: int) -> bool
     return File.write_entire_file(path, data, count);
 }
 
+// System
+get_path_of_running_executable :: () -> string
+{
+    return System.get_path_of_running_executable();
+}
+
+
 #scope_file
 
 GetConsoleWindow :: () -> Windows.HWND #foreign kernel32;
@@ -146,6 +158,7 @@ EnumWindows :: (f: #type (window: Windows.HWND, data: *void) -> bool #c_call, da
 SetCursorPos :: (x : s32, y : s32) -> s32 #foreign user32;
 
 Windows :: #import "Windows";
+System :: #import "System";
 kernel32 :: #system_library "kernel32";
 user32 :: #system_library "user32";
 

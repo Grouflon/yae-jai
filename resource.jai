@@ -49,7 +49,15 @@ resource_load :: (resource: *Resource) -> bool
 
         resource.is_loaded_without_errors = resource.load_function(resource);
         log_unindent();
-        log_verbose("loaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
+
+        if resource.is_loaded_without_errors
+        {
+            log_verbose("loaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
+        }
+        else
+        {
+            log_error("failed to load % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
+        }
     }
     resource.load_count += 1;
     return resource.is_loaded_without_errors;

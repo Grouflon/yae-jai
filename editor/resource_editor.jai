@@ -77,11 +77,11 @@ resource_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> bool
 
     if modified
     {
-        resource_editor.last_modification_time = get_time();
+        resource_editor.last_modification_time = get_time_since_startup();
     }
 
     validate_modification: = false;
-    if resource_editor.last_modification_time >= 0 && (get_time() - resource_editor.last_modification_time) >= RESOURCE_EDIT_BUFFER_TIME
+    if resource_editor.last_modification_time >= 0 && (get_time_since_startup() - resource_editor.last_modification_time) >= RESOURCE_EDIT_BUFFER_TIME
     {
         resource_editor.last_modification_time = -1.0;
 
