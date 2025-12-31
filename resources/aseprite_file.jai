@@ -13,7 +13,7 @@ AsepriteFile :: struct
 
 // get_animation :: (aseprite_file: *AsepriteFile, name: string) -> *Animation
 // {
-//     success, animation: = table_find_new(*aseprite_file.animations, string_hash(name));
+//     success, animation: = table_find(*aseprite_file.animations, string_hash(name));
 //     if !success return null;
 //     return get(animation);
 // }
@@ -27,7 +27,7 @@ AsepriteFile :: struct
 //     texture: = aseprite_file.texture;
 //     if texture == null return;
 
-//     tag_found, tag_index: = table_find_new(*aseprite_file.data.name_to_tag, aseprite_animation_name);
+//     tag_found, tag_index: = table_find(*aseprite_file.data.name_to_tag, aseprite_animation_name);
 //     if !tag_found return;
 //     tag: = aseprite_file.data.frame_tags[tag_index];
 
@@ -39,7 +39,7 @@ AsepriteFile :: struct
 
 //     for i: tag.start_frame..tag.end_frame
 //     {
-//         sprite_found, sprite_index: = table_find_new(*aseprite_file.aseprite_frame_to_sprite_index, i);
+//         sprite_found, sprite_index: = table_find(*aseprite_file.aseprite_frame_to_sprite_index, i);
 //         if !sprite_found continue;
 
 //         sprite: = *texture.sprites[sprite_index];
@@ -76,7 +76,7 @@ AsepriteFile :: struct
 //     for frame, i: data.frames
 //     {
 //         bounds: = get_bounds(frame.frame);
-//         if !table_find_new(*bounds_to_frame_index, bounds)
+//         if !table_find(*bounds_to_frame_index, bounds)
 //         {
 //             table_add(*bounds_to_frame_index, bounds, i);
 //         }
@@ -97,7 +97,7 @@ AsepriteFile :: struct
 //     for frame, i: data.frames
 //     {
 //         bounds: = get_bounds(frame.frame);
-//         found, frame_index: = table_find_new(*bounds_to_frame_index, bounds);
+//         found, frame_index: = table_find(*bounds_to_frame_index, bounds);
 //         assert(found); // It has to be there otherwise something is wrong in the loading process
 //         if i != frame_index continue;
 //         texture_add_or_set_sprite(texture, frame.name, bounds);
@@ -110,10 +110,10 @@ AsepriteFile :: struct
 // {
 //     assert(aseprite_file != null);
 
-//     found, animation: = table_find_new(*animations, animation_name);
+//     found, animation: = table_find(*animations, animation_name);
 //     if !found || animation == null return;
 
-//     found=, tag_index: = table_find_new(*data.name_to_tag, animation_name.str);
+//     found=, tag_index: = table_find(*data.name_to_tag, animation_name.str);
 //     assert(found);
 //     tag: = *data.frame_tags[tag_index];
 //     index_table: = aseprite_file_build_index_table(aseprite_file);
@@ -125,7 +125,7 @@ AsepriteFile :: struct
 //     for i: tag.start_frame..tag.end_frame
 //     {
 //         current_frame: = i - tag.start_frame;
-//         found=, sprite_index: = table_find_new(*index_table, i);
+//         found=, sprite_index: = table_find(*index_table, i);
 //         if !found continue;
 
 //         if sprite_index != previous_sprite_index 
@@ -173,7 +173,7 @@ AsepriteFile :: struct
 //     for frame, i: data.frames
 //     {
 //         bounds: = get_bounds(frame.frame);
-//         found, sprite_index: = table_find_new(*sprite_bounds_to_index, bounds);
+//         found, sprite_index: = table_find(*sprite_bounds_to_index, bounds);
 //         if found
 //         {
 //             table_add(*frame_index_to_sprite_index, i, sprite_index);
@@ -213,7 +213,7 @@ aseprite_file_load :: (resource: *Resource) -> bool
 
     //     table_add(*existing_tags, name_hash, true);
 
-    //     found: = table_find_new(*animations, name_hash);
+    //     found: = table_find(*animations, name_hash);
     //     if !found
     //     {
     //         table_add(*animations, name_hash, null);

@@ -113,7 +113,7 @@ ImGui_EditStructMembers :: (value: *void, info_struct: *Type_Info_Struct) -> boo
     modified: = false;
     for key: keys
     {
-        success, member_info: = table_find_new(*key_to_member_info, key);
+        success, member_info: = table_find(*key_to_member_info, key);
         if !success { continue; }
 
         if serialize_filter_function != null && !serialize_filter_function(value, info_struct, member_info.tis_member) { continue; }
@@ -135,16 +135,16 @@ ImGui_EditResourcePointer :: (label: string, resource_ptr: **Resource, info_stru
     assert(info_struct != null);
     assert(is_subclass_of(info_struct, Resource));
 
-    resource: = <<resource_ptr;
+    resource: = resource_ptr.*;
 
     resources: = get_resources_by_type_info(info_struct);
     modified: = false;
     if ImGui.BeginCombo(temp_c_string(unique_label(label, resource_ptr)), ifx resource != null then temp_c_string(resource.name) else "null")
     {
-        if ImGui.Selectable("null", resource == null) { <<resource_ptr = null; modified = true; }
+        if ImGui.Selectable("null", resource == null) { resource_ptr.* = null; modified = true; }
         for o: resources
         {
-            if ImGui.Selectable(temp_c_string(o.name), resource == o) { <<resource_ptr = o; modified = true; }
+            if ImGui.Selectable(temp_c_string(o.name), resource == o) { resource_ptr.* = o; modified = true; }
         }
         ImGui.EndCombo();
     }
@@ -275,7 +275,7 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                     temp_str: = copy_temporary_string(hash_ptr.str); // unnecessary copy probably
                     if ImGui_InputText(u_label, *temp_str, allocator=*temporary_allocator)
                     {
-                        <<hash_ptr = string_hash(temp_str);
+                        hash_ptr.* = string_hash(temp_str);
                         modified = true;
                     }
                 }
@@ -381,8 +381,8 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
             value_float: float32;
 
             if info.runtime_size == {
-                case 4; { value_float = cast(float)<<cast(*float32)value; }
-                case 8; { value_float = cast(float)<<cast(*float32)value; }
+                case 4; { value_float = value.(*float32).*.(float); }
+                case 8; { value_float = value.(*float32).*.(float); }
             }
 
             if widget_type ==
@@ -397,15 +397,15 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                 value_float = clamp(value_float, min_float, max_float);
 
                 if info.runtime_size == {
-                    case 4; { <<cast(*float32)value = cast(float32)value_float; }
-                    case 8; { <<cast(*float64)value = cast(float64)value_float; }
+                    case 4; { value.(*float32).* = cast(float32)value_float; }
+                    case 8; { value.(*float64).* = cast(float64)value_float; }
                 }
             }
         }
         case .STRING;
         {
             str_ptr: = cast(*string)value;
-            temp_str: = copy_temporary_string(<<str_ptr);
+            temp_str: = copy_temporary_string(str_ptr.*);
             if ImGui_InputText(u_label, str_ptr)
             {
                 modified = true;
@@ -472,8 +472,8 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                     memset(element_ptr, 0, element_size);
                 }
                 array_resizable.count += 1;
-                <<data_ptr = array_resizable.data;
-                <<size_ptr = array_resizable.count;
+                data_ptr.* = array_resizable.data;
+                size_ptr.* = array_resizable.count;
             }
 
             opened: = ImGui.TreeNode(c_label, "%(%)", label, size);
@@ -514,7 +514,7 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
 
                 array_width: = ImGui.GetContentRegionAvail().x;
                 row_positions: [..]Vector2;
-                row_positions.allocator = *temporary_allocator;
+                row_positions.allocator = temporary_allocator;
 
                 if ImGui.BeginTable(c_label, 2, table_flags, .{0, 0})
                 {
@@ -601,7 +601,7 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                         if payload != null
                         {
                             assert(payload.DataSize == size_of(type_of(i)));
-                            dragged_i: = <<cast(*s64)payload.Data;
+                            dragged_i: = payload.Data.(*s64).*;
                             target_i: = ifx i > dragged_i then i-1 else i;
 
                             if dragged_i == target_i continue;

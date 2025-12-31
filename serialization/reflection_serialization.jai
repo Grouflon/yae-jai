@@ -16,14 +16,14 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         {
             resource_ptr: = cast(**Resource) data;
 
-            resource: = <<resource_ptr;
+            resource: = resource_ptr.*;
             name: string;
             if serializer.mode == .WRITE
             {
                 name = ifx resource != null then resource.name else "";
             }
             success: = serialize(serializer, *name, key, *temporary_allocator);
-            <<resource_ptr = get_resource_by_name(name);
+            resource_ptr.* = get_resource_by_name(name);
 
             return success;
         }
@@ -37,7 +37,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         // polymorphic pointer is specific though cause we are dropping and replacing the whole chunk of memory, and not writing over it
         if is_polymorphic(tis)
         {
-            object_ptr: *void = <<cast(**void)data;
+            object_ptr: *void = data.(**void).*;
 
             if serializer.mode == .WRITE && object_ptr == null
             {
@@ -76,7 +76,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     free(object_ptr);
                 }
                 object_ptr = alloc(polymorphic_tis.runtime_size);
-                <<cast(**void)data = object_ptr;
+                data.(**void).* = object_ptr;
                 default_init(object_ptr, polymorphic_tis);
             }
             return serialize(serializer, object_ptr, polymorphic_tis, key);
@@ -170,7 +170,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     string_hash_ptr: = cast(*StringHash)data;
                     str: =  string_hash_ptr.str;
                     if !serialize(serializer, *str, key, *temporary_allocator) return false;
-                    <<string_hash_ptr = string_hash(str);
+                    string_hash_ptr.* = string_hash(str);
                     return true;
                 }
 
@@ -188,7 +188,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
                         if key_type != type_info(StringHash)
                         {
-                            log_warning("unsupported Table key type (%): Only StringHash is supported for now", <<key_type);
+                            log_warning("unsupported Table key type (%): Only StringHash is supported for now", key_type.*);
                             return false;
                         }
 
@@ -226,7 +226,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                             case 8; return serialize_table(serializer, cast(*Table(StringHash,u64))data, value_type, key);
                             case;
                             {
-                                log_warning("unsupported Table value type (%)", <<value_type);
+                                log_warning("unsupported Table value type (%)", value_type.*);
                                 return false;
                             }
                         }
@@ -253,7 +253,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
 
                     for key : keys
                     {
-                        success, member_info: = table_find_new(*key_to_member_info, key);
+                        success, member_info: = table_find(*key_to_member_info, key);
                         if !success { continue; } // For now we just skip unfound entries. We'll see if we need something more elaborate in the future
 
                         skip: = false;
@@ -334,14 +334,14 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         {
                             if name == enum_name
                             {
-                                <<data = cast(T) type.values[i];
+                                data.* = cast(T) type.values[i];
                                 return true;
                             }
                         }
                     }
                     case .WRITE;
                     {
-                        enum_value: s64 = cast(s64) <<data;
+                        enum_value: s64 = cast(s64) data.*;
                         for value, i : type.values
                         {
                             if value == enum_value

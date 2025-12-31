@@ -138,7 +138,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
                 i += 1;
             }
             // If it is object, frames will come out unordered. We sort them alphabetically to at least handle the most general case
-            bubble_sort(aseprite.frames, (a: AsepriteFrame, b: AsepriteFrame) -> s64
+            quick_sort(aseprite.frames, (a: AsepriteFrame, b: AsepriteFrame) -> s64
             {
                 return compare(a.name, b.name);
             });
@@ -169,7 +169,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
         // Tags
         {
-            found, json_tags: = table_find_new(meta.object, "frameTags");
+            found, json_tags: = table_find(meta.object, "frameTags");
             if found
             {
                 array_resize(*aseprite.frame_tags, json_tags.array.count);
@@ -189,7 +189,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
         // Layers
         {
-            found, json_layers: = table_find_new(meta.object, "layers");
+            found, json_layers: = table_find(meta.object, "layers");
             if found
             {
                 array_resize(*aseprite.layers, json_layers.array.count);
@@ -202,7 +202,7 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
 
         // Layers
         {
-            found, json_slices: = table_find_new(meta.object, "slices");
+            found, json_slices: = table_find(meta.object, "slices");
             if found
             {
                 array_resize(*aseprite.slices, json_slices.array.count);
@@ -276,7 +276,7 @@ aseprite_release_data :: (_data: *AsepriteData)
     array_free(_data.slices);
     deinit(*_data.name_to_slice);
 
-    <<_data = .{};
+    _data.* = .{};
 }
 
 to_bounds :: inline (aseprite_box: AsepriteBox) -> Bounds
@@ -291,7 +291,7 @@ aseprite_get_tag :: (using data: *AsepriteData, name: StringHash) -> *AsepriteFr
 {
     assert(data != null);
 
-    found, tag: = table_find_new(*name_to_tag, name);
+    found, tag: = table_find(*name_to_tag, name);
     if !found return null;
     return tag;
 }
@@ -311,7 +311,7 @@ aseprite_get_slice :: (data: *AsepriteData, name: StringHash, frame: s32, revers
 {
     if data == null return false, .{};
 
-    found, slice: = table_find_new(*data.name_to_slice, name);
+    found, slice: = table_find(*data.name_to_slice, name);
     if !found return false, .{};
 
     if frame < 0 || frame >= slice.keys.count return false, .{};
@@ -336,19 +336,19 @@ parse_box :: (_value: JSON_Value) -> AsepriteBox
 
     box: AsepriteBox;
     {
-        success, value: = table_find_new(_value.object, "x");
+        success, value: = table_find(_value.object, "x");
         if success { box.x = cast(s32)value.number; }
     }
     {
-        success, value: = table_find_new(_value.object, "y");
+        success, value: = table_find(_value.object, "y");
         if success { box.y = cast(s32)value.number; }
     }
     {
-        success, value: = table_find_new(_value.object, "w");
+        success, value: = table_find(_value.object, "w");
         if success { box.w = cast(s32)value.number; }
     }
     {
-        success, value: = table_find_new(_value.object, "h");
+        success, value: = table_find(_value.object, "h");
         if success { box.h = cast(s32)value.number; }
     }
 
@@ -378,7 +378,7 @@ parse_tag :: (_value: JSON_Value) -> AsepriteFrameTag
     tag.end_frame = cast(s32)json_get(_value, "to", .NUMBER).number;
     tag.direction = enum_name_to_value(AsepriteDirection, json_get(_value, "direction", .STRING).str);
     {
-        success, val: = table_find_new(_value.object, "repeat");
+        success, val: = table_find(_value.object, "repeat");
         if success { tag.repeat_count = cast(s32)string_to_float(val.str); } 
     }
     tag.color = copy_string(json_get(_value, "color", .STRING).str); // Would be better to directly convert it to color but fuck it for now
@@ -402,7 +402,7 @@ parse_slice :: (_value: JSON_Value, frame_count: s64) -> AsepriteSlice
     _slice.color = string_to_int(slice(json_get(_value, "color", .STRING).str, 1, 8), 16, u32);
 
     array_resize(*_slice.keys, frame_count);
-    found, json_keys: = table_find_new(_value.object, "keys");
+    found, json_keys: = table_find(_value.object, "keys");
     if found && json_keys.array.count > 0
     {
         previous_frame: s32 = -1;

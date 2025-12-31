@@ -66,7 +66,7 @@ texture_get_sprite :: (texture: *TextureFile, name: string) -> *TextureFile.Spri
 texture_get_sprite :: (texture: *TextureFile, name_hash: StringHash) -> *TextureFile.Sprite, s64
 {
     if texture == null return null, -1;
-    found, index: = table_find_new(*texture.name_to_sprite_index, name_hash);
+    found, index: = table_find(*texture.name_to_sprite_index, name_hash);
     if !found return null, -1;
     return *texture.sprites[index], index;
 }

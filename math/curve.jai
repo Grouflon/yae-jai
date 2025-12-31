@@ -159,7 +159,7 @@ serialize_curve :: (serializer: *Serializer, data: *void, info: *Type_Info, key:
     extrapolation_ptr: *CurveExtrapolation = data + table_find_pointer(*key_to_member_info, "extrapolation").offset;
 
     // Serialize points array
-    point_count: s64 = xx <<point_count_ptr;
+    point_count: s64 = xx point_count_ptr.*;
     if !serializer_begin_array(serializer, *point_count, "points") return false;
     max_points: s64 = xx get_polymorphic_argument(u64, xx info, 0);
     if point_count > max_points
@@ -167,7 +167,7 @@ serialize_curve :: (serializer: *Serializer, data: *void, info: *Type_Info, key:
         log_warning("Curve points array is greater than the curve capacity. Cropping excess values");
         point_count = max_points;
     }
-    <<point_count_ptr = xx point_count;
+    point_count_ptr.* = xx point_count;
 
     for i: 0..point_count-1
     {

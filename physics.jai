@@ -376,8 +376,8 @@ compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds)
         a_bounds += Vector2.{movement.x, 0};
         if collision_bounds_bounds(a_bounds, b_bounds)
         {
-            if movement.x >= 0 { <<a_bounds += Vector2.{b_bounds.min.x - a_bounds.max.x, 0}; }
-            else { <<a_bounds += Vector2.{b_bounds.max.x - a_bounds.min.x, 0}; }
+            if movement.x >= 0 { a_bounds.* += Vector2.{b_bounds.min.x - a_bounds.max.x, 0}; }
+            else { a_bounds.* += Vector2.{b_bounds.max.x - a_bounds.min.x, 0}; }
         }
     }
 
@@ -386,8 +386,8 @@ compute_push :: (a_previous_center: Vector2, a_bounds: Bounds, b_bounds: Bounds)
         a_bounds += Vector2.{0, movement.y};
         if collision_bounds_bounds(a_bounds, b_bounds)
         {
-            if movement.y >= 0 { <<a_bounds += Vector2.{0, b_bounds.min.y - a_bounds.max.y}; }
-            else { <<a_bounds += Vector2.{0, b_bounds.max.y - a_bounds.min.y}; }
+            if movement.y >= 0 { a_bounds.* += Vector2.{0, b_bounds.min.y - a_bounds.max.y}; }
+            else { a_bounds.* += Vector2.{0, b_bounds.max.y - a_bounds.min.y}; }
         }
     }
 

@@ -101,5 +101,10 @@ color_to_normalized_vector4 :: (c: Color) -> Vector4
 
 color_to_normalized_vector4 :: (c: u32) -> Vector4
 {
-    return color_to_normalized_vector4(<<cast(*Color)*c);
+    return color_to_normalized_vector4(u32_to_color(c));
+}
+
+u32_to_color :: (c:u32) -> Color
+{
+    return (*c).(*Color).*;
 }

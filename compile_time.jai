@@ -98,7 +98,7 @@ get_serialize_filter_function :: (ti: *Type_Info) -> SerializeFilterFunction
 {
     using compile_time_registry;
 
-    found, f: = table_find_new(*serialize_filter_registry, ti);
+    found, f: = table_find(*serialize_filter_registry, ti);
     if found return f;
     return null;
 }
@@ -107,7 +107,7 @@ get_custom_serialize_function :: (ti: *Type_Info) -> CustomSerializationFunction
 {
     using compile_time_registry;
 
-    found, f: = table_find_new(*custom_serialize_registry, ti);
+    found, f: = table_find(*custom_serialize_registry, ti);
     if found return f;
     return null;
 }
@@ -116,7 +116,7 @@ get_custom_editor_function :: (ti: *Type_Info) -> CustomEditorFunction
 {
     using compile_time_registry;
 
-    found, f: = table_find_new(*custom_editor_registry, ti);
+    found, f: = table_find(*custom_editor_registry, ti);
     if found return f;
     return null;
 }
@@ -130,7 +130,7 @@ get_type_by_name :: (name: StringHash) -> *Type_Info_Struct
 {
     using compile_time_registry;
 
-    found, tis: = table_find_new(*type_by_name, name);
+    found, tis: = table_find(*type_by_name, name);
     if !found return null;
     return tis;
 }
@@ -167,7 +167,7 @@ polymorphic_get_type :: (ptr: *void, tis: *Type_Info_Struct) -> *Type_Info_Struc
     {
         if tis_member.name != args[0].text continue;
 
-        polymorphic_tis = <<cast(**Type_Info_Struct)(ptr + tis_member.offset_in_bytes);
+        polymorphic_tis = (ptr + tis_member.offset_in_bytes).(**Type_Info_Struct).*;
         break;
     }
     return polymorphic_tis;
@@ -188,7 +188,7 @@ polymorphic_deinit :: (ptr: *void, tis: *Type_Info_Struct)
     polymorphic_tis: = polymorphic_get_type(ptr, tis);
     assert(polymorphic_tis != null);
 
-    found, f: = table_find_new(*deinit_registry, polymorphic_tis);
+    found, f: = table_find(*deinit_registry, polymorphic_tis);
     if !found return;
     f(ptr);
 }

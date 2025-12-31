@@ -11,13 +11,13 @@ string_hash :: (str: string) -> StringHash
     str_ptr, added: = find_or_add(*string_hash_repository, hash);
     if added
     {
-        <<str_ptr = copy_string(str);
+        str_ptr.* = copy_string(str);
     }
     else
     {
-        assert(<<str_ptr == str, "Hash Collision: %(%) vs %(%)", str, hash, <<str_ptr, hash);
+        assert(str_ptr.* == str, "Hash Collision: %(%) vs %(%)", str, hash, str_ptr.*, hash);
     }
-    return .{<<str_ptr, hash};
+    return .{str_ptr.*, hash};
 }
 
 free_string_hash_repository :: ()

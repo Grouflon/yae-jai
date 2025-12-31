@@ -66,7 +66,7 @@ yae_logger :: (message: string, data: *void, info: Log_Info)
 
     if log_indent_level > 0
     {
-        push_allocator(*temporary_allocator);
+        push_allocator(temporary_allocator);
         b: String_Builder;
 
         init_string_builder(*b, message.count + log_indent_level * 2);

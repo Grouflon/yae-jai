@@ -724,9 +724,9 @@ update_button_state :: (gamepad: *Gamepad, pressed: bool, code: Gamepad_Code) {
 
                 // This is analagous and partially adapted from ConfigJoystick in <sdl>s/rc/joystick/linux/SDL_sysjoystick.c.
                 num_buttons: u16 = 0;
-                for * current_gamepad_evdev_mappings.keys { <<it = 0xFFFF; }
-                for * current_gamepad_evdev_mappings.abs  { <<it = 0xFFFF; }
-                for * current_gamepad_evdev_mappings.hats { <<it = 0; }
+                for * current_gamepad_evdev_mappings.keys { it.* = 0xFFFF; }
+                for * current_gamepad_evdev_mappings.abs  { it.* = 0xFFFF; }
+                for * current_gamepad_evdev_mappings.hats { it.* = 0; }
 
                 // for some unexplained reason, button indices are not linearly mapped.
                 // event codes in range [BTN_JOYSTICK, KEY_MAX) are mapped first,
@@ -753,7 +753,7 @@ update_button_state :: (gamepad: *Gamepad, pressed: bool, code: Gamepad_Code) {
                         absinfo := libevdev_get_abs_info(current_gamepad, cast(u32) it);
 
                         current_gamepad_evdev_mappings.abs[it] = num_axes;
-                        current_gamepad_evdev_mappings.absinfo[it] = <<absinfo;
+                        current_gamepad_evdev_mappings.absinfo[it] = absinfo.*;
                         num_axes += 1;
                     }
                 }

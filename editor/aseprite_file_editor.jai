@@ -64,12 +64,12 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                 ImGui.TableNextRow();
                 ImGui.TableNextColumn();
 
-                if <<animation_ptr != null
+                if animation_ptr.* != null
                 {
                     ImGui.Selectable(temp_c_string(hash.str), false, .SpanAllColumns | .AllowOverlap, size=.{0,19});
                     if ImGui.IsItemClicked(.Left) && ImGui.IsMouseDoubleClicked(.Left)
                     {
-                        editor_open_resource(<<animation_ptr);
+                        editor_open_resource(animation_ptr.*);
                     }
                 }
                 else
@@ -82,7 +82,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
 
                 ImGui.TableNextColumn();
 
-                animation: = <<animation_ptr;
+                animation: = animation_ptr.*;
                 if animation != null
                 {
                     if ImGui.Button("Sync")
@@ -91,7 +91,7 @@ aseprite_file_editor_update :: (resource_editor: *ResourceEditor, dt: float) -> 
                     }
                     ImGui.SameLine();
                     
-                    success, index: = table_find_new(*aseprite_file.data.name_to_tag, hash.str);
+                    success, index: = table_find(*aseprite_file.data.name_to_tag, hash.str);
                     assert(success);
                     tag: = *aseprite_file.data.frame_tags[index];
 

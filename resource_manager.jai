@@ -30,7 +30,7 @@ resource_manager_init :: (resource_types: []*Type_Info_Struct)
             resources: = table_find_pointer(*resource_manager.file_dependencies, string_hash(path));
             if resources == null { return; }
 
-            for resource: <<resources
+            for resource: resources.*
             {
                 table_set(*resource_manager.resources_to_reload, resource, 0);
             }
@@ -53,7 +53,8 @@ resource_manager_shutdown :: ()
 
     #if FILE_WATCH_SUPPORTED
     {
-        deinit(*watcher);
+        deinit(watcher);
+        watcher = .{};
     }
 
     for resource: resources
@@ -169,7 +170,7 @@ get_resource_by_name :: (name: string) -> *Resource
 {
     using resource_manager;
 
-    found, resource: = table_find_new(*resource_by_name, string_hash(name));
+    found, resource: = table_find(*resource_by_name, string_hash(name));
     if !found return null;
     return resource;
 }
@@ -192,7 +193,7 @@ get_resource_by_path :: (path: string) -> *Resource
     using resource_manager;
 
     _path: = yae_resolve_path(path);
-    found, resource: = table_find_new(*resource_by_path, string_hash(_path));
+    found, resource: = table_find(*resource_by_path, string_hash(_path));
     if !found return null;
     return resource;
 }
@@ -222,7 +223,7 @@ get_resources_by_type_info :: (info: *Type_Info) -> []*Resource
     if !is_subclass_of(info, Resource) return .[];
 
     type_array: = find_or_add(*resources_by_type, cast(*Type_Info_Struct)info);
-    return <<type_array;
+    return type_array.*;
 }
 
 resource_add_file_watch :: (resource: *Resource, file_path: string)

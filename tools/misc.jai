@@ -16,7 +16,7 @@ fletcher32_checksum :: (data: *u8, len: s32) -> s32
         len -= tlen;
         while true
         {
-            sum1 += <<data;
+            sum1 += data.*;
             sum2 += sum1;
 
             data += 1;
@@ -85,7 +85,7 @@ array_move_item :: (data:*void, size: s64, element_type: *Type_Info, from: s64, 
 
     if to < from
     {
-        for #v2 < i: (to+1)..from // This is really weird jai
+        for < i: (to+1)..from // This is really weird jai
         {
             mem_swap(data + i * element_size, data + (i-1) * element_size, element_size);
         }
@@ -107,7 +107,7 @@ table_clear :: (table: *Table)
 table_reset_and_free :: (table: *Table)
 {
     table_free(table);
-    <<table = .{};
+    table.* = .{};
 }
 
 table_free :: (table: *Table)
@@ -178,9 +178,9 @@ mem_swap :: (a: *void, b: *void, size: s64)
 
 swap :: (a: *$T, b: *T) #expand
 {
-    tmp: = <<a;
-    <<a = <<b;
-    <<b = tmp;
+    tmp: = a.*;
+    a.* = b.*;
+    b.* = tmp;
 }
 
 default_init :: (data: *void, info: *Type_Info)

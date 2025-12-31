@@ -157,7 +157,7 @@ get_parent_type :: (tis: *Type_Info_Struct) -> *Type_Info
 get_polymorphic_argument :: ($T: Type, info_struct: *Type_Info_Struct, index: s64) -> T
 {
     assert(info_struct.specified_parameters.count > index);
-    return <<cast(*T)(info_struct.constant_storage.data + info_struct.specified_parameters[index].offset_into_constant_storage);
+    return (info_struct.constant_storage.data + info_struct.specified_parameters[index].offset_into_constant_storage).(*T).*;
 }
 
 enum_value_to_index :: (value: *void, info_enum: *Type_Info_Enum) -> s64
@@ -169,20 +169,20 @@ enum_value_to_index :: (value: *void, info_enum: *Type_Info_Enum) -> s64
     {
         if info_enum.internal_type.runtime_size ==
         {
-            case 1; { s64_value = xx << cast(*s8)value; }
-            case 2; { s64_value = xx << cast(*s16)value; }
-            case 4; { s64_value = xx << cast(*s32)value; }
-            case 8; { s64_value = xx << cast(*s64)value; }
+            case 1; { s64_value = xx value.(*s8).*; }
+            case 2; { s64_value = xx value.(*s16).*; }
+            case 4; { s64_value = xx value.(*s32).*; }
+            case 8; { s64_value = xx value.(*s64).*; }
         }
     }
     else
     {
         if info_enum.internal_type.runtime_size ==
         {
-            case 1; { s64_value = xx << cast(*u8)value; }
-            case 2; { s64_value = xx << cast(*u16)value; }
-            case 4; { s64_value = xx << cast(*u32)value; }
-            case 8; { s64_value = xx << cast(*u64)value; }
+            case 1; { s64_value = xx value.(*u8).*; }
+            case 2; { s64_value = xx value.(*u16).*; }
+            case 4; { s64_value = xx value.(*u32).*; }
+            case 8; { s64_value = xx value.(*u64).*; }
         }
     }
 
@@ -204,20 +204,20 @@ enum_index_to_value :: (index: s64, info_enum: *Type_Info_Enum, value: *void)
     {
         if info_enum.internal_type.runtime_size ==
         {
-            case 1; { typed_value: = cast(*s8)value; <<typed_value = xx s64_value; }
-            case 2; { typed_value: = cast(*s16)value; <<typed_value = xx s64_value; }
-            case 4; { typed_value: = cast(*s32)value; <<typed_value = xx s64_value; }
-            case 8; { typed_value: = cast(*s64)value; <<typed_value = xx s64_value; }
+            case 1; { typed_value: = cast(*s8)value; typed_value.* = xx s64_value; }
+            case 2; { typed_value: = cast(*s16)value; typed_value.* = xx s64_value; }
+            case 4; { typed_value: = cast(*s32)value; typed_value.* = xx s64_value; }
+            case 8; { typed_value: = cast(*s64)value; typed_value.* = xx s64_value; }
         }
     }
     else
     {
         if info_enum.internal_type.runtime_size ==
         {
-            case 1; { typed_value: = cast(*u8)value; <<typed_value = xx s64_value; }
-            case 2; { typed_value: = cast(*u16)value; <<typed_value = xx s64_value; }
-            case 4; { typed_value: = cast(*u32)value; <<typed_value = xx s64_value; }
-            case 8; { typed_value: = cast(*u64)value; <<typed_value = xx s64_value; }
+            case 1; { typed_value: = cast(*u8)value; typed_value.* = xx s64_value; }
+            case 2; { typed_value: = cast(*u16)value; typed_value.* = xx s64_value; }
+            case 4; { typed_value: = cast(*u32)value; typed_value.* = xx s64_value; }
+            case 8; { typed_value: = cast(*u64)value; typed_value.* = xx s64_value; }
         }
     }
 }

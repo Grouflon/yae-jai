@@ -145,8 +145,8 @@ resize_render_texture :: (render_texture: *RenderTexture, width: u32, height: u3
     assert(render_texture != null);
     if width == render_texture.texture.width && height == render_texture.texture.height return false;
 
-    unload_render_texture(<<render_texture);
-    <<render_texture = load_render_texture(width, height);
+    unload_render_texture(render_texture.*);
+    render_texture.* = load_render_texture(width, height);
     return true;
 }
 
@@ -461,7 +461,7 @@ transform_rotate :: (r: Quaternion)
 {
     using yae.renderer;
     assert(is_drawing);
-    <<array_back(transform_stack) = rotate(array_back(transform_stack), r);
+    array_back(transform_stack).* = rotate(array_back(transform_stack), r);
 }
 
 transform_scale :: (s: Vector3)
@@ -640,7 +640,7 @@ draw_imgui_drawdata :: (draw_data: *ImGui.ImDrawData)
 
     for i: 0..draw_data.CmdListsCount-1
     {
-        command_list: = << (draw_data.CmdLists.Data + i);
+        command_list: = (draw_data.CmdLists.Data + i).*;
 
         vertices: [..]Vertex;
         vertices.allocator = temporary_allocator;

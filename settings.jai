@@ -62,7 +62,8 @@ settings_shutdown :: ()
 
     #if FILE_WATCH_SUPPORTED
     {
-        deinit(*watcher);
+        deinit(watcher);
+        watcher = .{};
     }
 
     free(cached_json_settings);

@@ -128,12 +128,12 @@ serialize :: (using s: *JsonSerializer, value: *bool, key: string = "") -> bool
                 return false;
             }
 
-            <<value = current_value.boolean;
+            value.* = current_value.boolean;
         }
         case .WRITE;
         {
             current_value.type = .BOOLEAN;
-            current_value.boolean = <<value;
+            current_value.boolean = value.*;
         }
     }
     return true;
@@ -156,12 +156,12 @@ serialize_number :: inline (using s: *JsonSerializer, value: *$T, key: string = 
                 return false;
             }
 
-            <<value = cast(T) current_value.number;
+            value.* = cast(T) current_value.number;
         }
         case .WRITE;
         {
             current_value.type = .NUMBER;
-            current_value.number = cast(float64) <<value;
+            current_value.number = cast(float64) value.*;
         }
     }
     return true;
@@ -260,13 +260,13 @@ serialize :: (using s: *JsonSerializer, value: *string, key: string = "", alloca
             }
 
             push_allocator(ifx allocator != null then allocator else *context.default_allocator);
-            free(<<value);
-            <<value = copy_string(current_value.str);
+            free(value.*);
+            value.* = copy_string(current_value.str);
         }
         case .WRITE;
         {
             current_value.type = .STRING;
-            current_value.str = copy_temporary_string(<<value);
+            current_value.str = copy_temporary_string(value.*);
         }
     }
     return true;
@@ -289,15 +289,15 @@ json_serializer_begin_array :: (using s: *JsonSerializer, size: *s64, key: strin
                 last_error = "Read value is not of type array";
                 return false;
             }
-            <<size = current_value.array.count;
+            size.* = current_value.array.count;
         }
         case .WRITE;
         {
-            byte_size: = <<size * size_of(JSON_Value);
+            byte_size: = size.* * size_of(JSON_Value);
             current_value.type = .ARRAY;
             current_value.array.data = talloc(byte_size);
             memset(current_value.array.data, 0, byte_size);
-            current_value.array.count = <<size;
+            current_value.array.count = size.*;
         }
     }
     array_add(*context_stack, .{ value = current_value });
@@ -369,7 +369,7 @@ json_serializer_begin_object :: (using s: *JsonSerializer, keys: *[]string, key:
                 i: int = 0;
                 for value, key: current_value.object
                 {
-                    (<<keys)[i] = key;
+                    (keys.*)[i] = key;
                     i += 1;
                 }
             }

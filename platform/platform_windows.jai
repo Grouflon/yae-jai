@@ -95,7 +95,7 @@ swap_buffers :: (window: *void)
 
 read_and_decode_image :: (filename: string, allocator: *Allocator) -> ImageData
 {
-    push_allocator(ifx allocator != null then <<allocator else default_allocator);
+    push_allocator(ifx allocator != null then allocator.* else default_allocator);
 
     width, height, channels: s32;
     data: = stbi_load(temp_c_string(filename), *width, *height, *channels, 4);

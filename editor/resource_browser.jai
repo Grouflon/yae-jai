@@ -30,7 +30,7 @@ resource_browser_update :: ()
                 ImGui.TableSetColumnSortDirection(1, .Ascending, false);
             }
 
-            bubble_sort(resources, (a: *Resource, b: *Resource) -> s64
+            quick_sort(resources, (a: *Resource, b: *Resource) -> s64
             {
                 sort_spec: = current_sort_specs.Specs[0];
                 delta: s64 = 0;

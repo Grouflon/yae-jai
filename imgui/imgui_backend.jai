@@ -273,7 +273,7 @@ update_keyboard_events :: (io: *ImGui.IO)
     // Key Pressed/Released
     for key_code: 0..enum_highest_value(Key_Code)
     {
-        found, imgui_key: = table_find_new(*imgui_keymap, xx key_code);
+        found, imgui_key: = table_find(*imgui_keymap, xx key_code);
         if !found { continue; }
 
         if is_pressed_raw(xx key_code)
@@ -327,7 +327,7 @@ update_keyboard_events :: (io: *ImGui.IO)
 
 //     change_cursor :: (cursor: ImGui.MouseCursor)
 //     {
-//         found, raylib_cursor: = table_find_new(*imgui_raylib_cursors, cursor);
+//         found, raylib_cursor: = table_find(*imgui_raylib_cursors, cursor);
 //         if !found { raylib_cursor = .MOUSE_CURSOR_DEFAULT; }
 
 //         if global_state.config.change_cursor_callback != null
