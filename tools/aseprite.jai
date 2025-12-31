@@ -170,20 +170,45 @@ aseprite_load_data :: (aseprite: *AsepriteData, json_file_path: string) -> bool
         // Tags
         {
             found, json_tags: = table_find(meta.object, "frameTags");
+            has_out_of_bounds_frames: = false;
             if found
             {
-                array_resize(*aseprite.frame_tags, json_tags.array.count);
-                for json_tag, i : json_tags.array
+                if aseprite.frames.count == 0
                 {
-                    aseprite.frame_tags[i] = parse_tag(json_tag);
-
-                    // Compute duration
-                    aseprite.frame_tags[i].duration_in_ms = 0;
-                    for j : 0..(aseprite.frame_tags[i].end_frame - aseprite.frame_tags[i].start_frame)
+                    has_out_of_bounds_frames = true;
+                }
+                else
+                {
+                    array_resize(*aseprite.frame_tags, json_tags.array.count);
+                    for json_tag, i : json_tags.array
                     {
-                        aseprite.frame_tags[i].duration_in_ms += aseprite.frames[aseprite.frame_tags[i].start_frame + j].duration_in_ms;
+                        aseprite.frame_tags[i] = parse_tag(json_tag);
+
+                        // Clamp start/end frames to frames range so that data is at least usable
+                        if aseprite.frame_tags[i].start_frame >= aseprite.frames.count
+                        {
+                            aseprite.frame_tags[i].start_frame = clamp(aseprite.frame_tags[i].start_frame, 0, xx (aseprite.frames.count-1));
+                            has_out_of_bounds_frames = true;
+                        }
+                        if aseprite.frame_tags[i].end_frame >= aseprite.frames.count
+                        {
+                            aseprite.frame_tags[i].end_frame = clamp(aseprite.frame_tags[i].end_frame, 0, xx (aseprite.frames.count-1));
+                            has_out_of_bounds_frames = true;
+                        }
+
+                        // Compute duration
+                        aseprite.frame_tags[i].duration_in_ms = 0;
+                        for j : 0..(aseprite.frame_tags[i].end_frame - aseprite.frame_tags[i].start_frame)
+                        {
+                            aseprite.frame_tags[i].duration_in_ms += aseprite.frames[aseprite.frame_tags[i].start_frame + j].duration_in_ms;
+                        }
                     }
                 }
+            }
+
+            if has_out_of_bounds_frames
+            {
+                log_warning("Aseprite file % has out of range tags. You should probably reexport it", json_file_path);
             }
         }
 
