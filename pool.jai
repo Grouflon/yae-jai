@@ -1,52 +1,111 @@
-Pool :: struct($T: Type)
+// Collection
+PoolCollection :: struct
+{
+    pools: Table(*Type_Info, PoolBase);
+}
+pool_collection: PoolCollection;
+
+pool_add :: ($T: Type) -> *T, ID(T)
+{
+    pool: = get_or_add_pool(type_info(T));
+    assert(pool != null);
+
+    data, id: = pool_add(pool);
+
+    return data, .{index = id.index, generation = id.generation};
+}
+
+pool_remove :: (ptr: *$T)
+{
+    pool: = get_or_add_pool(type_info(T));
+    assert(pool != null);
+
+    item: *PoolBase.Item = (ptr.(*void) - POOL_ITEM_HEADER_SIZE);
+    pool_remove(pool, item);
+}
+
+pool_remove :: (id: ID($T))
+{
+    pool: = get_or_add_pool(type_info(T));
+    assert(pool != null);
+
+    item: = pool_index_to_item_ptr(pool, id.index);
+    assert(item.generation == id.generation); // removing already released item
+
+    pool_remove(pool, item);
+}
+
+get_or_add_pool :: (ti: *Type_Info) -> *PoolBase
+{
+    assert(ti != null);
+
+    pool, newly_added: = find_or_add(*pool_collection.pools, ti);
+    if newly_added
+    {
+        pool_init(pool, ti);
+    }
+    assert(pool != null);
+    return pool;
+}
+
+// Pool
+PoolBase :: struct
 {
     Item :: struct
     {
-        data: T;
         generation: u32;
-        previous: s32;
-        next: s32;
+        previous: u32;
+        next: u32;
+        data: *void;
     }
 
-    pages: [..]*Item;
+    pages: [..]*void;
+    type: *Type_Info;
     items_per_page: s64;
 
-    first_used: s32 = -1;
-    last_used: s32 = -1;
-    first_unused: s32 = -1;
+    first_used: u32;
+    last_used: u32;
+    first_unused: u32;
+
+    used_count: u32;
 }
+
+POOL_ITEM_HEADER_SIZE :: size_of(PoolBase.Item) - size_of(*void);
 
 ID :: struct($T: Type)
 {
-    #as using id: BaseID;
+    #as using id: IDBase;
 }
 
-BaseID :: struct
+IDBase :: struct
 {
-    pool: *void;
-    index: s32;
+    index: u32;
     generation: u32;
 }
 
-operator == :: inline (a: BaseID, b: BaseID) -> bool
+operator == :: inline (a: IDBase, b: IDBase) -> bool
 {
-    return a.pool == b.pool && a.index == b.index && a.generation == b.generation;
+    return a.index == b.index && a.generation == b.generation;
 }
 
-pool_init :: (pool: *Pool, page_size: s32 = 32 * 1024)
+pool_init :: (using pool: *PoolBase, ti: *Type_Info, page_size: u32 = 32 * 1024)
 {
     assert(pool != null);
+    assert(pool.type == null);
 
-    item_size: = size_of(pool.Item);
+    type = ti;
+    item_size: = get_item_size(pool);
     assert(page_size >= item_size);
-    pool.items_per_page = floor_to_s32(cast(float)page_size / cast(float)item_size);
+    items_per_page = floor_to_s64(cast(float)page_size / cast(float)item_size);
 
-    pool.first_used = -1;
-    pool.last_used = -1;
-    pool.first_unused = -1;
+    first_used = 0;
+    last_used = 0;
+    first_unused = 0;
+
+    pool_add_page(pool); // we allocate a page already to make the null item valid immediately
 }
 
-pool_shutdown :: (using pool: *Pool)
+pool_shutdown :: (using pool: *PoolBase)
 {
     assert(pool != null);
 
@@ -55,47 +114,54 @@ pool_shutdown :: (using pool: *Pool)
         free(page);
     }
     array_reset(*pages);
+
+    first_used = 0;
+    last_used = 0;
+    first_unused = 0;
+    type = null;
 }
 
-pool_add :: (using pool: *Pool($T), $initialize:=true) -> *T, ID(T)
+pool_add :: (using pool: *PoolBase, $initialize:=true) -> *void, IDBase
 {
     assert(pool != null);
 
-    if first_unused < 0
+    if first_unused == 0
     {
         pool_add_page(pool);
-        assert(first_unused >= 0);
+        assert(first_unused > 0);
     }
 
     new_item_index: = first_unused;
-    item: = pool_index_to_ptr(pool, first_unused);
+    item: = pool_index_to_item_ptr(pool, first_unused);
 
     first_unused = item.next;
-    if first_unused >= 0 { pool_index_to_ptr(pool, first_unused).previous = -1; }
+    if first_unused > 0 { pool_index_to_item_ptr(pool, first_unused).previous = 0; }
     item.previous = last_used;
-    item.next = -1;
+    item.next = 0;
 
-    id: = ID(T).{ pool = pool, index = new_item_index, generation = item.generation};
+    id: = IDBase.{ index = new_item_index, generation = item.generation};
 
-    if first_used < 0
+    if first_used == 0
     {
-        assert(last_used < 0);
+        assert(last_used == 0);
         first_used = new_item_index;
         last_used = new_item_index;
     }
     else
     {
-        pool_index_to_ptr(pool, last_used).next = new_item_index;
+        pool_index_to_item_ptr(pool, last_used).next = new_item_index;
         last_used = new_item_index;
     }
 
     #if initialize
     {
-        ini :: initializer_of(T);
-        #if ini {
-            ini(*item.data);
-        } else {
-            memset(*item.data, 0, size_of(T));
+        if type.type == .STRUCT && type.(*Type_Info_Struct).initializer != null
+        {
+            type.(*Type_Info_Struct).initializer(*item.data);
+        }
+        else
+        {
+            memset(*item.data, 0, type.runtime_size);
         }
     }
 
@@ -105,20 +171,16 @@ pool_add :: (using pool: *Pool($T), $initialize:=true) -> *T, ID(T)
     //     log("% % %", i, item.previous, item.next);
     // }
 
+    used_count += 1;
+
     return *item.data, id;
 }
 
-pool_remove :: (using pool: *Pool($T), data: *T)
+pool_remove :: (using pool: *PoolBase, item: *PoolBase.Item)
 {
     assert(pool != null);
+    assert(item != null);
 
-    // log("rem % (% % %)", id.index, first_used, last_used, first_unused);
-    // for *item, i: items
-    // {
-    //     log("% % %", i, item.previous, item.next);
-    // }
-
-    item: *Pool(T).Item = xx data;
     page_index: s64 = -1;
     for p, i: pages
     {
@@ -129,7 +191,7 @@ pool_remove :: (using pool: *Pool($T), data: *T)
         }
     }
     assert(page_index >= 0);
-    index: s32 = xx (page_index * items_per_page + (item - pages[page_index]));
+    index: u32 = xx (page_index * items_per_page + (item - pages[page_index].(*PoolBase.Item)));
 
     // Patch used list
     if index == first_used
@@ -140,41 +202,43 @@ pool_remove :: (using pool: *Pool($T), data: *T)
     {
         last_used = item.previous;
     }
-    if item.previous >= 0 { pool_index_to_ptr(pool, item.previous).next = item.next; }
-    if item.next >= 0 { pool_index_to_ptr(pool, item.next).previous = item.previous; }
+    if item.previous > 0 { pool_index_to_item_ptr(pool, item.previous).next = item.next; }
+    if item.next > 0 { pool_index_to_item_ptr(pool, item.next).previous = item.previous; }
 
     // Patch unused list (keep unused list ordered to avoid memory fragmentation)
-    if first_unused < 0
+    if first_unused == 0
     {
         // Empty unused list
         first_unused = index;
-        item.previous = -1;
-        item.next = -1;
+        item.previous = 0;
+        item.next = 0;
     }
     else if index < first_unused
     {
         // removed index is before first unused
-        item.previous = -1;
+        item.previous = 0;
         item.next = first_unused;
-        pool_index_to_ptr(pool, first_unused).previous = index;
+        pool_index_to_item_ptr(pool, first_unused).previous = index;
         first_unused = index;
     }
     else
     {
         // removed index is after first unused
         append_index: = first_unused;
-        append_item: = pool_index_to_ptr(pool, append_index);
-        while append_item.next < index && append_item.next >= 0
+        append_item: = pool_index_to_item_ptr(pool, append_index);
+        while append_item.next < index && append_item.next > 0
         {
             append_index = append_item.next;
-            append_item = pool_index_to_ptr(pool, append_index);
+            append_item = pool_index_to_item_ptr(pool, append_index);
         }
 
-        if append_item.next >= 0 { pool_index_to_ptr(pool, append_item.next).previous = index; }
+        if append_item.next > 0 { pool_index_to_item_ptr(pool, append_item.next).previous = index; }
         item.next = append_item.next;
         item.previous = append_index;
         append_item.next = index;
     }
+
+    used_count -= 1;
 
     item.generation += 1;
 }
@@ -184,22 +248,22 @@ get :: (id: ID($T), $do_checks: = true) -> *T
     return get(T, id, do_checks);
 }
 
-get :: ($T: Type, id: BaseID, $do_checks: = true) -> *T
+get :: ($T: Type, id: IDBase, $do_checks: = true) -> *T
 {
-    pool: *Pool(T) = xx id.pool;
+    pool: *PoolBase(T) = xx id.pool;
     #if do_checks
     {
         if pool == null return null;
-        item: = pool_index_to_ptr(pool, id.index);
+        item: = pool_index_to_item_ptr(pool, id.index);
         return ifx id.generation == item.generation then *item.data else null;
     }
     else
     {
-        return *pool_index_to_ptr(id.index).data;
+        return *pool_index_to_item_ptr(id.index).data;
     }
 }
 
-for_expansion :: (pool: *Pool, body: Code, flags: For_Flags) #expand
+for_expansion :: (pool: PoolBase, body: Code, flags: For_Flags) #expand
 {
     i: = 0;
 
@@ -210,7 +274,7 @@ for_expansion :: (pool: *Pool, body: Code, flags: For_Flags) #expand
 
     while index >= 0
     {
-        item: = pool_index_to_ptr(pool, index);
+        item: = pool_index_to_item_ptr(*pool, index);
 
         `it_index: = i;     // The backtick will export it_index to the caller.
 
@@ -230,9 +294,14 @@ for_expansion :: (pool: *Pool, body: Code, flags: For_Flags) #expand
     }
 }
 
+get_item_size :: (pool: *PoolBase) -> s64
+{
+    return POOL_ITEM_HEADER_SIZE + pool.type.runtime_size;
+}
+
 #scope_file
 
-pool_index_to_ptr :: (using pool: *Pool($T), index: s32) -> *Pool(T).Item
+pool_index_to_item_ptr :: (using pool: *PoolBase, index: u32) -> *PoolBase.Item
 {
     assert(index >= 0);
     page_index: = index / items_per_page;
@@ -241,25 +310,39 @@ pool_index_to_ptr :: (using pool: *Pool($T), index: s32) -> *Pool(T).Item
     return pages[page_index] + item_index;
 }
 
-pool_add_page :: (using pool: *Pool($T))
+pool_add_page :: (using pool: *PoolBase)
 {
     assert(pool != null);
-    assert(first_unused < 0);
+    assert(first_unused == 0);
 
-    page: *Pool(T).Item = xx alloc(items_per_page * size_of(pool.Item));
+    item_size: = get_item_size(pool);
+    page: = alloc(items_per_page * item_size);
     array_add(*pages, page);
     page_index: = pages.count - 1;
-    first_unused = xx (page_index * items_per_page);
-    start_index: = xx (page_index * items_per_page);
-
-    for i: 0..items_per_page-1
+    first_item_index: = 0;
+    if page_index == 0
     {
-        page[i].generation = 1; // We start generation at 1, so that IDs zero initialized are always invalid
-        page[i].previous = xx(start_index + i-1);
-        page[i].next = xx(start_index + i+1);
+        first_item_index = 1; // 0 is reserved as the null item
+        memset(page, 0, item_size); // 0 initialize null index
+    }
+    start_index: = page_index * items_per_page;
+    first_unused = xx (start_index + first_item_index);
+
+    for i: first_item_index..items_per_page-1
+    {
+        item: *Item = xx (page + (i * item_size));
+        item.generation = 0;
+        item.previous = xx(start_index + i-1);
+        item.next = xx(start_index + i+1);
     }
 
-    page[0].previous = -1;
-    page[items_per_page-1].next = -1;
-}
+    get_page_item :: (page: *void, index: s64, item_size: s64) -> *PoolBase.Item
+    {
+        return xx (page + (index * item_size));
+    }
 
+    first_item: = get_page_item(page, first_item_index, item_size);
+    last_item: = get_page_item(page, items_per_page-1, item_size);
+    first_item.previous = 0; // first item is first unused item so previous is null
+    last_item.next = 0; // last item is last unused item so next is null
+}

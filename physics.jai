@@ -3,7 +3,7 @@ SOLVING_ITERATIONS :: 5;
 
 PhysicsManager :: struct
 {
-    colliders: Pool(Collider);
+    // colliders: Pool(Collider);
 
     colliders_by_layer: [LAYER_COUNT][..]*Collider;
     layers_response: [LAYER_COUNT]u64;
