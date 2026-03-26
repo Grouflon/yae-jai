@@ -174,6 +174,24 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     return true;
                 }
 
+                case type_info(Color);
+                {
+                    color: *Color = data;
+                    size: s64 = 4;
+                    if !serializer_begin_array(serializer, *size, key) return false;
+                    if size != 4 return false;
+                    verify(serializer_set_array_index(serializer, 0));
+                    verify(serialize(serializer, *color.r));
+                    verify(serializer_set_array_index(serializer, 1));
+                    verify(serialize(serializer, *color.g));
+                    verify(serializer_set_array_index(serializer, 2));
+                    verify(serialize(serializer, *color.b));
+                    verify(serializer_set_array_index(serializer, 3));
+                    verify(serialize(serializer, *color.a));
+                    verify(serializer_end_array(serializer));
+                    return true;
+                }
+
                 case;
                 {
                     info_struct: = cast(*Type_Info_Struct) info;

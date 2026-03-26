@@ -296,6 +296,26 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                     }
                 }
 
+                case type_info(Color);
+                {
+                    color_ptr: = value.(*Color);
+                    color: = float.[
+                        color_ptr.r.(float) / 255.0,
+                        color_ptr.g.(float) / 255.0,
+                        color_ptr.b.(float) / 255.0,
+                        color_ptr.a.(float) / 255.0,
+                    ];
+
+                    if ImGui.ColorEdit4(c_label, *color)
+                    {
+                        color_ptr.r = xx (color[0] * 255.0);
+                        color_ptr.g = xx (color[1] * 255.0);
+                        color_ptr.b = xx (color[2] * 255.0);
+                        color_ptr.a = xx (color[3] * 255.0);
+                        modified = true;
+                    }
+                }
+
                 case; // Generic structs
                 {
                     info_struct: = polymorphic_get_type(value, xx info);
