@@ -19,7 +19,7 @@ resource_load :: (resource: *Resource) -> bool
 {
     if resource == null return false;
 
-    if resource.load_count == 0 && resource.load_function != null
+    if resource.load_count == 0
     {
         log_verbose("loading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
         log_indent();
@@ -47,7 +47,7 @@ resource_load :: (resource: *Resource) -> bool
             resource_add_file_watch(resource, data_path);
         }
 
-        resource.is_loaded_without_errors = resource.load_function(resource);
+        resource.is_loaded_without_errors = resource.load_function == null || resource.load_function(resource);
         log_unindent();
 
         if resource.is_loaded_without_errors
@@ -70,7 +70,7 @@ resource_unload :: (resource: *Resource)
     assert(resource.load_count > 0);
 
     resource.load_count -= 1;
-    if resource.load_count == 0 && resource.unload_function != null
+    if resource.load_count == 0
     {
         log_verbose("unloading % %...", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
 
@@ -85,7 +85,10 @@ resource_unload :: (resource: *Resource)
         }
         
         resource.is_loaded_without_errors = false;
-        resource.unload_function(resource);
+        if resource.unload_function != null
+        {
+            resource.unload_function(resource);
+        }
         log_verbose("unloaded % %", resource.type.name, resource.name, section = *RESOURCE_LOG_SECTION);
     }
 }
