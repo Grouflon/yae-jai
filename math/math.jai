@@ -16,6 +16,11 @@ floor_to_s32 :: inline (_value: float) -> s32
     return cast(s32)floor(_value);
 }
 
+floor_to_s64 :: inline (_value: float) -> s64
+{
+    return cast(s64)floor(_value);
+}
+
 floor_to_s32 :: inline (_value: Vector2) -> s32, s32
 {
     return floor_to_s32(_value.x), floor_to_s32(_value.y);
@@ -24,6 +29,11 @@ floor_to_s32 :: inline (_value: Vector2) -> s32, s32
 floor_to_u32 :: inline (_value: float) -> u32
 {
     return cast(u32)floor(_value);
+}
+
+floor_to_u64 :: inline (_value: float) -> u64
+{
+    return cast(u64)floor(_value);
 }
 
 ceil_to_int :: inline (_value: float) -> int
@@ -39,6 +49,11 @@ ceil_to_s32 :: inline (_value: float) -> s32
 ceil_to_s32 :: inline (_value: Vector2) -> s32, s32
 {
     return ceil_to_s32(_value.x), ceil_to_s32(_value.y);
+}
+
+ceil_to_s64 :: inline (_value: float) -> s64
+{
+    return cast(s64)ceil(_value);
 }
 
 round :: inline (value: float) -> float
