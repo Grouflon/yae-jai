@@ -55,6 +55,7 @@ yae_resources: struct
 
 #load "tools/aseprite.jai";
 #load "tools/filesystem.jai";
+#load "tools/hash.jai";
 #load "tools/json.jai";
 #load "tools/misc.jai";
 #load "tools/os.jai";
