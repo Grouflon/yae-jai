@@ -70,6 +70,7 @@ yae_resources: struct
     #load "editor/gizmo.jai";
     #load "editor/resource_browser.jai";
     #load "editor/resource_editor.jai";
+    #load "editor/pools_inspector.jai";
     #load "editor/texture_file_editor.jai";
 }
 

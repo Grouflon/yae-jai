@@ -309,6 +309,25 @@ yae_array_add_if_unique :: (array: *[..] $T, item: T) -> bool, s64 {   // Return
 //     return true;
 // }
 
+prettify_byte_count :: (size: u64, format: string = "% %") -> string
+{
+    units: = string.["b", "Kb", "Mb", "Gb", "Tb"];
+    unit_index: = 0;
+
+    while size > 1024 && unit_index < (units.count-1)
+    {
+        size /= 1024;
+        unit_index += 1;
+    }
+
+    return tprint(format, size, units[unit_index]);
+}
+
+prettify_byte_count :: (size: s64, format: string = "% %") -> string
+{
+    return prettify_byte_count(size.(u64), format);
+}
+
 #scope_file
 vsnprintf :: (buffer: *u8, bufsz: s64, fmt: *u8, args: *void) -> s32 #foreign;
 

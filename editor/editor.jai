@@ -4,6 +4,7 @@ Editor :: struct
     imgui_demo_open: bool; @serialize
     imgui_font_open: bool; @serialize
     display_colliders: bool; @serialize
+    pools_open: bool; @serialize
 
     edited_resources: [..]ResourceEditor; @serialize
 
@@ -94,6 +95,7 @@ editor_update :: (dt: float)
         if ImGui.BeginMenu("Windows")
         {
             ImGui.MenuItem("Resources", "", *resources_open);
+            ImGui.MenuItem("Pools", "", *pools_open);
             ImGui.MenuItem("ImGui Demo", "", *imgui_demo_open);
             ImGui.MenuItem("ImGui Font", "", *imgui_font_open);
 
@@ -162,6 +164,16 @@ editor_update :: (dt: float)
         {
             resource_save_to_disk(resource_editor.resource);
         }
+    }
+
+    if pools_open
+    {
+        ImGui.SetNextWindowSize(.{500, 300}, .FirstUseEver);
+        if ImGui.Begin("Pools", *pools_open)
+        {
+            pools_inspector_update();
+        }
+        ImGui.End();
     }
 }
 
