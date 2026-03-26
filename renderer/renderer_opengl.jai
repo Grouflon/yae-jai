@@ -65,6 +65,21 @@ renderer_init :: ()
     // Index Buffer
     GL_VERIFY(glGenBuffers(1, *ibo));
     GL_VERIFY(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+
+    // Default Camera
+    array_add(*camera_stack,.{
+        position = .{},
+        rotation = .{},
+        type = .ORTHOGRAPHIC,
+        orthographic = .{
+            top = 0,
+            left = 0,
+            bottom = 1,
+            right = 1,
+            near = -10,
+            far = 10
+        }
+    });
 }
 
 renderer_shutdown :: ()
@@ -295,7 +310,7 @@ end_camera :: ()
 {
     using yae.renderer;
     assert(is_drawing);
-    assert(camera_stack.count > 0);
+    assert(camera_stack.count > 1);
 
     draw_all_commands();
     pop(*camera_stack);
@@ -379,10 +394,15 @@ begin_draw :: ()
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE); // With cull face enabled, inverted viewports (like default camera) will invert front and back face and fail to draw
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_SCISSOR_TEST);
+
+    w: = get_viewport_width(yae.window_handle).(u32);
+    h: = get_viewport_height(yae.window_handle).(u32);
+    GL_VERIFY(glViewport(0, 0, w, h));
+    GL_VERIFY(glScissor(0, 0, w, h));
 }
 
 end_draw :: ()
