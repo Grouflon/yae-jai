@@ -1,4 +1,5 @@
 Entity :: struct
 {
-    position: Vector3;
+    // transform: *Transform;
+    // components: [..]*EntityComponent;
 }

@@ -33,6 +33,13 @@ has_note :: (ti: *Type_Info_Struct_Member, note: string) -> bool
     return has_note(ti.notes, note);
 }
 
+has_note :: (ph: *Code_Procedure_Header, note: string) -> bool
+{
+    if ph == null return false;
+    for ph.notes if it.text == note return true;
+    return false;
+}
+
 has_note :: (notes: []string, note: string) -> bool
 {
     for n: notes

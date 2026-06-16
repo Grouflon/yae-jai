@@ -8,6 +8,8 @@ YaeCompileTimeInfo :: struct
     custom_editor_types: []TypeFunction(CustomEditorFunction);
     serialize_filter_types: []TypeFunction(SerializeFilterFunction);
     deinit_functions: []TypeFunction(DeinitFunction);
+    update_functions: []TypeFunction(UpdateFunction);
+    draw_functions: []TypeFunction(DrawFunction);
 }
 
 CustomSerializationFunction :: #type (serializer: *Serializer, data: *void, info: *Type_Info,  key: string) -> (success: bool);
@@ -15,6 +17,8 @@ CustomEditorFunction :: #type (data: *void, info: *Type_Info) -> bool;
 // @NOTE(remi): in the case of #as or unions, Type_Info_Struct_Member might come from a different Type_Info than the parent_info. Maybe it is not a good idea to give it as is
 SerializeFilterFunction :: #type (parent_data: *void, parent_info: *Type_Info_Struct, member_info: *Type_Info_Struct_Member) -> bool;
 DeinitFunction :: #type (ptr: *void);
+UpdateFunction :: #type (ptr: *void, dt: float);
+DrawFunction :: #type (ptr: *void);
 
 TypeFunction :: struct(function_type: Type)
 {
@@ -34,6 +38,8 @@ compile_time_registry : struct
     custom_editor_registry: Table(*Type_Info, CustomEditorFunction);
     serialize_filter_registry: Table(*Type_Info, SerializeFilterFunction);
     deinit_registry: Table(*Type_Info_Struct, DeinitFunction);
+    update_registry: Table(*Type_Info_Struct, UpdateFunction); // using a table here is not great cause update order can vary as we add new things to the table
+    draw_registry: Table(*Type_Info_Struct, DrawFunction);
     type_by_name: Table(StringHash, *Type_Info_Struct);
     children_by_type: Table(*Type_Info_Struct, [..]*Type_Info_Struct);
 };
@@ -66,6 +72,18 @@ compile_time_registry_init :: (compile_time_info: *YaeCompileTimeInfo)
     {
         if type.ti == null || type.function == null { continue; }
         table_add(*deinit_registry, xx type.ti, type.function);
+    }
+
+    for type: compile_time_info.update_functions
+    {
+        if type.ti == null || type.function == null { continue; }
+        table_add(*update_registry, xx type.ti, type.function);
+    }
+
+    for type: compile_time_info.draw_functions
+    {
+        if type.ti == null || type.function == null { continue; }
+        table_add(*draw_registry, xx type.ti, type.function);
     }
 
     for child_type: compile_time_info.child_types
@@ -193,6 +211,34 @@ polymorphic_deinit :: (ptr: *void, tis: *Type_Info_Struct)
     f(ptr);
 }
 
+default_update :: (dt: float)
+{
+    using compile_time_registry;
+
+    for update_func, tis: update_registry
+    {
+        pool: = get_or_add_pool(tis);
+        for item: pool
+        {
+            update_func(item, dt);
+        }
+    }
+}
+
+default_draw :: ()
+{
+    using compile_time_registry;
+
+    for draw_func, tis: draw_registry
+    {
+        pool: = get_or_add_pool(tis);
+        for item: pool
+        {
+            draw_func(item);
+        }
+    }
+}
+
 // Compile Time
 yae_notify_compiler_message :: (w: Workspace, message: *Message)
 {
@@ -280,10 +326,51 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                         table_add(*deinit_procedures, tis, args[0].text);
                     }
                 }
+
+
             }
 
             for ph: mt.procedure_headers
             {
+                if has_note(ph.expression, "default_update")
+                {
+                    if ph.expression.arguments.count != 2
+                    || ph.expression.arguments[0].type_inst.result.type != .POINTER
+                    || ph.expression.arguments[1].type_inst.result.type != .FLOAT
+                    {
+                        compiler_report("@default_update is only valid on (ptr: *T, dt: float) function signatures", make_location(ph.expression));
+                    }
+                    else
+                    {
+                        log("%", ph.expression.arguments[0].type_inst.result.*);
+                        ti: = ph.expression.arguments[0].type_inst.result.(*Type_Info_Pointer).pointer_to;
+                        assert(ti.type == .STRUCT);
+                        table_add(*update_procedures, xx ti, ph.expression.name);
+                    }
+                }
+
+                if has_note(ph.expression, "default_draw")
+                {
+                    if ph.expression.arguments.count != 1
+                    || ph.expression.arguments[0].type_inst.result.type != .POINTER
+                    {
+                        compiler_report("@default_draw is only valid on (ptr: *T) function signatures", make_location(ph.expression));
+                    }
+                    else
+                    {
+                        log("%", ph.expression.arguments[0].type_inst.result.*);
+                        ti: = ph.expression.arguments[0].type_inst.result.(*Type_Info_Pointer).pointer_to;
+                        assert(ti.type == .STRUCT);
+                        table_add(*draw_procedures, xx ti, ph.expression.name);
+                    }
+                }
+                // if ph.expression.name == "update"
+                // {
+                //     for arg: ph.expression.arguments
+                //     {
+                //         log("%", arg.type_inst.result.*);
+                //     }
+                // }
             }
         }
 
@@ -331,6 +418,32 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                             {
                                 if i > 0 append(*sb, ",");
                                 append(*sb, tprint("\n\t.{ti=type_info(%1), function=(ptr:*void){ %(cast(*%1)ptr); }}", tis.name, function_name));
+                                i+=1;
+                            }
+                            append(*sb, "\n],\n");
+                        }
+
+                        // Update functions
+                        {
+                            append(*sb, "update_functions= .[");
+                            i: = 0;
+                            for function_name, tis: update_procedures
+                            {
+                                if i > 0 append(*sb, ",");
+                                append(*sb, tprint("\n\t.{ti=type_info(%1), function=(ptr:*void, dt:float){ %2(ptr.(*%1), dt); }}", tis.name, function_name));
+                                i+=1;
+                            }
+                            append(*sb, "\n],\n");
+                        }
+
+                        // Draw functions
+                        {
+                            append(*sb, "draw_functions= .[");
+                            i: = 0;
+                            for function_name, tis: draw_procedures
+                            {
+                                if i > 0 append(*sb, ",");
+                                append(*sb, tprint("\n\t.{ti=type_info(%1), function=(ptr:*void){ %2(ptr.(*%1)); }}", tis.name, function_name));
                                 i+=1;
                             }
                             append(*sb, "\n],\n");
@@ -391,6 +504,8 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
 // Compile time variables
 resource_types: [..]*Type_Info_Struct;
 child_types: [..]ChildType;
+update_procedures: Table(*Type_Info_Struct, string);
+draw_procedures: Table(*Type_Info_Struct, string);
 custom_serialize_table: Table(*Type_Info_Struct, string);
 custom_editor_table: Table(*Type_Info_Struct, string);
 serialize_filter_table: Table(*Type_Info_Struct, string);

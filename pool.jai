@@ -272,16 +272,12 @@ for_expansion :: (pool: PoolBase, body: Code, flags: For_Flags) #expand
     else
         index: = pool.first_used;
 
-    while index >= 0
+    while index > 0
     {
         item: = pool_index_to_item_ptr(*pool, index);
 
         `it_index: = i;     // The backtick will export it_index to the caller.
-
-        #if flags & .POINTER
-            `it: = *item.data;  // Same.
-        else
-            `it: = item.data;
+        `it: = *item.data;  // Same.
 
         // Preparation for next iteration should be done before inserting body, otherwise continue will break the loop
         #if flags & .REVERSE
