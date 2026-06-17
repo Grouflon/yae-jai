@@ -303,7 +303,7 @@ pool_index_to_item_ptr :: (using pool: *PoolBase, index: u32) -> *PoolBase.Item
     page_index: = index / items_per_page;
     assert(page_index < pages.count);
     item_index: = index % items_per_page;
-    return pages[page_index] + item_index;
+    return pages[page_index] + item_index * get_item_size(pool);
 }
 
 pool_add_page :: (using pool: *PoolBase)
