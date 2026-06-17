@@ -68,13 +68,6 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     renderer_init();
     init_gamepad();
 
-    // window_flags: rl.ConfigFlags;
-    // window_flags |= .FLAG_WINDOW_RESIZABLE;
-    // rl.InitWindow(width, height, temp_c_string(title));
-    // rl.SetWindowState(xx window_flags);
-    // rl.SetTargetFPS(60);
-    // rl.SetExitKey(.KEY_NULL);
-
     // ImGui
     #if IMGUI_SUPPORTED
     {
@@ -283,41 +276,5 @@ yae_refresh_gamepads :: ()
 
 #scope_file
 
-// tracelog_callback :: (log_level: s32, text: *u8, args: *void) #c_call
-// {
-//     ctx: #Context;
-//     ctx.logger = yae_logger;
-//     push_context ctx
-//     {
-//         trace_log_level: rl.TraceLogLevel = xx log_level;
-//         t: = c_format_string(text, args);
-
-//         if trace_log_level == 
-//         {
-//             case .RL_LOG_TRACE; #through;
-//             case .RL_LOG_DEBUG;
-//             {
-//                 log_verbose(t, section = *RAYLIB_LOG_SECTION);
-//             }
-//             case;
-//             {
-//                 log(t);
-//             }
-//             case .RL_LOG_WARNING;
-//             {
-//                 log_warning(t, section = *RAYLIB_LOG_SECTION);
-//             }
-//             case .RL_LOG_ERROR;
-//             case .RL_LOG_FATAL;
-//             {
-//                 log_error(t, section = *RAYLIB_LOG_SECTION);
-//             }
-//         }
-//     }
-// }
-
-
 #import "Input";
 #import "Gamepad";
-
-// rl :: #import "raylib";

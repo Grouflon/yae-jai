@@ -57,6 +57,21 @@ has_note_with_args :: (ti: *Type_Info_Struct_Member, note: string) -> bool, []No
     return found, args;
 }
 
+has_note_with_args :: (ph: *Code_Procedure_Header, note: string) -> bool, []NoteArgument
+{
+    if ph == null return false, .[];
+
+    notes: [..]string;
+    notes.allocator = temporary_allocator;
+    for n: ph.notes
+    {
+        array_add(*notes, n.text);
+    }
+
+    found, args: = has_note_with_args(notes, note);
+    return found, args;
+}
+
 has_note_with_args :: (ti: *Type_Info_Struct, note: string, check_parents: bool = false) -> bool, []NoteArgument
 {
     if ti == null return false, .[];
