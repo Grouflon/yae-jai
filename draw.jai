@@ -61,6 +61,11 @@ draw_line :: (begin: Vector3, end: Vector3, width: float = 1.0, color: Color = W
     draw_command(.LINES, vertices, indices, line_width = width);
 }
 
+draw_line :: (begin: Vector2, end: Vector2, width: float = 1.0, color: Color = WHITE)
+{
+    draw_line(xyz(begin,0), xyz(end, 0), width, color);
+}
+
 draw_circle :: (center: Vector3, radius: float, color: Color = WHITE, $segments: u16 = 64)
 {
     vertices: [segments+1]Vertex;
@@ -74,6 +79,35 @@ draw_circle :: (center: Vector3, radius: float, color: Color = WHITE, $segments:
     {
         angle: float = i.(float) * step;
         v: = center + xyz(rotate(Vector2.{radius, 0}, angle), 0);
+        uv: = (Vector2.{cos(angle), sin(angle)} + Vector2.{1.0,1.0}) * 0.5;
+        vertices[i+1] = .{v, uv, c};
+
+        indices[i*3+0] = 0;
+        indices[i*3+1] = 1+i.(u16);
+        indices[i*3+2] = 1+(i.(u16)+1)%segments;
+    }
+
+    draw_command(.TRIANGLES, vertices, indices);
+}
+
+draw_circle :: (center: Vector2, radius: float, color: Color = WHITE, $segments: u16 = 64)
+{
+    draw_circle(xyz(center, 0), radius, color, segments);
+}
+
+draw_ellipse :: (center: Vector3, radius: Vector2, color: Color = WHITE, $segments: u16 = 64)
+{
+    vertices: [segments+1]Vertex;
+    indices: [segments*3]u16;
+
+    c: = color_to_normalized_vector4(color);
+
+    vertices[0] = .{center, .{0.5,0.5}, c};
+    step: = PI*2 / segments.(float);
+    for i: 0..segments-1
+    {
+        angle: float = i.(float) * step;
+        v: = center + Vector3.{cos(angle) * radius.x, sin(angle) * radius.y, 0};
         uv: = (Vector2.{cos(angle), sin(angle)} + Vector2.{1.0,1.0}) * 0.5;
         vertices[i+1] = .{v, uv, c};
 

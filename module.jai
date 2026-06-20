@@ -21,10 +21,12 @@ yae_resources: struct
 #load "input.jai";
 #load "log.jai";
 #load "physics.jai";
+#load "pid.jai";
 #load "pool.jai";
 #load "resource.jai";
 #load "resource_manager.jai";
 #load "settings.jai";
+#load "smoother.jai";
 // #load "statemachine.jai";
 #load "string_hash.jai";
 // #load "tilemap.jai";

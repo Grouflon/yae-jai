@@ -1,5 +1,6 @@
 R2D :: (180.0 / PI);
 D2R :: (PI / 180.0);
+EPSILON :: 0.0001;
 
 floor :: inline (_value: Vector2) -> Vector2
 {
@@ -91,12 +92,29 @@ sign :: inline (value: $T) -> T
     }
 }
 
+clamp01 :: inline (_value: $T) -> T
+{
+    return clamp(_value, 0, 1);
+}
+
 clamp :: inline (_value: Vector2, min: float, max: float) -> Vector2
 {
     return .{
         clamp(_value.x, min, max),
         clamp(_value.y, min, max)
     };
+}
+
+max_length :: inline(value: $T, max: float) -> T
+{
+    l: = length(value);
+    if l == 0 return .{};
+
+    if l > max
+    {
+        return (value / l) * max;
+    }
+    return value;
 }
 
 angle_between :: inline (a: Vector2, b: Vector2) -> float
@@ -276,6 +294,23 @@ barycentric_coordinates :: (p: Vector2, a: Vector2, b: Vector2, c: Vector2) -> V
 normalized_sin :: (x: float) -> float
 {
     return sin(x) * 0.5 + 0.5;
+}
+
+xyz :: (value: Vector2) -> Vector3
+{
+    return xyz(value, 0);
+}
+
+time_independent_lerp :: (base: $T, target: T, ratio: float, dt: float) -> T
+{
+    return lerp(base, target, (1.0 - pow(ratio, dt)));
+}
+
+// NOTE(Remi|2019/05/30): See http://www.rorydriscoll.com/2016/03/07/frame-rate-independent-damping-using-lerp/
+time_independent_lerp_2 :: (base: $T, target: T, time_to_90: float, dt: float) -> T
+{
+    lambda: = -log(1.0 - 0.9) / time_to_90;
+    return lerp(base, target, 1.0 - exp(-lambda * dt));
 }
 
 #scope_file

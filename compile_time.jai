@@ -257,6 +257,7 @@ draw_group :: (group_name: string = "")
             draw_func(item);
         }
     }
+    draw_all_commands();
 }
 
 // Compile Time

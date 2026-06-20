@@ -182,16 +182,18 @@ pool_remove :: (using pool: *PoolBase, item: *PoolBase.Item)
     assert(item != null);
 
     page_index: s64 = -1;
+    item_size: = get_item_size(pool);
     for p, i: pages
     {
-        if item >= p && item < (p+items_per_page)
+        if item >= p && item < (p+items_per_page*item_size)
         {
             page_index = i;
             break;
         }
     }
     assert(page_index >= 0);
-    index: u32 = xx (page_index * items_per_page + (item - pages[page_index].(*PoolBase.Item)));
+    item_offset: = item.(s64) - pages[page_index].(s64);
+    index: u32 = xx (page_index * items_per_page + item_offset / item_size);
 
     // Patch used list
     if index == first_used

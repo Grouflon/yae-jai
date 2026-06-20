@@ -243,6 +243,12 @@ random_get_array_item :: (array: []$T) -> bool, T
     return found, item;
 }
 
+random_get_array_item :: (array: []$T, default_value: T) -> T
+{
+    found, item: = random_get_array_item(array);
+    return ifx found then item else default_value;
+}
+
 random_range :: (state: *Random_State, min: $T, max_inclusive: T) -> T
 {
     return min + ((max_inclusive - min).(float) * random_get_zero_to_one(state)).(T);

@@ -41,6 +41,12 @@ resource_browser_update :: ()
                     case 2; delta = cast(s64)a.load_count - cast(s64)b.load_count;
                 }
 
+                // fallback on name if comparison is equal to avoid shuffling on every frame
+                if sort_spec.ColumnIndex != 0 && delta == 0
+                {
+                    delta = compare_strings(a.name, b.name);
+                }
+
                 if sort_spec.SortDirection_ == .Descending { delta *= -1; }
                 return delta;
             });

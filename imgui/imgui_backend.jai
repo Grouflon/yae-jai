@@ -176,9 +176,9 @@ load_fonts :: (fonts: *ImGui.ImFontAtlas, load_default_font: bool, fonts_config:
 
 update_display_size :: (io: *ImGui.IO)
 {
-    w, h: = get_viewport_size();
-    io.DisplaySize.x = cast(float) w;
-    io.DisplaySize.y = cast(float) h;
+    size: = get_viewport_size();
+    io.DisplaySize.x = xx size.x;
+    io.DisplaySize.y = xx size.y;
 
     resolution_scale: = get_window_scale_dpi();
     if resolution_scale != io.DisplayFramebufferScale
