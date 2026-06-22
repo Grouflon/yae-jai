@@ -2,9 +2,11 @@
 
 wasm_on_update :: (dt: float32) #c_call
 {
-    push_context
+    push_context wasm_context
     {
         yae_frame(dt);
+
+        wasm_context = context;
     }
 }
 

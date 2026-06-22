@@ -156,8 +156,10 @@ get_time_since_startup :: () -> float64 #foreign;
 _get_date_time :: () -> s64 #foreign;
 get_current_appolo_time :: () -> Apollo_Time
 {
-    t: = to_apollo(_get_date_time().(float64) * 1000);
-    return t;
+    // t: = to_apollo(_get_date_time().(float64) * 1000);
+    // NOTE: to_apollo does not work in wasm I'm not sure why. Since we only use this for random seed generation, fuck it for now
+    t: = _get_date_time().(float64);
+    return .{xx t, xx t};
 }
 
 // Rendering

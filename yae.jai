@@ -1,5 +1,10 @@
 RAYLIB_LOG_SECTION :: Log_Section.{ "Raylib" };
 
+#if OS == .WASM
+{
+    wasm_context: #Context;
+}
+
 YAE :: struct
 {
     app_window_rect: IntBounds = .{.{0, 30}, .{800, 630}}; @serialize
@@ -178,7 +183,8 @@ yae_loop :: (update_function: #type (dt: float), draw_function: #type ())
     yae.update_function = update_function;
     yae.draw_function = draw_function;
 
-    #if OS == .WASM { return; }
+    // WASM will lose and reinit context betweem executions, therefore we store and reapply it each frame
+    #if OS == .WASM { wasm_context = context; return; }
 
     while !yae.should_close
     {
