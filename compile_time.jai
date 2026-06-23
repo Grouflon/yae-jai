@@ -364,7 +364,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     }
                     else
                     {
-                        log("%", ph.expression.arguments[0].type_inst.result.*);
+                        // log("%", ph.expression.arguments[0].type_inst.result.*);
                         ti: = ph.expression.arguments[0].type_inst.result.(*Type_Info_Pointer).pointer_to;
                         group: = ifx update_args.count > 0 then update_args[0].text else "";
                         group = trim(group, "\"");
@@ -383,7 +383,7 @@ yae_notify_compiler_message :: (w: Workspace, message: *Message)
                     }
                     else
                     {
-                        log("%", ph.expression.arguments[0].type_inst.result.*);
+                        // log("%", ph.expression.arguments[0].type_inst.result.*);
                         ti: = ph.expression.arguments[0].type_inst.result.(*Type_Info_Pointer).pointer_to;
                         group: = ifx draw_args.count > 0 then draw_args[0].text else "";
                         group = trim(group, "\"");
