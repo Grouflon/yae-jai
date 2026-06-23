@@ -44,6 +44,11 @@ renderer_init :: ()
 
     array_add(*transform_stack, Matrix4_Identity);
 
+#if OS != .WASM
+{
+    wglSwapIntervalEXT(1); // vsync
+}
+
     // Vertex Buffer
     GL_VERIFY(glGenBuffers(1, *vbo));
     GL_VERIFY(glBindBuffer(GL_ARRAY_BUFFER, vbo));
