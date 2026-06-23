@@ -44,9 +44,11 @@ renderer_init :: ()
 
     array_add(*transform_stack, Matrix4_Identity);
 
+    // Vsync
 #if OS != .WASM
 {
-    wglSwapIntervalEXT(1); // vsync
+    // https://wikis.khronos.org/opengl/Swap_Interval#GPU_vs_CPU_synchronization
+    wglSwapIntervalEXT(1);
 }
 
     // Vertex Buffer
