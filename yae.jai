@@ -28,10 +28,11 @@ YAE :: struct
 
     frame: s64;
     time: float64;
-    should_close: bool;
 
     update_function: #type (dt: float);
     draw_function: #type ();
+
+    should_close: bool;
 };
 yae: YAE;
 
@@ -49,7 +50,8 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     log_verbose("Initializing yae...");
     log_indent();
 
-    debugger_handle = find_window_by_title_containing("RemedyBG");
+    // debugger_handle = find_window_by_title_containing("RemedyBG");
+    debugger_handle = find_window_by_title_containing("RAD Debugger");
 
     // Normalize working directory
     exe_directory: = path_strip_filename(get_path_of_running_executable());
