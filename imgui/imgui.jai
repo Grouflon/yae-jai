@@ -211,6 +211,15 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
         max_override = args[0].decimal;
     }
 
+    found, args = has_note_with_args(notes, "range");
+    if found && args.count > 1
+    {
+        has_min_override = true;
+        has_max_override = true;
+        min_override = args[0].decimal;
+        max_override = args[1].decimal;
+    }
+
     // Common Float settings
     min_float: float = -FLOAT32_MAX;
     max_float: float = FLOAT32_MAX;
