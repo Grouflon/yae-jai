@@ -17,7 +17,7 @@ yae_resources: struct
 #load "color.jai";
 #load "compile_time.jai";
 #load "draw.jai";
-#load "entity.jai";
+#load "entity_component_system.jai";
 #load "input.jai";
 #load "log.jai";
 #load "physics.jai";

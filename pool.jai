@@ -17,22 +17,34 @@ pool_add :: ($T: Type) -> *T, ID(T)
 
 pool_remove :: (ptr: *$T)
 {
-    pool: = get_or_add_pool(type_info(T));
-    assert(pool != null);
-
-    item: *PoolBase.Item = (ptr.(*void) - POOL_ITEM_HEADER_SIZE);
-    pool_remove(pool, item);
+    pool_remove(ptr, type_info(T));
 }
 
 pool_remove :: (id: ID($T))
 {
-    pool: = get_or_add_pool(type_info(T));
+    pool: = get_pool(type_info(T));
     assert(pool != null);
 
     item: = pool_index_to_item_ptr(pool, id.index);
     assert(item.generation == id.generation); // removing already released item
 
     pool_remove(pool, item);
+}
+
+pool_remove :: (ptr: *void, ti: *Type_Info)
+{
+    pool: = get_pool(ti);
+    assert(pool != null);
+
+    item: *PoolBase.Item = (ptr - POOL_ITEM_HEADER_SIZE);
+    pool_remove(pool, item);
+}
+
+get_pool :: (ti: *Type_Info) -> *PoolBase
+{
+    assert(ti != null);
+
+    return table_find_pointer(*pool_collection.pools, ti);
 }
 
 get_or_add_pool :: (ti: *Type_Info) -> *PoolBase
