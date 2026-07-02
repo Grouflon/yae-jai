@@ -40,6 +40,7 @@ yae_resources: struct
 #load "math/ease.jai";
 #load "math/int_vector.jai";
 #load "math/math.jai";
+#load "math/range.jai";
 // #load "math/spline.jai";
 
 #load "renderer/renderer.jai";

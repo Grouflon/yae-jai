@@ -220,16 +220,19 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
         max_override = args[1].decimal;
     }
 
-    // Common Float settings
+    // Common settings
     min_float: float = -FLOAT32_MAX;
     max_float: float = FLOAT32_MAX;
     step_float: = 0.1;
-    if has_step_override { step_float = step_override; }
-    if has_min_override { min_float = max(min_float, min_override); }
-    if has_max_override { max_float = min(max_float, max_override); }
+    min_int: s32 = -S32_MAX;
+    max_int: s32 = S32_MAX;
+    step_int: = 1;
+    if has_step_override { step_float = step_override; step_int = xx step_override; }
+    if has_min_override { min_float = max(min_float, min_override); min_int = max(min_int, xx min_override); }
+    if has_max_override { max_float = min(max_float, max_override); max_int = min(max_int, xx max_override); }
     // Slider does not behave well with huge values. We set bounds to something arbitrary to prevent crash
-    if widget_type == .SLIDER && !has_min_override { min_float = 0; }
-    if widget_type == .SLIDER && !has_max_override { max_float = 100; }
+    if widget_type == .SLIDER && !has_min_override { min_float = 0; min_int = xx min_float; }
+    if widget_type == .SLIDER && !has_max_override { max_float = 100; max_int = xx max_float; }
 
     // Display widget
     modified: bool = false;
@@ -323,6 +326,18 @@ ImGui_EditValue :: (label: string, value: *void, info: *Type_Info, notes: []stri
                         color_ptr.a = xx (color[3] * 255.0);
                         modified = true;
                     }
+                }
+
+                case type_info(RangeFloat);
+                {
+                    range_ptr: = value.(*RangeFloat);
+                    modified = ImGui.DragFloatRange2(c_label, *range_ptr.min, *range_ptr.max, step_float, min_float, max_float);
+                }
+
+                case type_info(RangeInt);
+                {
+                    range_ptr: = value.(*RangeInt);
+                    modified = ImGui.DragIntRange2(c_label, *range_ptr.min, *range_ptr.max, step_float, min_int, max_int);
                 }
 
                 case; // Generic structs

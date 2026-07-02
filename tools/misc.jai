@@ -259,6 +259,16 @@ random_range :: (min: $T, max_inclusive: T) -> T
     return random_range(*context.random_state, min, max_inclusive);
 }
 
+random_range :: (state: *Random_State, range_inclusive: Range($T)) -> T
+{
+    return random_range(state, range_inclusive.min, range_inclusive.max);
+}
+
+random_range :: (range_inclusive: Range($T)) -> T
+{
+    return random_range(*context.random_state, range_inclusive);
+}
+
 random_bool :: (state: *Random_State) -> bool
 {
     return ifx random_get_zero_to_one(state) > 0.5 then true else false;
