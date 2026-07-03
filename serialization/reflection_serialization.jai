@@ -35,52 +35,54 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
         // The deinit thing does not seem to be related to being polymorphic or not, and probably not even being a pointer
         // I think reading over a struct should trigger it, just like with strings, but it is probably best to avoid the pattern in the first place
         // polymorphic pointer is specific though cause we are dropping and replacing the whole chunk of memory, and not writing over it
-        if is_polymorphic(tis)
-        {
-            object_ptr: *void = data.(**void).*;
+        
+        // @NOTE(remi|03/07/2026): not sure where i was going with that honestly. I want us to be able to get away without nonsensical serialization like that
+        // if is_polymorphic(tis)
+        // {
+        //     object_ptr: *void = data.(**void).*;
 
-            if serializer.mode == .WRITE && object_ptr == null
-            {
-                return serialize_null(serializer, key);
-            }
+        //     if serializer.mode == .WRITE && object_ptr == null
+        //     {
+        //         return serialize_null(serializer, key);
+        //     }
 
-            // First incursion into the object to get the type
-            if !serializer_begin_object(serializer, null, key) return false;
+        //     // First incursion into the object to get the type
+        //     if !serializer_begin_object(serializer, null, key) return false;
 
-            polymorphic_tis: *Type_Info_Struct;
-            type_name: StringHash;
+        //     polymorphic_tis: *Type_Info_Struct;
+        //     type_name: StringHash;
 
-            if serializer.mode == .WRITE
-            {
-                polymorphic_tis = polymorphic_get_type(object_ptr, tis);
-                assert(polymorphic_tis != null);
-                type_name = string_hash(polymorphic_tis.name);
-            }
-            serialize(serializer, *type_name, "type");
-            if serializer.mode == .READ
-            {
-                polymorphic_tis = get_type_by_name(type_name);
-            }
+        //     if serializer.mode == .WRITE
+        //     {
+        //         polymorphic_tis = polymorphic_get_type(object_ptr, tis);
+        //         assert(polymorphic_tis != null);
+        //         type_name = string_hash(polymorphic_tis.name);
+        //     }
+        //     serialize(serializer, *type_name, "type");
+        //     if serializer.mode == .READ
+        //     {
+        //         polymorphic_tis = get_type_by_name(type_name);
+        //     }
 
-            verify(serializer_end_object(serializer));
+        //     verify(serializer_end_object(serializer));
 
-            // Unknown type, we fail
-            if polymorphic_tis == null return false;
+        //     // Unknown type, we fail
+        //     if polymorphic_tis == null return false;
 
-            // Instantiate o
-            if serializer.mode == .READ
-            {
-                if object_ptr != null
-                {
-                    polymorphic_deinit(object_ptr, polymorphic_tis);
-                    free(object_ptr);
-                }
-                object_ptr = alloc(polymorphic_tis.runtime_size);
-                data.(**void).* = object_ptr;
-                default_init(object_ptr, polymorphic_tis);
-            }
-            return serialize(serializer, object_ptr, polymorphic_tis, key);
-        }
+        //     // Instantiate o
+        //     if serializer.mode == .READ
+        //     {
+        //         if object_ptr != null
+        //         {
+        //             polymorphic_deinit(object_ptr, polymorphic_tis);
+        //             free(object_ptr);
+        //         }
+        //         object_ptr = alloc(polymorphic_tis.runtime_size);
+        //         data.(**void).* = object_ptr;
+        //         default_init(object_ptr, polymorphic_tis);
+        //     }
+        //     return serialize(serializer, object_ptr, polymorphic_tis, key);
+        // }
     }
 
     // Basic types
