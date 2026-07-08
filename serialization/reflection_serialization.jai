@@ -266,7 +266,13 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                     }
 
                     // NOTE: we may want to not flatten the keys and notes at some point, so we can consider each struct notes separately
-                    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct, "serialize");
+                    filter: string;
+                    if !has_note(info_struct, "serialize")
+                    {
+                        filter = "serialize";
+                    }
+
+                    keys, key_to_member_info, notes: = get_flattened_struct_members(info_struct, filter);
                     serialize_filter_function: = get_serialize_filter_function(info_struct);
 
                     if !serializer_begin_object(serializer, *keys, key) return false;
