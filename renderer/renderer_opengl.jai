@@ -14,7 +14,7 @@ OpenGLRenderer :: struct
     // Maybe all this could go to a renderer agnostic command buffer thingy
     is_drawing: bool;
     vertex_buffer: [..]Vertex;
-    index_buffer: [..]u16;
+    index_buffer: [..]u32;
     command_buffer: [..]DrawCommand;
 
     shader_stack: [..]ShaderInstance;
@@ -516,7 +516,7 @@ clear_depth_buffer :: ()
 }
 
 // NOTE: this actually queue commands instead of drawing them instantly.
-draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, texture: TextureHandle = 0, line_width: float = 0)
+draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u32, texture: TextureHandle = 0, line_width: float = 0)
 {
     using yae.renderer;
 
@@ -570,7 +570,7 @@ draw_all_commands :: ()
     time: float = xx get_time_since_startup();
 
     GL_VERIFY(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.count * size_of(Vertex), vertex_buffer.data, GL_STREAM_DRAW));
-    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u16), index_buffer.data, GL_STREAM_DRAW));
+    GL_VERIFY(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer.count * size_of(u32), index_buffer.data, GL_STREAM_DRAW));
 
     shader_instance: = last(shader_stack);
     GL_VERIFY(glUseProgram(shader_instance.program.handle));
@@ -602,7 +602,7 @@ draw_all_commands :: ()
         GL_VERIFY(glUniformMatrix4fv(shader_instance.program.mvp_uniform_location, 1, GL_TRUE, cast(*GLfloat)*mvp));
 
         GL_VERIFY(glLineWidth(command.line_width));
-        GL_VERIFY(glDrawElements(draw_command_type_to_gl(command.type), xx command.size, GL_UNSIGNED_SHORT, xx (command.start_index * size_of(u16))));
+        GL_VERIFY(glDrawElements(draw_command_type_to_gl(command.type), xx command.size,  GL_UNSIGNED_INT, xx (command.start_index * size_of(u32))));
     }
 
     command_buffer.count = 0;

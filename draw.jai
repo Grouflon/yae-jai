@@ -56,7 +56,7 @@ draw_line :: (begin: Vector3, end: Vector3, width: float = 1.0, color: Color = W
         .{ begin, .{0,0}, c },
         .{ end, .{1,1}, c },
     ];
-    indices: = u16.[0,1];
+    indices: = u32.[0,1];
     
     draw_command(.LINES, vertices, indices, line_width = width);
 }
@@ -69,7 +69,7 @@ draw_line :: (begin: Vector2, end: Vector2, width: float = 1.0, color: Color = W
 draw_circle :: (center: Vector3, radius: float, color: Color = WHITE, $segments: u16 = 64)
 {
     vertices: [segments+1]Vertex;
-    indices: [segments*3]u16;
+    indices: [segments*3]u32;
 
     c: = color_to_normalized_vector4(color);
 
@@ -83,8 +83,8 @@ draw_circle :: (center: Vector3, radius: float, color: Color = WHITE, $segments:
         vertices[i+1] = .{v, uv, c};
 
         indices[i*3+0] = 0;
-        indices[i*3+1] = 1+i.(u16);
-        indices[i*3+2] = 1+(i.(u16)+1)%segments;
+        indices[i*3+1] = 1+i.(u32);
+        indices[i*3+2] = 1+(i.(u32)+1)%segments;
     }
 
     draw_command(.TRIANGLES, vertices, indices);
@@ -98,7 +98,7 @@ draw_circle :: (center: Vector2, radius: float, color: Color = WHITE, $segments:
 draw_ellipse :: (center: Vector3, radius: Vector2, color: Color = WHITE, $segments: u16 = 64)
 {
     vertices: [segments+1]Vertex;
-    indices: [segments*3]u16;
+    indices: [segments*3]u32;
 
     c: = color_to_normalized_vector4(color);
 
@@ -112,8 +112,8 @@ draw_ellipse :: (center: Vector3, radius: Vector2, color: Color = WHITE, $segmen
         vertices[i+1] = .{v, uv, c};
 
         indices[i*3+0] = 0;
-        indices[i*3+1] = 1+i.(u16);
-        indices[i*3+2] = 1+(i.(u16)+1)%segments;
+        indices[i*3+1] = 1+i.(u32);
+        indices[i*3+2] = 1+(i.(u32)+1)%segments;
     }
 
     draw_command(.TRIANGLES, vertices, indices);
@@ -129,7 +129,7 @@ OutlineMode :: enum
 draw_circle_outline :: (center: Vector3, radius: float, thickness: float = 1.0, color: Color = WHITE, mode: OutlineMode = .OUTSIDE, $segments: s32 = 32)
 {
     vertices: [segments]Vertex;
-    indices: [segments]u16;
+    indices: [segments]u32;
 
     c: = color_to_normalized_vector4(color);
 
@@ -140,7 +140,7 @@ draw_circle_outline :: (center: Vector3, radius: float, thickness: float = 1.0, 
         v: = center + xyz(rotate(Vector2.{radius, 0}, angle), 0);
         uv: = (Vector2.{cos(angle), sin(angle)} + Vector2.{1.0,1.0}) * 0.5;
         vertices[i] = .{v, uv, c};
-        indices[i] = i.(u16);
+        indices[i] = i.(u32);
     }
 
     draw_command(.LINE_LOOP, vertices, indices, line_width = thickness);
@@ -277,7 +277,7 @@ draw_circle_outline :: (center: Vector3, radius: float, thickness: float = 1.0, 
 
 #scope_file
 
-make_quad :: (min_max: [2]Vector3, uv: [2]Vector2, color: Color) -> [4]Vertex, [6]u16 #expand
+make_quad :: (min_max: [2]Vector3, uv: [2]Vector2, color: Color) -> [4]Vertex, [6]u32 #expand
 {
     // Not sure what to do with z. The interface is probably not great
     v, i: = make_quad(.[
@@ -296,7 +296,7 @@ make_quad :: (min_max: [2]Vector3, uv: [2]Vector2, color: Color) -> [4]Vertex, [
     return v,i;
 }
 
-make_quad :: (vertices: [4]Vector3, uv: [4]Vector2, color: Color) -> [4]Vertex, [6]u16 #expand
+make_quad :: (vertices: [4]Vector3, uv: [4]Vector2, color: Color) -> [4]Vertex, [6]u32 #expand
 {
     c: = color_to_normalized_vector4(color);
     v: [4]Vertex = .[
@@ -305,6 +305,6 @@ make_quad :: (vertices: [4]Vector3, uv: [4]Vector2, color: Color) -> [4]Vertex, 
         .{ vertices[2], uv[2], c },
         .{ vertices[3], uv[3], c },
     ];
-    i: [6]u16 = .[0,2,1,3,2,0];
+    i: [6]u32 = .[0,2,1,3,2,0];
     return v, i;
 }
