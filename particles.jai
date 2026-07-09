@@ -31,6 +31,8 @@ ParticleEmitterSettings :: struct @serialize
     angle: RangeFloat = .{0,360}; @range(0,360)
     duration: RangeFloat = .{1.0, 1.0};
     speed: RangeFloat = .{1.0, 1.0};
+    size: RangeFloat = .{5.0, 5.0};
+    color: Color = WHITE;
 
     auto_emit: bool;
 } 
@@ -42,9 +44,15 @@ particle_emitter_emit :: (using _emitter: *ParticleEmitter, _count: int)
 
 particle_emitter_update :: (using _emitter: *ParticleEmitter, _position: Vector3, _dt: float)
 {
-    if settings.auto_emit
+    for p: particles
     {
-        particles_to_emit += xx (settings.emission_rate.(float) * _dt);
+        particle_update(_emitter, p, _dt);
+    }
+
+    particles_per_frame: = ceil_to_s32(settings.emission_rate * _dt);
+    if settings.auto_emit && particles_to_emit < particles_per_frame
+    {
+        particles_to_emit += particles_per_frame;
     }
 
     if particles_to_emit == 0
@@ -53,27 +61,26 @@ particle_emitter_update :: (using _emitter: *ParticleEmitter, _position: Vector3
         return;
     }
 
+    previous_position: = position;
+    position = _position;
     next_particle_in -= _dt;
 
-    for p: particles
+    particle_interval: = 1.0 / settings.emission_rate;
+    while next_particle_in < 0.0 && particles_to_emit > 0
     {
-        p.remaining_life -= _dt;
-
-        if p.remaining_life <= 0
-        {
-            pool_remove(*particles, p);
-            continue;
-        }
-
-        p.position += p.velocity * _dt;
-    }
-
-    while next_particle_in < 0.0
-    {
-        next_particle_in += 1.0 / settings.emission_rate;
-
         new_particle: = pool_add(*particles);
 
+        ratio: = (_dt + next_particle_in) / _dt;
+        new_particle.position = lerp(previous_position, position, ratio);
+        new_particle.size = random_range(settings.size);
+        new_particle.remaining_life = random_range(settings.duration);
+        new_particle.color = settings.color;
+        new_particle.velocity = xyz(rotate(.{1,0}, D2R * random_range(settings.angle)) * random_range(settings.speed), 0);
+
+        particle_update(_emitter, new_particle, -next_particle_in);
+        next_particle_in += particle_interval;
+
+        particles_to_emit -= 1;
     }
 }
 
@@ -89,4 +96,19 @@ particle_emitter_draw :: (using _emitter: *ParticleEmitter)
             }
         }
     }
+}
+
+#scope_file
+
+particle_update :: (using _emitter: *ParticleEmitter, _particle: *Particle, _dt: float)
+{
+    _particle.remaining_life -= _dt;
+
+    if _particle.remaining_life <= 0
+    {
+        pool_remove(*particles, _particle);
+        return;
+    }
+
+    _particle.position += _particle.velocity * _dt;
 }
