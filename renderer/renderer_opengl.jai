@@ -520,6 +520,9 @@ draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, text
 {
     using yae.renderer;
 
+    command_texture: = ifx texture != 0 then texture else texture_1px_white.handle;
+    command_transform: = last(transform_stack);
+
     start_index: = index_buffer.count;
     for i: indices
     {
@@ -527,12 +530,31 @@ draw_command :: (type: DrawCommandType, vertices: []Vertex, indices: []u16, text
     }
     array_add(*vertex_buffer, ..vertices);
 
+    // Try to merge new command with the previous one
+    if command_buffer.count > 0
+    {
+        last_command: = array_back(command_buffer);
+
+        for 0..1
+        {
+            if type != last_command.type break;
+            if command_transform != last_command.transform break;
+            if start_index != last_command.start_index + last_command.size break;
+            if command_texture != last_command.texture break;
+            if line_width != last_command.line_width break;
+            
+            last_command.size += xx indices.count;
+            return;
+        }
+    }
+
+    // Otherwise add new command
     array_add(*command_buffer, DrawCommand.{
         type = type,
-        transform = last(transform_stack),
+        transform = command_transform,
         start_index = xx start_index,
         size = xx indices.count,
-        texture = ifx texture != 0 then texture else texture_1px_white.handle,
+        texture = command_texture,
         line_width = line_width,
     });
 }
