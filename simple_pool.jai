@@ -44,34 +44,49 @@ pool_reserve :: (using pool: *SimplePool($T), count: s32)
 
 pool_add :: (using pool: *SimplePool($T)) -> *T, s32
 {
+    // Grow pool if no unused items left
     if first_unused < 0
     {
         pool_reserve(pool, items.count.(s32) * 2 + 8);
     }
     assert(first_unused >= 0);
 
+    // We append new item at the end of used list
+    new_index: = first_unused;
     if last_used >= 0
     {
-        items[last_used].next = first_unused;
+        items[last_used].next = new_index;
+    }
+    else
+    {
+        assert(first_used < 0);
+        first_used = new_index;
     }
 
-    if first_used < 0
+    first_unused = items[new_index].next;
+    if first_unused >= 0
     {
-        first_used = first_unused;
+        items[first_unused].previous = -1;
     }
-    last_used = first_unused;
-    first_unused = items[last_used].next;
-    items[last_used].next = -1;
+
+    items[new_index].previous = last_used;
+    items[new_index].next = -1;
+
+    last_used = new_index;
 
     used_count += 1;
 
-    return *items[last_used].data, last_used;
+    return *items[new_index].data, new_index;
 }
 
 pool_remove :: (using pool: *SimplePool($T), item: *T)
 {
-    index: = (item.(*SimplePool(T).Item) - pool.items.data) / size_of(SimplePool(T).Item);
-    pool_remove(pool, xx index);
+    raw_data: *void = xx items.data;
+    raw_item: *void = xx item;
+    ITEM_SIZE :: size_of(SimplePool(T).Item);
+    assert(raw_item >= raw_data && raw_item < (raw_data + pool.items.count * ITEM_SIZE));
+    index: s32 = xx ((raw_item - raw_data) / ITEM_SIZE);
+    pool_remove(pool, index);
 }
 
 pool_remove :: (using pool: *SimplePool($T), index: s32)
@@ -85,10 +100,15 @@ pool_remove :: (using pool: *SimplePool($T), index: s32)
     {
         assert(item.previous < 0);
         first_used = item.next;
+        if first_used >= 0
+        {
+            items[first_used].previous = -1;
+        }
     }
     else
     {
-        items[item.previous].next = item.next;
+        if item.previous >= 0 items[item.previous].next = item.next;
+        if item.next >= 0 items[item.next].previous = item.previous;
     }
 
     if index == last_used
@@ -99,6 +119,10 @@ pool_remove :: (using pool: *SimplePool($T), index: s32)
     // Insert at unused list start
     item.previous = -1;
     item.next = first_unused;
+    if first_unused >= 0
+    {
+        items[first_unused].previous = index;
+    }
     first_unused = index;
 
     used_count -= 1;
@@ -133,7 +157,7 @@ for_expansion :: (using pool: SimplePool, body: Code, flags: For_Flags) #expand
 
     while index >= 0
     {
-        item: = items[index];
+        item: = items.data + index;
 
         `it_index: = i;     // The backtick will export it_index to the caller.
         `it: = *item.data;  // Same.
@@ -150,7 +174,7 @@ for_expansion :: (using pool: SimplePool, body: Code, flags: For_Flags) #expand
 }
 
 #scope_file
-is_index_used :: (using pool: *SimplePool($T), index: s32)
+is_index_used :: (using pool: *SimplePool($T), index: s32) -> bool
 {
     i: = first_used;
     while i >= 0
