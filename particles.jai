@@ -1,6 +1,8 @@
+particles_pool: SimplePool(Particle);
+
 ParticleEmitter :: struct
 {
-    particles: SimplePool(Particle); // maybe we can make it a global pool for all emitters, but that is too complex for now
+    particles: PoolList(Particle) = #run PoolList(Particle).{ pool = *particles_pool };
 
     settings: ParticleEmitterSettings;
     position: Vector3;
@@ -33,9 +35,20 @@ ParticleEmitterSettings :: struct @serialize
     speed: RangeFloat = .{1.0, 1.0};
     size: RangeFloat = .{5.0, 5.0};
     color: Color = WHITE;
+    gravity: Vector3;
 
     auto_emit: bool;
-} 
+}
+
+particle_emitter_init :: (using _emitter: *ParticleEmitter)
+{
+
+}
+
+particle_emitter_shutdown :: (using _emitter: *ParticleEmitter)
+{
+    
+}
 
 particle_emitter_emit :: (using _emitter: *ParticleEmitter, _count: int)
 {
@@ -44,11 +57,16 @@ particle_emitter_emit :: (using _emitter: *ParticleEmitter, _count: int)
 
 particle_emitter_update :: (using _emitter: *ParticleEmitter, _position: Vector3, _dt: float)
 {
+    previous_position: = position;
+    position = _position;
+
+    // Update current particles
     for p: particles
     {
         particle_update(_emitter, p, _dt);
     }
 
+    // Emit new particles
     particles_per_frame: = ceil_to_s32(settings.emission_rate * _dt);
     if settings.auto_emit && particles_to_emit < particles_per_frame
     {
@@ -61,10 +79,7 @@ particle_emitter_update :: (using _emitter: *ParticleEmitter, _position: Vector3
         return;
     }
 
-    previous_position: = position;
-    position = _position;
     next_particle_in -= _dt;
-
     particle_interval: = 1.0 / settings.emission_rate;
     while next_particle_in < 0.0 && particles_to_emit > 0
     {
@@ -110,5 +125,6 @@ particle_update :: (using _emitter: *ParticleEmitter, _particle: *Particle, _dt:
         return;
     }
 
+    _particle.velocity += _emitter.settings.gravity * _dt;
     _particle.position += _particle.velocity * _dt;
 }

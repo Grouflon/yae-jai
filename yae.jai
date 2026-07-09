@@ -121,6 +121,7 @@ yae_init :: (compile_time_info: *YaeCompileTimeInfo, width: s32, height: s32, ti
     {
         editor_init();
     }
+    pool_initialize(*particles_pool);
 
     load_resources(engine_resources);
 
@@ -136,6 +137,8 @@ yae_shutdown :: ()
     log_indent();
 
     unload_resources(engine_resources);
+
+    pool_shutdown(*particles_pool);
 
     #if WITH_EDITOR
     {
