@@ -15,21 +15,13 @@ SimplePool :: struct($T: Type)
 
 PoolList :: struct($T: Type)
 {
-    pool: *SimplePool(T);
+    pool: *SimplePool(T); // only necessary for the for_expansion
     first: s32 = -1;
     last: s32 = -1;
     count: s32 = 0;
 }
 
-pool_initialize :: (using _pool: *SimplePool($T), _base_pool_size: s32 = 256)
-{
-    used_list.pool = _pool;
-    unused_list.pool = _pool;
-
-    pool_reserve(_pool, _base_pool_size);
-}
-
-pool_shutdown :: (using _pool: *SimplePool($T))
+pool_reset :: (using _pool: *SimplePool($T))
 {
     array_reset(*items);
     used_list = .{};
@@ -61,9 +53,13 @@ pool_reserve :: (using _pool: *SimplePool($T), _count: s32)
     unused_list = concatenate_lists(unused_list, new_list);
 }
 
-pool_add :: (using pool: *SimplePool($T)) -> *T, s32
+pool_add :: (using _pool: *SimplePool($T)) -> *T, s32
 {
-    item, index: = pool_add(pool.used_list);
+    // Lazy init, no better idea
+    _pool.used_list.pool = _pool;
+    _pool.unused_list.pool = _pool;
+
+    item, index: = pool_add(*_pool.used_list);
     return item, index;
 }
 
@@ -119,15 +115,15 @@ pool_clear :: (using _pool: *SimplePool($T))
     // TODO
 }
 
-pool_get :: (using pool: *SimplePool($T), index: s32) -> *T // never store this pointer. It can and will be invalidated when the pool grows
+pool_get :: (using _pool: *SimplePool($T), _index: s32) -> *T // never store this pointer. It can and will be invalidated when the pool grows
 {
-    assert(index >= 0 && index < items.count);
-    assert(is_index_used(pool, index));
+    assert(_index >= 0 && index < items.count);
+    assert(is_index_used(_pool, _index));
 
-    return *items[index].data;
+    return *items[_index].data;
 }
 
-operator[] :: (using pool: SimplePool($T), index: int) -> SimplePool(T).Item
+operator[] :: (using _pool: SimplePool($T), index: int) -> SimplePool(T).Item
 {
     return items[index];
 }
