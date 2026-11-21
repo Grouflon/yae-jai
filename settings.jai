@@ -129,7 +129,7 @@ register_settings_section :: (name: string, data: *void, type: *Type_Info, befor
     assert(type != null);
 
     name_hash: = string_hash(name);
-    assert(!table_contains(*sections, name_hash), "settings section % registered twice.", name);
+    assert(!table_contains(*sections, name_hash), "settings section \"%\" registered twice.", name);
     table_add(*sections, name_hash, .{
         data = data,
         type = type,

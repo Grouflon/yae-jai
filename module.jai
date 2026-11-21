@@ -1,7 +1,7 @@
-WITH_EDITOR :: (OS != .WASM);
+// WITH_EDITOR :: (OS != .WASM);
 // WITH_EDITOR :: false;
 FILE_WATCH_SUPPORTED :: (OS != .WASM);
-IMGUI_SUPPORTED :: WITH_EDITOR;
+IMGUI_SUPPORTED :: (OS != .WASM);
 YAE_DEBUG_MEMORY :: (OS != .WASM);
 
 yae_resources: struct
@@ -66,18 +66,15 @@ yae_resources: struct
 #load "tools/os.jai";
 #load "tools/reflection.jai";
 
-#if WITH_EDITOR
-{
-    // #load "editor/animation_editor.jai";
-    #load "editor/aseprite_file_editor.jai";
-    #load "editor/curve_editor.jai";
-    #load "editor/editor.jai";
-    #load "editor/gizmo.jai";
-    #load "editor/resource_browser.jai";
-    #load "editor/resource_editor.jai";
-    #load "editor/pools_inspector.jai";
-    #load "editor/texture_file_editor.jai";
-}
+// #load "editor/animation_editor.jai";
+#load "editor/aseprite_file_editor.jai";
+#load "editor/curve_editor.jai";
+#load "editor/editor.jai";
+#load "editor/gizmo.jai";
+#load "editor/resource_browser.jai";
+#load "editor/resource_editor.jai";
+#load "editor/pools_inspector.jai";
+#load "editor/texture_file_editor.jai";
 
 #if IMGUI_SUPPORTED
 {

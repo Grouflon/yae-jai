@@ -123,7 +123,6 @@ imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2,
     screen_p1: = canvas_to_screen(canvas, p1);
 
     draw_list: = ImGui.GetWindowDrawList();
-    draw_end: = draw_origin + draw_size;
 
 
     ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color), thickness);
