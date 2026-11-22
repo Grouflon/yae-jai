@@ -15,6 +15,7 @@ Serializer :: struct
 
     begin_array:     #type (serializer: *Serializer, size: *s64, key: string) -> bool;
     set_array_index: #type (serializer: *Serializer, index: s64) -> bool;
+    next_array_item: #type (serializer: *Serializer) -> bool;
     end_array:       #type (serializer: *Serializer) -> bool;
 
     begin_object: #type (serializer: *Serializer, keys: *[]string, key: string) -> bool;
@@ -61,6 +62,12 @@ serializer_set_array_index :: (serializer: *Serializer, index: s64) -> bool
 {
     assert(serializer != null);
     return serializer.set_array_index(serializer, index);
+}
+
+serializer_next_array_item :: (serializer: *Serializer) -> bool
+{
+    assert(serializer != null);
+    return serializer.next_array_item(serializer);
 }
 
 serializer_end_array :: (serializer: *Serializer) -> bool

@@ -17,6 +17,7 @@ JsonSerializer :: struct
 
     begin_array =     (serializer: *Serializer, size: *s64, key: string) -> bool { return json_serializer_begin_array(cast(*JsonSerializer)serializer, size, key); };
     set_array_index = (serializer: *Serializer, index: s64) -> bool              { return json_serializer_set_array_index(cast(*JsonSerializer)serializer, index); };
+    next_array_item = (serializer: *Serializer) -> bool                          { return json_serializer_next_array_item(cast(*JsonSerializer)serializer); };
     end_array =       (serializer: *Serializer) -> bool                          { return json_serializer_end_array(cast(*JsonSerializer)serializer); };
 
     begin_object = (serializer: *Serializer, keys: *[]string, key: string) -> bool { return json_serializer_begin_object(cast(*JsonSerializer)serializer, keys, key); };
@@ -326,6 +327,15 @@ json_serializer_set_array_index :: (using s: *JsonSerializer, index: s64) -> boo
 
     current_context.current_index = index;
     return true;
+}
+
+json_serializer_next_array_item :: (using s: *JsonSerializer) -> bool
+{
+    assert(s != null);
+    assert(mode != .NONE);
+
+    current_context: = array_back(context_stack);
+    return json_serializer_set_array_index(s, current_context.current_index + 1);
 }
 
 json_serializer_end_array :: (using s: *JsonSerializer) -> bool
