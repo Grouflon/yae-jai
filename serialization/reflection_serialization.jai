@@ -252,6 +252,70 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                         }
                     }
 
+                    // Simple Pool
+                    if info_struct.name == "SimplePool"
+                    {
+                        assert(info_struct.specified_parameters.count == 1);
+                        item_type: = get_polymorphic_argument(*Type_Info, info_struct, 0);
+
+                        pool: = cast(*SimplePool(*void))data;
+                        count: s64 = pool.used_list.count;
+                        if !serializer_begin_array(serializer, *count, key) return false;
+                        defer serializer_end_array(serializer);
+
+                        if serializer.mode ==
+                        {
+                            case .WRITE;
+                            {
+                                id: = pool.used_list.first;
+                                while id >= 0
+                                {
+                                    if !serializer_next_array_item(serializer) return false;
+
+                                    if !serializer_begin_object(serializer) return false;
+                                    defer serializer_end_object(serializer);
+
+                                    if !serialize(serializer, *id, "id") return false;
+
+                                    item: = pool_get_raw_item(pool, item_type, id);
+                                    if !serialize(serializer, *item.data, item_type, "value") return false;
+
+                                    id = item.next;
+                                }
+                            }
+
+                            case .READ;
+                            {
+                                // we rebuild pool from scratch
+                                pool.items.count = 0;
+                                pool.used_list = .{};
+                                pool.unused_list = .{};
+
+                                pool_reserve(pool, item_type, xx count); // hopefully things are packed and we will only do one allocation, if not we might end up doing a lot. As of now I think it's still better than doing a preloop to find higher index first
+
+                                for i: 0..count
+                                {
+                                    if !serializer_next_array_item(serializer) return false;
+
+                                    if !serializer_begin_object(serializer) return false;
+                                    defer serializer_end_object(serializer);
+
+                                    id: s32;
+                                    if !serialize(serializer, *id, "id") return false;
+
+                                    pool_reserve(pool, item_type, xx id); // in case things are not packed and id is greater than count
+                                    pool_move_item_between_lists(pool, item_type, *pool.unused_list, *pool.used_list, id);
+
+                                    item: = pool_get_raw_item(pool, item_type, id);
+                                    default_init(*item.data, item_type); // item is not initialized, neither by reserve nor by move
+                                    if !serialize(serializer, *item.data, item_type, "value") return false;
+                                }
+                            }
+                        }
+
+                        return true;
+                    }
+
                     // Custom serialize
                     custom_serialize_function: = get_custom_serialize_function(info_struct);
                     if custom_serialize_function != null

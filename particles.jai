@@ -2,7 +2,7 @@ particles_pool: SimplePool(Particle);
 
 ParticleEmitter :: struct
 {
-    particles: PoolList(Particle) = #run PoolList(Particle).{ pool = *particles_pool };
+    particles: PoolList;
 
     settings: ParticleEmitterSettings;
     position: Vector3;
