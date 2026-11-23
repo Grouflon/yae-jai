@@ -125,8 +125,8 @@ pool_clear :: (using _pool: *SimplePool($T))
 
 pool_get :: (using _pool: *SimplePool($T), _index: s32) -> *T // never store this pointer. It can and will be invalidated when the pool grows
 {
-    assert(_index >= 0 && index < items.count);
-    assert(is_index_used(_pool, _index));
+    assert(_index >= 0 && _index < items.count);
+    assert(is_index_in_list(_pool, _pool.used_list, _index));
 
     return *items[_index].data;
 }

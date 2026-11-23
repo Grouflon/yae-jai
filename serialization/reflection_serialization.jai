@@ -303,7 +303,7 @@ serialize :: (serializer: *Serializer, data: *void, info: *Type_Info, key: strin
                                     id: s32;
                                     if !serialize(serializer, *id, "id") return false;
 
-                                    pool_reserve(pool, item_type, xx id); // in case things are not packed and id is greater than count
+                                    pool_reserve(pool, item_type, xx (id+1)); // in case things are not packed and id is greater than count
                                     pool_move_item_between_lists(pool, item_type, *pool.unused_list, *pool.used_list, id);
 
                                     item: = pool_get_raw_item(pool, item_type, id);
