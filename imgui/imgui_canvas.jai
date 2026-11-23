@@ -41,7 +41,6 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
     if opened
     {
         ImGui.ImDrawList.AddRectFilled(draw_list, draw_origin, draw_end, IM_COL32(50, 50, 50, 255));
-        ImGui.ImDrawList.AddRect(draw_list, draw_origin, draw_end, IM_COL32(200, 200, 200, 255));
 
         ImGui.InvisibleButton("canvas", draw_size, .MouseButtonLeft | .MouseButtonRight | .MouseButtonMiddle);
         ImGui.SetItemKeyOwner(.MouseWheelY);
@@ -110,6 +109,10 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
 imgui_canvas_end :: (using canvas: *ImGuiCanvas)
 {
     draw_list: = ImGui.GetWindowDrawList();
+
+    canvas_bounds: = draw_list._ClipRectStack.Data[draw_list._ClipRectStack.Size-1];
+    ImGui.ImDrawList.AddRect(draw_list, .{canvas_bounds.x, canvas_bounds.y}, .{canvas_bounds.z, canvas_bounds.w}, IM_COL32(200, 200, 200, 255));
+
     ImGui.ImDrawList.PopClipRect(draw_list);
     ImGui.EndChild();
 
@@ -117,18 +120,26 @@ imgui_canvas_end :: (using canvas: *ImGuiCanvas)
     // ImGui.Value("scrolling", scrolling);
 }
 
-imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2, color: Color = WHITE, thickness: float = 1.0)
+ImGuiCanvasDrawFlags :: enum_flags
+{
+    SCALE_THICKNESS;
+    SCALE_ROUNDING;
+}
+
+imgui_canvas_draw_line :: (using canvas: *ImGuiCanvas, p0: Vector2, p1: Vector2, color: Color = WHITE, thickness: float = 1.0, flags: ImGuiCanvasDrawFlags = 0)
 {
     screen_p0: = canvas_to_screen(canvas, p0);
     screen_p1: = canvas_to_screen(canvas, p1);
 
     draw_list: = ImGui.GetWindowDrawList();
 
+    scale: = max(zoom.x, zoom.y) * grid_step;
+    scaled_thickness: = ifx flags & .SCALE_THICKNESS then thickness * scale else thickness;
 
-    ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color), thickness);
+    ImGui.ImDrawList.AddLine(draw_list, screen_p0, screen_p1, IM_COL32(color), scaled_thickness);
 }
 
-imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: Color = RED, thickness: float = 1.0)
+imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: Color = RED, thickness: float = 1.0, rounding: float = 0.0, flags: ImGuiCanvasDrawFlags = 0)
 {
     p_min: = canvas_to_screen(canvas, bounds.min);
     p_max: = canvas_to_screen(canvas, bounds.max);
@@ -137,7 +148,11 @@ imgui_canvas_draw_bounds :: (using canvas: *ImGuiCanvas, bounds: Bounds, color: 
 
     draw_list: = ImGui.GetWindowDrawList();
 
-    ImGui.ImDrawList.AddRect(draw_list, clean_min, clean_max, IM_COL32(color.r, color.g, color.b, color.a), thickness = thickness);
+    scale: = max(zoom.x, zoom.y) * grid_step;
+    scaled_thickness: = ifx flags & .SCALE_THICKNESS then thickness * scale else thickness;
+    scaled_rounding: = ifx flags & .SCALE_ROUNDING then rounding * scale else rounding;
+
+    ImGui.ImDrawList.AddRect(draw_list, clean_min, clean_max, IM_COL32(color.r, color.g, color.b, color.a), scaled_rounding, thickness = scaled_thickness);
 }
 
 imgui_canvas_draw_handle :: (using canvas: *ImGuiCanvas, position: Vector2, size: float, color: Color)
@@ -185,6 +200,13 @@ screen_to_canvas :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
     return canvas_position;
 }
 
+screen_to_canvas :: (using canvas: *ImGuiCanvas, bounds: Bounds) -> Bounds
+{
+    min: = screen_to_canvas(canvas, bounds.min);
+    max: = screen_to_canvas(canvas, bounds.max);
+    return make_bounds(min, max);
+}
+
 canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
 {
     screen_position: = position;
@@ -192,6 +214,13 @@ canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
     origin: = draw_origin + scrolling + .{0, draw_size.y};
     screen_position = screen_position * (grid_step * zoom) + origin;
     return screen_position;
+}
+
+canvas_to_screen :: (using canvas: *ImGuiCanvas, bounds: Bounds) -> Bounds
+{
+    min: = canvas_to_screen(canvas, bounds.min);
+    max: = canvas_to_screen(canvas, bounds.max);
+    return make_bounds(min, max);
 }
 
 canvas_zoom :: (using canvas: *ImGuiCanvas, anchor_position: Vector2, new_zoom: Vector2)
