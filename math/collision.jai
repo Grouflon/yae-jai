@@ -8,6 +8,16 @@ collision_bounds_bounds :: inline (a: Bounds, b: Bounds) -> bool
     );
 }
 
+collision_point_bounds :: inline (p: Vector2, b: Bounds) -> bool
+{
+    return !(
+        p.x >= b.max.x ||
+        b.min.x >= p.x ||
+        p.y >= b.max.y ||
+        b.min.y >= p.y
+    );
+}
+
 collision_circle_circle :: inline (a_center: Vector2, a_radius: float, b_center: Vector2, b_radius: float) -> bool
 {
     r: = a_radius + b_radius;

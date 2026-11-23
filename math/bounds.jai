@@ -59,6 +59,16 @@ dilate :: (bounds: $T/BoundsBase, size: T.vector_type) -> T
     };
 }
 
+dilate :: (bounds: Bounds, size: float) -> Bounds
+{
+    return dilate(bounds, .{size, size});
+}
+
+dilate :: (bounds: Bounds3D, size: float) -> Bounds
+{
+    return dilate(bounds, .{size, size, size});
+}
+
 expand :: (a: $T/BoundsBase, p: T.vector_type) -> T
 {
     return .{
