@@ -207,6 +207,11 @@ screen_to_canvas :: (using canvas: *ImGuiCanvas, bounds: Bounds) -> Bounds
     return make_bounds(min, max);
 }
 
+screen_to_canvas :: (using canvas: *ImGuiCanvas, scalar: float) -> float
+{
+    return scalar / (grid_step * max(zoom.x, zoom.y));
+}
+
 canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
 {
     screen_position: = position;
@@ -214,6 +219,11 @@ canvas_to_screen :: (using canvas: *ImGuiCanvas, position: Vector2) -> Vector2
     origin: = draw_origin + scrolling + .{0, draw_size.y};
     screen_position = screen_position * (grid_step * zoom) + origin;
     return screen_position;
+}
+
+canvas_to_screen :: (using canvas: *ImGuiCanvas, scalar: float) -> float
+{
+    return scalar * grid_step * max(zoom.x, zoom.y);
 }
 
 canvas_to_screen :: (using canvas: *ImGuiCanvas, bounds: Bounds) -> Bounds
