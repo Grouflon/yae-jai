@@ -12,11 +12,6 @@ ImGuiConfig :: struct
 
     load_default_font: bool = true;
     fonts: []ImGuiFont;
-
-    user_data: *void;
-    show_cursor_callback: #type (user_data: *void);
-    hide_cursor_callback: #type (user_data: *void);
-    // change_cursor_callback: #type (cursor: MouseCursor, user_data: *void);
 }
 
 ImGuiTheme :: enum
@@ -30,7 +25,7 @@ imgui_init :: (config: ImGuiConfig = .{})
 {
     // Setup Mappings
     setup_keymap();
-    // setup_mouse_cursors();
+    setup_mouse_cursors();
 
     // // Init base state
     backend_data.last_frame_focused = is_window_focused();
@@ -90,7 +85,7 @@ imgui_new_frame :: (dt: float)
 
     update_events(io);
 
-    // update_mouse_cursor(io);
+    update_mouse_cursor(io);
 
     ImGui.NewFrame();
 }
@@ -299,77 +294,12 @@ update_keyboard_events :: (io: *ImGui.IO)
     }
 }
 
-// update_mouse_cursor :: (io: *ImGui.IO)
-// {
-//     hide_cursor :: ()
-//     {
-//         if global_state.config.hide_cursor_callback != null
-//         {
-//             global_state.config.hide_cursor_callback(global_state.config.user_data);
-//         }
-//         else
-//         {
-//             HideCursor();
-//         }
-//     }
-
-//     show_cursor :: ()
-//     {
-//         if global_state.config.show_cursor_callback != null
-//         {
-//             global_state.config.show_cursor_callback(global_state.config.user_data);
-//         }
-//         else
-//         {
-//             ShowCursor();
-//         }
-//     }
-
-//     change_cursor :: (cursor: ImGui.MouseCursor)
-//     {
-//         found, raylib_cursor: = table_find(*imgui_raylib_cursors, cursor);
-//         if !found { raylib_cursor = .MOUSE_CURSOR_DEFAULT; }
-
-//         if global_state.config.change_cursor_callback != null
-//         {
-//             global_state.config.change_cursor_callback(raylib_cursor, global_state.config.user_data);
-//         }
-//         else
-//         {
-//             SetMouseCursor(cast(s32) raylib_cursor);
-//         }
-//     }
-
-//     if io.BackendFlags_ & ImGui.BackendFlags.ImGuiBackendFlags_HasMouseCursors == 0 { return; }
-//     if io.ConfigFlags_ & ImGui.ConfigFlags.ImGuiConfigFlags_NoMouseCursorChange != 0 { return; }
-
-//     wanted_cursor: = ImGui.GetMouseCursor();
-//     previous_cursor: = global_state.current_mouse_cursor;
-//     if wanted_cursor == previous_cursor { return; }
-
-//     // Cursor has changed
-//     global_state.current_mouse_cursor = wanted_cursor;
-//     if wanted_cursor ==
-//     {
-//         case ImGui.MouseCursor.ImGuiMouseCursor_None;
-//         {
-//             hide_cursor();
-//         }
-
-//         case;
-//         {
-//             if previous_cursor == ImGui.MouseCursor.ImGuiMouseCursor_None
-//             {
-//                 show_cursor();
-//             }
-
-//             if io.ConfigFlags_ & ImGui.ConfigFlags.ImGuiConfigFlags_NoMouseCursorChange == 0
-//             {
-//                 change_cursor(wanted_cursor);
-//             }
-//         }
-//     }
-// }
+update_mouse_cursor :: (io: *ImGui.IO)
+{
+    cursor: = ImGui.GetMouseCursor();
+    ShowCursor(xx(cursor != ImGui.MouseCursor.None)); // Windows call
+    SetCursor(imgui_to_windows_cursors[cursor]); // Windows call
+}
 
 // update_gamepad_events :: (io: *ImGui.IO)
 // {
@@ -540,21 +470,26 @@ setup_keymap :: ()
     table_set(*imgui_keymap, #char "=", ImGui.Key.ImGuiKey_KeypadEqual);
 }
 
-// imgui_raylib_cursors: Table(ImGui.MouseCursor, MouseCursor);
-// setup_mouse_cursors :: ()
-// {
-//     if imgui_raylib_cursors.count > 0 { return; }
-
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_Arrow, MouseCursor.MOUSE_CURSOR_ARROW);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_TextInput, MouseCursor.MOUSE_CURSOR_IBEAM);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_Hand, MouseCursor.MOUSE_CURSOR_POINTING_HAND);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_ResizeAll, MouseCursor.MOUSE_CURSOR_RESIZE_ALL);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_ResizeEW, MouseCursor.MOUSE_CURSOR_RESIZE_EW);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_ResizeNESW, MouseCursor.MOUSE_CURSOR_RESIZE_NESW);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_ResizeNS, MouseCursor.MOUSE_CURSOR_RESIZE_NS);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_ResizeNWSE, MouseCursor.MOUSE_CURSOR_RESIZE_NWSE);
-//     table_set(*imgui_raylib_cursors, ImGui.MouseCursor.ImGuiMouseCursor_NotAllowed, MouseCursor.MOUSE_CURSOR_NOT_ALLOWED);
-// }
+CURSOR_COUNT :: #run enum_highest_value(ImGui.MouseCursor)+1;
+imgui_to_windows_cursors: [CURSOR_COUNT]HCURSOR;
+setup_mouse_cursors :: ()
+{
+    imgui_to_windows_cursors[ImGui.MouseCursor.Arrow]       = LoadCursorW(null, IDC_ARROW);
+    imgui_to_windows_cursors[ImGui.MouseCursor.TextInput]   = LoadCursorW(null, IDC_IBEAM);
+    imgui_to_windows_cursors[ImGui.MouseCursor.ResizeAll]   = LoadCursorW(null, IDC_SIZEALL);
+    imgui_to_windows_cursors[ImGui.MouseCursor.ResizeNS]    = LoadCursorW(null, IDC_SIZENS);
+    imgui_to_windows_cursors[ImGui.MouseCursor.ResizeEW]    = LoadCursorW(null, IDC_SIZEWE);
+    imgui_to_windows_cursors[ImGui.MouseCursor.ResizeNESW]  = LoadCursorW(null, IDC_SIZENESW);
+    imgui_to_windows_cursors[ImGui.MouseCursor.ResizeNWSE]  = LoadCursorW(null, IDC_SIZENWSE);
+    imgui_to_windows_cursors[ImGui.MouseCursor.Hand]        = LoadCursorW(null, IDC_HAND);
+    imgui_to_windows_cursors[ImGui.MouseCursor.Wait]        = LoadCursorW(null, IDC_WAIT);
+    imgui_to_windows_cursors[ImGui.MouseCursor.Progress]    = LoadCursorW(null, IDC_APPSTARTING);
+    imgui_to_windows_cursors[ImGui.MouseCursor.NotAllowed]  = LoadCursorW(null, IDC_CROSS);
+}
 
 #import "Hash_Table";
 #import "Math";
+
+#scope_file
+
+#import "Windows";
