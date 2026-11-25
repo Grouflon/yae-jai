@@ -3306,7 +3306,8 @@ MouseCursor :: enum s32 {
     Wait       :: 8;
     Progress   :: 9;
     NotAllowed :: 10;
-    COUNT      :: 11;
+    Cross      :: 11; // @yae added
+    COUNT      :: 12;
 
     ImGuiMouseCursor_None       :: None;
     ImGuiMouseCursor_Arrow      :: Arrow;
@@ -3320,6 +3321,7 @@ MouseCursor :: enum s32 {
     ImGuiMouseCursor_Wait       :: Wait;
     ImGuiMouseCursor_Progress   :: Progress;
     ImGuiMouseCursor_NotAllowed :: NotAllowed;
+    ImGuiMouseCursor_Cross      :: Cross;  // @yae added
     ImGuiMouseCursor_COUNT      :: COUNT;
 }
 

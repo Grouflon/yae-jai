@@ -484,7 +484,8 @@ setup_mouse_cursors :: ()
     imgui_to_windows_cursors[ImGui.MouseCursor.Hand]        = LoadCursorW(null, IDC_HAND);
     imgui_to_windows_cursors[ImGui.MouseCursor.Wait]        = LoadCursorW(null, IDC_WAIT);
     imgui_to_windows_cursors[ImGui.MouseCursor.Progress]    = LoadCursorW(null, IDC_APPSTARTING);
-    imgui_to_windows_cursors[ImGui.MouseCursor.NotAllowed]  = LoadCursorW(null, IDC_CROSS);
+    imgui_to_windows_cursors[ImGui.MouseCursor.NotAllowed]  = LoadCursorW(null, IDC_NO);
+    imgui_to_windows_cursors[ImGui.MouseCursor.Cross]       = LoadCursorW(null, IDC_CROSS);
 }
 
 #import "Hash_Table";
