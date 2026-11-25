@@ -108,3 +108,8 @@ u32_to_color :: (c:u32) -> Color
 {
     return (*c).(*Color).*;
 }
+
+color_to_u32 :: (c: Color) -> u32
+{
+    return (*c).(*u32).*;
+}
