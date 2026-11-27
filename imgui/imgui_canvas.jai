@@ -18,6 +18,7 @@ imgui_canvas_begin :: (using canvas: *ImGuiCanvas, size: Vector2 = .{0,0}) -> bo
     draw_size = ImGui.GetContentRegionAvail();
     if size.x > 0 { draw_size.x = size.x; }
     if size.y > 0 { draw_size.y = size.y; }
+    draw_size = max(draw_size, xy(1));
     draw_origin = ImGui.GetCursorScreenPos(); 
     draw_end: = draw_origin + draw_size;
 
