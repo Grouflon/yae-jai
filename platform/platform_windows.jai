@@ -134,7 +134,7 @@ make_directory_if_it_does_not_exist :: (name: string, recursive := false) -> dir
 
 read_entire_file :: (path: string) -> string, bool
 {
-    content, success: = File.read_entire_file(path);
+    content, success: = File.read_entire_file(path, log_errors = false);
     return content, success;
 }
 
