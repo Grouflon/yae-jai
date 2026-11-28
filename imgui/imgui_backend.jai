@@ -39,7 +39,6 @@ imgui_init :: (config: ImGuiConfig = .{})
     // Setup Fonts
     io: = ImGui.GetIO();
     io.DisplayFramebufferScale = get_window_scale_dpi();
-    io.DisplayFramebufferScale = .{1,1};
     update_scale(io, io.DisplayFramebufferScale.x); // This loads the font
 
     // // Setup Backend
@@ -67,6 +66,10 @@ imgui_init :: (config: ImGuiConfig = .{})
         }
     };
     io.ClipboardUserData = null;
+
+    // Apparently caches useful things. CalcTextSize won't work on first frame unless we do this.
+    imgui_new_frame(0);
+    imgui_render();
 }
 
 imgui_shutdown :: ()
